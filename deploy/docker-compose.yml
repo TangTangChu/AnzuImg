@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: anzuimg-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${ANZUIMG_DB_USER:-anzuuser}
+      POSTGRES_PASSWORD: ${ANZUIMG_DB_PASSWORD:-anzupass}
+      POSTGRES_DB: ${ANZUIMG_DB_NAME:-anzuimg}
+    volumes:
+      - anzuimg-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: anzuimg-backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      ANZUIMG_SERVER_ADDR: ":8080"
+
+      ANZUIMG_DB_HOST: db
+      ANZUIMG_DB_PORT: "5432"
+      ANZUIMG_DB_USER: ${ANZUIMG_DB_USER:-anzuuser}
+      ANZUIMG_DB_PASSWORD: ${ANZUIMG_DB_PASSWORD:-anzupass}
+      ANZUIMG_DB_NAME: ${ANZUIMG_DB_NAME:-anzuimg}
+      ANZUIMG_DB_SSLMODE: "disable"
+
+      ANZUIMG_API_KEY: ${ANZUIMG_API_KEY:-PLEASE_CHANGE_ME}
+      ANZUIMG_STORAGE_BASE: "/data/images"
+    volumes:
+      - anzuimg-images:/data/images
+    ports:
+      - "8080:8080"
+
+volumes:
+  anzuimg-db-data:
+  anzuimg-images:
