@@ -1,0 +1,203 @@
+{
+    "common": {
+        "actions": {
+            "more": "更多",
+            "viewDetail": "查看详情",
+            "paginationPrevious": "上一页",
+            "paginationNext": "下一页",
+            "paginationJumpTo": "跳至",
+            "paginationPageUnit": "页",
+            "paginationTargetPageNumber": "目标页数",
+            "paginationJumpToPage": "跳转至 {page} 页",
+            "paginationGoButton": "跳转",
+            "cancel": "取消",
+            "confirm": "确认",
+            "delete": "删除",
+            "deleting": "删除中",
+            "login": "登录",
+            "logout": "退出登录",
+            "download": "下载",
+            "close": "关闭",
+            "copyLink": "复制链接",
+            "loading": "加载中...",
+            "uploading": "上传中...",
+            "deleteConfirm": "确定要删除吗？",
+            "deleteSuccess": "删除成功",
+            "deleteFailed": "删除失败",
+            "copySuccess": "复制成功",
+            "open": "打开",
+            "search": "搜索",
+            "clear": "清除"
+        },
+        "validation": {
+            "passwordLength": "密码长度至少为8个字符",
+            "passwordUppercase": "密码必须包含至少一个大写字母",
+            "passwordLowercase": "密码必须包含至少一个小写字母",
+            "passwordNumber": "密码必须包含至少一个数字"
+        },
+        "labels": {
+            "files": "文件",
+            "description": "描述",
+            "tags": "标签",
+            "password": "密码",
+            "toc": "目录",
+            "warning": "警告",
+            "info": "信息",
+            "tip": "提示",
+            "error": "错误",
+            "success": "成功",
+            "ok": "完成"
+        },
+        "direction": {
+            "left1": "左方",
+            "right1": "右方",
+            "up1": "上方",
+            "down1": "下方"
+        },
+        "themeMenu": {
+            "tooltip": "主题设置",
+            "title": "主题设置",
+            "mode": "主题模式",
+            "light": "浅色",
+            "dark": "深色"
+        },
+        "themeColorPicker": {
+            "tooltip": "更改主题色",
+            "title": "主题配色",
+            "customColor": "自定义颜色",
+            "colorInputLabel": "选择自定义主题色",
+            "Themes": "主题",
+            "themeItem": "{name} 的主题配色"
+        }
+    },
+    "nav": {
+        "home": "首页",
+        "gallery": "图库",
+        "upload": "上传",
+        "routes": "路由管理",
+        "settings": "设置"
+    },
+    "auth": {
+        "registerPasskey": "注册 Passkey"
+    },
+    "meta": {
+        "fullName": "AnzuIMG"
+    },
+    "setup": {
+        "title": "系统初始化",
+        "description": "请设置系统密码以保护您的实例。",
+        "confirmPasswordLabel": "确认密码",
+        "submit": "完成设置",
+        "passwordPlaceholder": "至少8位，包含大小写字母和数字",
+        "confirmPasswordPlaceholder": "请确认您的密码",
+        "passwordLengthError": "密码长度至少为 8 个字符",
+        "passwordMatchError": "两次输入的密码不一致",
+        "success": "初始化设置成功",
+        "setupFailed": "设置失败，请重试。"
+    },
+    "login": {
+        "title": "登录 AnzuImg",
+        "passkeyButton": "使用 Passkey 登录",
+        "registerPasskey": "注册新设备 (Passkey)",
+        "success": "登录成功"
+    },
+    "upload": {
+        "title": "上传图片",
+        "dragDrop": "拖拽图片到这里",
+        "orSelect": "或者选择文件",
+        "success": "上传成功",
+        "route": "映射路由",
+        "customFileName": "自定义文件名",
+        "customFileNamePlaceholder": "例如：my-image",
+        "convert": "转换格式",
+        "targetFormat": "目标格式",
+        "quality": "质量 (1-100)",
+        "effort": "压缩努力程度 (0-9)",
+        "submit": "开始上传",
+        "routeUniqueWarning": "唯一路由别名（可选）"
+    },
+    "gallery": {
+        "title": "图片库",
+        "noImages": "暂无图片",
+        "downloadStarted": "开始下载图片",
+        "previous": "上一张",
+        "next": "下一张",
+        "loadingDetails": "加载详细信息...",
+        "detailLoadFailed": "加载详细信息失败",
+        "updated": "更新",
+        "routes": "路由映射",
+        "urls": "访问链接"
+    },
+    "tags": {
+        "addPlaceholder": "添加标签...",
+        "remove": "移除",
+        "removeLabel": "移除标签 {tag}",
+        "maxTagsError": "最多只能添加 {max} 个标签",
+        "duplicateError": "标签已存在",
+        "validationError": "标签验证失败",
+        "counter": "{current} / {max}",
+        "hint": "输入标签后按回车、逗号或Tab键添加",
+        "validation": {
+            "tooShort": "标签太短，至少{min}个字符",
+            "tooLong": "标签太长，最多{max}个字符",
+            "invalidChars": "标签只能包含中文、英文、数字、空格、-和_"
+        }
+    },
+    "settings": {
+        "title": "设置",
+        "changePassword": {
+            "title": "修改密码",
+            "description": "修改管理员密码。修改密码后，所有现有会话将被注销。",
+            "currentPassword": "当前密码",
+            "currentPasswordPlaceholder": "请输入当前密码",
+            "newPassword": "新密码",
+            "newPasswordPlaceholder": "至少8位，包含大小写字母和数字",
+            "confirmPassword": "确认新密码",
+            "confirmPasswordPlaceholder": "请再次输入新密码",
+            "submit": "修改密码",
+            "fillAllFields": "请填写所有字段",
+            "passwordLengthError": "新密码长度至少为8个字符",
+            "passwordMatchError": "两次输入的新密码不一致",
+            "success": "密码修改成功",
+            "failed": "密码修改失败，请检查当前密码是否正确"
+        },
+        "passkeyManagement": {
+            "title": "PassKey管理",
+            "description": "管理您的PassKey设备。PassKey允许您使用生物识别或安全密钥登录。",
+            "registerNew": "注册新PassKey",
+            "noPasskeys": "尚未注册任何PassKey设备",
+            "unknownDevice": "未知设备",
+            "registeredAt": "注册时间",
+            "lastUsed": "最后使用",
+            "registerSuccess": "PassKey注册成功",
+            "registerFailed": "PassKey注册失败"
+        },
+        "apiTokens": {
+            "description": "生成用于外部脚本或服务访问图床 API 的永久令牌。支持 IP 白名单限制。",
+            "createNew": "创建新令牌",
+            "noTokens": "暂无服务令牌",
+            "name": "令牌名称",
+            "namePlaceholder": "例如：Docker Backup",
+            "ipAllowlist": "IP 白名单",
+            "ipAllowlistTip": "输入 IP 或 CIDR (如 192.168.1.0/24) 并回车。留空则允许所有 IP。",
+            "created": "创建于",
+            "lastUsed": "最后使用",
+            "neverUsed": "未使用",
+            "createSuccess": "令牌创建成功",
+            "createFailed": "令牌创建失败",
+            "tokenCreatedTitle": "令牌已生成",
+            "tokenCreatedMessage": "请务必现在复制此令牌。出于安全原因，它将无法再次显示。",
+            "copy": "复制",
+            "copySuccess": "令牌已复制"
+        }
+    },
+    "routes": {
+        "title": "路由管理",
+        "path": "路由路径",
+        "target": "目标图片",
+        "createdAt": "创建时间",
+        "actions": "操作",
+        "visit": "访问",
+        "noRoutes": "暂无路由"
+    }
+}

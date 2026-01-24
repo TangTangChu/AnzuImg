@@ -1,0 +1,176 @@
+package service
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"github.com/TangTangChu/AnzuImg/backend/internal/model"
+)
+
+const (
+	SessionCookieName = "anzuimg_session"
+	SessionHeaderName = "X-Session-Token"
+)
+
+type SessionService struct {
+	db *gorm.DB
+}
+
+func NewSessionService(db *gorm.DB) *SessionService {
+	return &SessionService{db: db}
+}
+
+// CreateSession 创建新会话，添加会话固定攻击防护
+func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, error) {
+	clientIP := c.ClientIP()
+	if clientIP == "" {
+		clientIP = "unknown"
+	}
+
+	userAgent := c.Request.UserAgent()
+	if err := model.RevokeAllUserSessions(s.db, model.DefaultUserID); err != nil {
+
+	}
+
+	token, session, err := model.CreateSession(s.db, model.DefaultUserID, clientIP, userAgent)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return token, session, nil
+}
+
+// ValidateSession 验证会话令牌
+func (s *SessionService) ValidateSession(c *gin.Context) (*model.Session, error) {
+	token := s.extractToken(c)
+	if token == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	session, err := model.ValidateSession(s.db, token)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 严格的IP地址验证
+	clientIP := c.ClientIP()
+	if clientIP != "" && clientIP != "unknown" && session.IPAddress != "" && session.IPAddress != "unknown" {
+		if clientIP != session.IPAddress {
+			// IP地址不匹配，撤销会话并返回错误
+			_ = model.RevokeSession(s.db, model.HashToken(token))
+			return nil, gorm.ErrRecordNotFound
+		}
+	}
+
+	return session, nil
+}
+
+// extractToken 从请求中提取令牌
+func (s *SessionService) extractToken(c *gin.Context) string {
+	// 优先从Cookie获取
+	if cookie, err := c.Cookie(SessionCookieName); err == nil && cookie != "" {
+		return cookie
+	}
+
+	// 从Authorization Header获取
+	authHeader := c.GetHeader("Authorization")
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		return authHeader[7:]
+	}
+
+	// 从自定义Header获取
+	if header := c.GetHeader(SessionHeaderName); header != "" {
+		return header
+	}
+
+	return ""
+}
+
+// SetSessionCookie 设置会话Cookie
+func (s *SessionService) SetSessionCookie(c *gin.Context, token string) {
+	secure := false
+	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+		secure = true
+	}
+
+	c.SetCookie(
+		SessionCookieName,
+		token,
+		int(model.SessionExpirationHours*60*60),
+		"/",
+		"",
+		secure,
+		true,   // HttpOnly
+	)
+}
+
+// ClearSessionCookie 清除会话Cookie
+func (s *SessionService) ClearSessionCookie(c *gin.Context) {
+	c.SetCookie(
+		SessionCookieName,
+		"",
+		-1, // 立即过期
+		"/",
+		"",
+		false,
+		true,
+	)
+}
+
+// RevokeCurrentSession 撤销当前会话
+func (s *SessionService) RevokeCurrentSession(c *gin.Context) error {
+	token := s.extractToken(c)
+	if token == "" {
+		return nil
+	}
+
+	tokenHash := model.HashToken(token)
+	return model.RevokeSession(s.db, tokenHash)
+}
+
+// RevokeAllSessions 撤销所有会话
+func (s *SessionService) RevokeAllSessions() error {
+	return model.RevokeAllUserSessions(s.db, model.DefaultUserID)
+}
+
+// CleanExpiredSessions 清理过期会话
+func (s *SessionService) CleanExpiredSessions() error {
+	return model.CleanExpiredSessions(s.db)
+}
+
+// SessionMiddleware 会话中间件
+func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
+	apiTokenService := NewAPITokenService(s.db)
+
+	return func(c *gin.Context) {
+		session, err := s.ValidateSession(c)
+		if err == nil {
+			c.Set("session", session)
+			c.Set("user_id", session.UserID)
+			c.Set("auth_method", "session")
+			c.Next()
+			return
+		}
+		token := s.extractToken(c)
+		if token != "" {
+			clientIP := c.ClientIP()
+			if clientIP == "" {
+				clientIP = "unknown"
+			}
+
+			if apiToken, err := apiTokenService.ValidateToken(token, clientIP); err == nil {
+				c.Set("api_token", apiToken)
+				c.Set("user_id", uint64(model.DefaultUserID))
+				c.Set("auth_method", "api_token")
+				c.Next()
+				return
+			}
+		}
+
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid or expired session/token",
+		})
+	}
+}

@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.output
+**/.nuxt
+**/.git
+**/.idea
+**/.vscode
+backend/anzuimg.exe
+backend/server.exe
+backend/test_build.exe

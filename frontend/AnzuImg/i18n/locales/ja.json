@@ -1,0 +1,149 @@
+{
+    "common": {
+        "actions": {
+            "more": "もっと見る",
+            "viewDetail": "詳細を見る",
+            "paginationPrevious": "前へ",
+            "paginationNext": "次へ",
+            "paginationJumpTo": "移動",
+            "paginationPageUnit": "ページ",
+            "paginationTargetPageNumber": "指定ページ",
+            "paginationJumpToPage": "{page} ページへ移動",
+            "paginationGoButton": "移動",
+            "cancel": "キャンセル",
+            "confirm": "確認",
+            "delete": "削除",
+            "login": "ログイン",
+            "logout": "ログアウト",
+            "download": "ダウンロード",
+            "close": "閉じる",
+            "copyLink": "リンクをコピー",
+            "loading": "読み込み中...",
+            "uploading": "アップロード中...",
+            "deleteConfirm": "削除してもよろしいですか？",
+            "deleteSuccess": "削除しました",
+            "deleteFailed": "削除に失敗しました",
+            "copySuccess": "コピーしました",
+            "open": "開く"
+        },
+        "validation": {
+            "passwordLength": "パスワードは8文字以上である必要があります",
+            "passwordUppercase": "パスワードには少なくとも1つの大文字が必要です",
+            "passwordLowercase": "パスワードには少なくとも1つの小文字が必要です",
+            "passwordNumber": "パスワードには少なくとも1つの数字が必要です"
+        },
+        "labels": {
+            "description": "説明",
+            "tags": "タグ",
+            "password": "パスワード",
+            "toc": "目次",
+            "warning": "警告",
+            "info": "情報",
+            "tip": "ヒント",
+            "error": "エラー",
+            "success": "成功",
+            "ok": "OK"
+        },
+        "direction": {
+            "left1": "左",
+            "right1": "右",
+            "up1": "上",
+            "down1": "下"
+        },
+        "themeMenu": {
+            "tooltip": "テーマ設定",
+            "title": "テーマ設定",
+            "mode": "テーマモード",
+            "light": "ライト",
+            "dark": "ダーク"
+        },
+        "themeColorPicker": {
+            "tooltip": "テーマカラー変更",
+            "title": "テーマカラー",
+            "customColor": "カスタムカラー",
+            "colorInputLabel": "カスタムテーマカラーを選択",
+            "Themes": "テーマ",
+            "themeItem": "{name} のテーマカラー"
+        }
+    },
+    "nav": {
+        "home": "ホーム",
+        "gallery": "ギャラリー",
+        "upload": "アップロード",
+        "settings": "設定"
+    },
+    "auth": {
+        "registerPasskey": "Passkeyを登録"
+    },
+    "meta": {
+        "fullName": "AnzuIMG"
+    },
+    "setup": {
+        "title": "初期設定",
+        "description": "インスタンスを保護するためにシステムパスワードを設定してください。",
+        "confirmPasswordLabel": "パスワード（確認）",
+        "submit": "設定を完了",
+        "passwordPlaceholder": "8文字以上、大小文字と数字を含む",
+        "confirmPasswordPlaceholder": "パスワードを再入力してください",
+        "passwordLengthError": "パスワードは8文字以上である必要があります",
+        "passwordMatchError": "パスワードが一致しません",
+        "success": "セットアップ完了",
+        "setupFailed": "設定に失敗しました。もう一度お試しください。"
+    },
+    "login": {
+        "title": "AnzuImg にログイン",
+        "passkeyButton": "Passkeyでログイン",
+        "registerPasskey": "新しいデバイスを登録 (Passkey)",
+        "success": "ログイン成功"
+    },
+    "upload": {
+        "title": "画像アップロード",
+        "dragDrop": "画像をここにドラッグ＆ドロップ",
+        "orSelect": "またはファイルを選択",
+        "success": "アップロード成功",
+        "route": "ルートパス設定",
+        "customFileName": "カスタムファイル名",
+        "customFileNamePlaceholder": "例：my-image",
+        "submit": "アップロード開始"
+    },
+    "gallery": {
+        "title": "ギャラリー",
+        "noImages": "画像がありません",
+        "downloadStarted": "ダウンロードを開始しました",
+        "previous": "前へ",
+        "next": "次へ"
+    },
+    "settings": {
+        "title": "設定",
+        "changePassword": {
+            "title": "パスワード変更",
+            "description": "管理者パスワードを変更します。パスワード変更後、すべての既存セッションはログアウトされます。",
+            "currentPassword": "現在のパスワード",
+            "currentPasswordPlaceholder": "現在のパスワードを入力してください",
+            "newPassword": "新しいパスワード",
+            "newPasswordPlaceholder": "8文字以上、大小文字と数字を含む",
+            "confirmPassword": "新しいパスワード（確認）",
+            "confirmPasswordPlaceholder": "新しいパスワードを再入力してください",
+            "submit": "パスワード変更",
+            "fillAllFields": "すべてのフィールドを入力してください",
+            "passwordLengthError": "新しいパスワードは8文字以上である必要があります",
+            "passwordMatchError": "新しいパスワードが一致しません",
+            "success": "パスワードを変更しました",
+            "failed": "パスワード変更に失敗しました。現在のパスワードを確認してください"
+        },
+        "passkeyManagement": {
+            "title": "PassKey管理",
+            "description": "PassKeyデバイスを管理します。PassKeyを使用すると、生体認証やセキュリティキーでログインできます。",
+            "registerNew": "新しいPassKeyを登録",
+            "noPasskeys": "PassKeyデバイスが登録されていません",
+            "unknownDevice": "不明なデバイス",
+            "registeredAt": "登録日時",
+            "lastUsed": "最後使用",
+            "registerSuccess": "PassKeyを登録しました",
+            "registerFailed": "PassKeyの登録に失敗しました"
+        }
+    },
+    "routes": {
+        "noRoutes": "ルートが見つかりません"
+    }
+}

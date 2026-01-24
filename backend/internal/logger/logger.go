@@ -91,7 +91,7 @@ func Register(module string, opts ...Option) *Logger {
 	return l
 }
 
-// Get 获取某个模块的 logger，如果不存在返回 nil
+// Get 获取某个模块的 logger
 func Get(module string) *Logger {
 	registryMu.RLock()
 	defer registryMu.RUnlock()

@@ -1,0 +1,202 @@
+{
+    "common": {
+        "actions": {
+            "more": "More",
+            "viewDetail": "View Detail",
+            "paginationPrevious": "Previous",
+            "paginationNext": "Next",
+            "paginationJumpTo": "Jump to",
+            "paginationPageUnit": "Page",
+            "paginationTargetPageNumber": "Target Page",
+            "paginationJumpToPage": "Jump to page {page}",
+            "paginationGoButton": "Go",
+            "cancel": "Cancel",
+            "confirm": "Confirm",
+            "delete": "Delete",
+            "login": "Login",
+            "logout": "Logout",
+            "download": "Download",
+            "close": "Close",
+            "copyLink": "Copy Link",
+            "loading": "Loading...",
+            "uploading": "Uploading...",
+            "deleteConfirm": "Are you sure you want to delete?",
+            "deleteSuccess": "Deleted successfully",
+            "deleteFailed": "Delete failed",
+            "copySuccess": "Copied successfully",
+            "open": "Open",
+            "search": "Search",
+            "clear": "Clear"
+        },
+        "validation": {
+            "passwordLength": "Password must be at least 8 characters long",
+            "passwordUppercase": "Password must contain at least one uppercase letter",
+            "passwordLowercase": "Password must contain at least one lowercase letter",
+            "passwordNumber": "Password must contain at least one number"
+        },
+        "labels": {
+            "files": "files",
+            "description": "Description",
+            "tags": "Tags",
+            "password": "Password",
+            "toc": "Table of Contents",
+            "warning": "Warning",
+            "info": "Info",
+            "tip": "Tip",
+            "error": "Error",
+            "success": "Success",
+            "ok": "OK"
+        },
+        "direction": {
+            "left1": "Left",
+            "right1": "Right",
+            "up1": "Up",
+            "down1": "Down"
+        },
+        "themeMenu": {
+            "tooltip": "Theme Settings",
+            "title": "Theme Settings",
+            "mode": "Theme Mode",
+            "light": "Light",
+            "dark": "Dark"
+        },
+        "themeColorPicker": {
+            "tooltip": "Change Theme Color",
+            "title": "Theme Color",
+            "customColor": "Custom Color",
+            "colorInputLabel": "Select Custom Theme Color",
+            "Themes": "Themes",
+            "themeItem": "{name} Theme Color"
+        }
+    },
+    "nav": {
+        "home": "Home",
+        "gallery": "Gallery",
+        "upload": "Upload",
+        "routes": "Routes",
+        "settings": "Settings"
+    },
+    "auth": {
+        "registerPasskey": "Register Passkey"
+    },
+    "meta": {
+        "fullName": "AnzuIMG"
+    },
+    "setup": {
+        "title": "Initial Setup",
+        "description": "Please set a system password to secure your instance.",
+        "confirmPasswordLabel": "Confirm Password",
+        "submit": "Complete Setup",
+        "passwordPlaceholder": "At least 8 chars with upper, lower case and number",
+        "confirmPasswordPlaceholder": "Confirm your password",
+        "passwordLengthError": "Password must be at least 8 characters long",
+        "passwordMatchError": "Passwords do not match",
+        "success": "Setup Successful",
+        "setupFailed": "Setup failed. Please try again."
+    },
+    "login": {
+        "title": "Login to AnzuImg",
+        "passkeyButton": "Login with Passkey",
+        "registerPasskey": "Register New Device (Passkey)",
+        "success": "Login successful"
+    },
+    "upload": {
+        "title": "Upload Image",
+        "dragDrop": "Drag & drop image here",
+        "orSelect": "or select file",
+        "success": "Upload successful",
+        "route": "Route Path",
+        "customFileName": "Custom file name",
+        "customFileNamePlaceholder": "e.g., my-image",
+        "convert": "Convert Format",
+        "targetFormat": "Target Format",
+        "quality": "Quality (1-100)",
+        "effort": "Compression Effort (0-9)",
+        "submit": "Start upload",
+        "routeUniqueWarning": "Unique route alias (optional)"
+    },
+    "gallery": {
+        "title": "Gallery",
+        "noImages": "No images found",
+        "downloadStarted": "Download started",
+        "previous": "Previous",
+        "next": "Next",
+        "loadingDetails": "Loading details...",
+        "detailLoadFailed": "Failed to load details",
+        "updated": "Updated",
+        "routes": "Route Mappings",
+        "urls": "Access URLs"
+    },
+    "tags": {
+        "addPlaceholder": "Add tag...",
+        "remove": "Remove",
+        "removeLabel": "Remove tag {tag}",
+        "maxTagsError": "Maximum {max} tags allowed",
+        "duplicateError": "Tag already exists",
+        "validationError": "Tag validation failed",
+        "counter": "{current} / {max}",
+        "hint": "Press Enter, comma, or Tab to add tag",
+        "validation": {
+            "tooShort": "Tag too short, minimum {min} characters",
+            "tooLong": "Tag too long, maximum {max} characters",
+            "invalidChars": "Tag can only contain Chinese, English, numbers, spaces, - and _"
+        }
+    },
+    "settings": {
+        "title": "Settings",
+        "changePassword": {
+            "title": "Change Password",
+            "description": "Change administrator password. All existing sessions will be logged out after password change.",
+            "currentPassword": "Current Password",
+            "currentPasswordPlaceholder": "Enter current password",
+            "newPassword": "New Password",
+            "newPasswordPlaceholder": "At least 8 chars with upper, lower case and number",
+            "confirmPassword": "Confirm New Password",
+            "confirmPasswordPlaceholder": "Enter new password again",
+            "submit": "Change Password",
+            "fillAllFields": "Please fill all fields",
+            "passwordLengthError": "New password must be at least 8 characters long",
+            "passwordMatchError": "New passwords do not match",
+            "success": "Password changed successfully",
+            "failed": "Password change failed, please check current password"
+        },
+        "passkeyManagement": {
+            "title": "PassKey Management",
+            "description": "Manage your PassKey devices. PassKey allows you to login using biometrics or security keys.",
+            "registerNew": "Register New PassKey",
+            "noPasskeys": "No PassKey devices registered yet",
+            "unknownDevice": "Unknown Device",
+            "registeredAt": "Registered at",
+            "lastUsed": "Last used",
+            "registerSuccess": "PassKey registered successfully",
+            "registerFailed": "PassKey registration failed"
+        },
+        "apiTokens": {
+            "description": "Generate permanent tokens for external services to access the API. Supports IP allowlisting.",
+            "createNew": "Create New Token",
+            "noTokens": "No service tokens found",
+            "name": "Token Name",
+            "namePlaceholder": "e.g., Docker Backup",
+            "ipAllowlist": "IP Allowlist",
+            "ipAllowlistTip": "Enter IP or CIDR (e.g. 192.168.1.0/24) and press Enter. Leave empty to allow all IPs.",
+            "created": "Created At",
+            "lastUsed": "Last Used",
+            "neverUsed": "Never",
+            "createSuccess": "Token created successfully",
+            "createFailed": "Failed to create token",
+            "tokenCreatedTitle": "Token Generated",
+            "tokenCreatedMessage": "Please copy this token now. For security reasons, it will not be shown again.",
+            "copy": "Copy",
+            "copySuccess": "Token copied"
+        }
+    },
+    "routes": {
+        "title": "Route Management",
+        "path": "Route Path",
+        "target": "Target Image",
+        "createdAt": "Created At",
+        "actions": "Actions",
+        "visit": "Visit",
+        "noRoutes": "No routes found"
+    }
+}

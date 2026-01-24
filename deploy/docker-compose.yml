@@ -5,14 +5,21 @@ services:
     image: postgres:16
     container_name: anzuimg-db
     restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${ANZUIMG_DB_USER:-anzuuser} -d ${ANZUIMG_DB_NAME:-anzuimg}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_USER: ${ANZUIMG_DB_USER:-anzuuser}
       POSTGRES_PASSWORD: ${ANZUIMG_DB_PASSWORD:-anzupass}
       POSTGRES_DB: ${ANZUIMG_DB_NAME:-anzuimg}
     volumes:
       - anzuimg-db-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
 
   backend:
     build:
@@ -21,7 +28,8 @@ services:
     container_name: anzuimg-backend
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       ANZUIMG_SERVER_ADDR: ":8080"
 
@@ -32,12 +40,27 @@ services:
       ANZUIMG_DB_NAME: ${ANZUIMG_DB_NAME:-anzuimg}
       ANZUIMG_DB_SSLMODE: "disable"
 
-      ANZUIMG_API_KEY: ${ANZUIMG_API_KEY:-PLEASE_CHANGE_ME}
       ANZUIMG_STORAGE_BASE: "/data/images"
+
+      # Passkey配置
+      ANZUIMG_PASSKEY_RP_ID: "localhost"
+      ANZUIMG_PASSKEY_RP_ORIGIN: "http://localhost:3000"
+      ANZUIMG_PASSKEY_RP_DISPLAY_NAME: "AnzuImg"
     volumes:
       - anzuimg-images:/data/images
     ports:
       - "8080:8080"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    container_name: anzuimg-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
 
 volumes:
   anzuimg-db-data:
