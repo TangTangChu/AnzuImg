@@ -78,7 +78,7 @@ func validateIP(clientIP string, allowlistJSON datatypes.JSON) error {
 	var allowlist []string
 	if len(allowlistJSON) > 0 {
 		if err := json.Unmarshal(allowlistJSON, &allowlist); err != nil {
-			return nil
+			return errors.New("invalid ip allowlist")
 		}
 	}
 	var activeRules []string
@@ -100,7 +100,10 @@ func validateIP(clientIP string, allowlistJSON datatypes.JSON) error {
 	for _, rule := range activeRules {
 		if strings.Contains(rule, "/") {
 			_, ipNet, err := net.ParseCIDR(rule)
-			if err == nil && ipNet.Contains(ip) {
+			if err != nil {
+				continue
+			}
+			if ipNet.Contains(ip) {
 				return nil
 			}
 		} else {

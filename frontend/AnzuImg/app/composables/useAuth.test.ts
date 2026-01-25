@@ -1,39 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useAuth } from './useAuth'
+import { $fetch, navigateTo, useCookie } from '#imports'
+import { startAuthentication } from '@simplewebauthn/browser'
 
 describe('useAuth', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    const useCookie = vi.mocked(require('#imports').useCookie)
-    useCookie.mockReturnValue({ value: null })
+    vi.resetAllMocks()
+    vi.mocked(useCookie).mockReturnValue({ value: null } as any)
   })
 
   describe('login', () => {
     it('should login successfully with valid password', async () => {
       const mockToken = 'test-token-123'
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockResolvedValueOnce({ token: mockToken })
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockResolvedValueOnce({ token: mockToken })
 
       const { login, token } = useAuth()
-      
+
       const result = await login('valid-password')
-      
+
       expect(result).toBe(true)
-      expect($fetch).toHaveBeenCalledWith('/api/v1/auth/login', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/login', {
         method: 'POST',
         body: { password: 'valid-password' }
       })
-      expect(token.value).toBe(mockToken)
+      expect(token.value).toBeNull()
     })
 
     it('should return false when login fails', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockRejectedValueOnce(new Error('Login failed'))
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockRejectedValueOnce(new Error('Login failed'))
 
       const { login, token } = useAuth()
-      
+
       const result = await login('invalid-password')
-      
+
       expect(result).toBe(false)
       expect(token.value).toBeNull()
     })
@@ -41,83 +42,97 @@ describe('useAuth', () => {
 
   describe('checkInit', () => {
     it('should return true when system is initialized', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockResolvedValueOnce({ initialized: true })
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockResolvedValueOnce({ initialized: true })
 
       const { checkInit } = useAuth()
-      
+
       const result = await checkInit()
-      
+
       expect(result).toBe(true)
-      expect($fetch).toHaveBeenCalledWith('/api/v1/auth/status')
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/status')
     })
 
     it('should return false when system is not initialized', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockResolvedValueOnce({ initialized: false })
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockResolvedValueOnce({ initialized: false })
 
       const { checkInit } = useAuth()
-      
+
       const result = await checkInit()
-      
+
       expect(result).toBe(false)
     })
 
     it('should return false when backend is unavailable', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockRejectedValueOnce(new Error('Network error'))
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockRejectedValueOnce(new Error('Network error'))
 
       const { checkInit } = useAuth()
-      
+
       const result = await checkInit()
-      
+
       expect(result).toBe(false)
     })
   })
 
   describe('setup', () => {
     it('should setup system successfully', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockResolvedValueOnce({})
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockResolvedValueOnce({})
 
       const { setup } = useAuth()
-      
+
       const result = await setup('new-password-123')
-      
+
       expect(result).toBe(true)
-      expect($fetch).toHaveBeenCalledWith('/api/v1/auth/setup', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/setup', {
         method: 'POST',
-        body: { password: 'new-password-123' }
+        body: { password: 'new-password-123' },
+        headers: undefined,
+      })
+    })
+
+    it('should include X-Setup-Token header when setup token is provided', async () => {
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockResolvedValueOnce({})
+
+      const { setup } = useAuth()
+
+      const result = await setup('new-password-123', 'setup-token-abc')
+
+      expect(result).toBe(true)
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/setup', {
+        method: 'POST',
+        body: { password: 'new-password-123' },
+        headers: { 'X-Setup-Token': 'setup-token-abc' },
       })
     })
 
     it('should return false when setup fails', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockRejectedValueOnce(new Error('Setup failed'))
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockRejectedValueOnce(new Error('Setup failed'))
 
       const { setup } = useAuth()
-      
+
       const result = await setup('new-password-123')
-      
+
       expect(result).toBe(false)
     })
   })
 
   describe('logout', () => {
     it('should clear token and navigate to login', () => {
-      const mockPush = vi.fn()
-      const useRouter = vi.mocked(require('#imports').useRouter)
-      useRouter.mockReturnValueOnce({ push: mockPush })
+      const navMock = vi.mocked(navigateTo)
 
       const { logout, token } = useAuth()
-      
-      // Set a token first
+
       token.value = 'existing-token'
-      
+
       logout()
-      
+
       expect(token.value).toBeNull()
-      expect(mockPush).toHaveBeenCalledWith('/login')
+      expect(navMock).toHaveBeenCalledWith('/login')
     })
   })
 
@@ -126,44 +141,44 @@ describe('useAuth', () => {
       const mockToken = 'passkey-token-123'
       const mockAssertion = { challenge: 'test-challenge' }
       const mockAuthResp = { id: 'credential-id' }
-      
-      const $fetch = vi.mocked((global as any).$fetch)
-      const startAuthentication = vi.mocked(require('@simplewebauthn/browser').startAuthentication)
-      
-      startAuthentication.mockResolvedValueOnce(mockAuthResp)
-      $fetch
-        .mockResolvedValueOnce({ 
-          assertion: mockAssertion,
-          session_id: 'test-session-id' 
+
+      const fetchMock = vi.mocked($fetch)
+      const startAuthMock = vi.mocked(startAuthentication)
+
+      startAuthMock.mockResolvedValueOnce(mockAuthResp as any)
+      fetchMock
+        .mockResolvedValueOnce({
+          assertion: { publicKey: mockAssertion },
+          session_id: 'test-session-id'
         })
         .mockResolvedValueOnce({ token: mockToken })
 
       const { loginWithPasskey, token } = useAuth()
-      
+
       const result = await loginWithPasskey()
-      
+
       expect(result).toBe(true)
-      expect($fetch).toHaveBeenCalledTimes(2)
-      expect($fetch).toHaveBeenNthCalledWith(1, '/api/v1/auth/passkey/login/begin')
-      expect($fetch).toHaveBeenNthCalledWith(2, '/api/v1/auth/passkey/login/finish', {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/auth/passkey/login/begin')
+      expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/auth/passkey/login/finish', {
         method: 'POST',
         body: mockAuthResp,
         headers: {
           'X-Session-ID': 'test-session-id'
         }
       })
-      expect(startAuthentication).toHaveBeenCalledWith(mockAssertion)
-      expect(token.value).toBe(mockToken)
+      expect(startAuthMock).toHaveBeenCalledWith({ optionsJSON: mockAssertion })
+      expect(token.value).toBeNull()
     })
 
     it('should return false when passkey login fails', async () => {
-      const $fetch = vi.mocked((global as any).$fetch)
-      $fetch.mockRejectedValueOnce(new Error('Passkey login failed'))
+      const fetchMock = vi.mocked($fetch)
+      fetchMock.mockRejectedValueOnce(new Error('Passkey login failed'))
 
       const { loginWithPasskey, token } = useAuth()
-      
+
       const result = await loginWithPasskey()
-      
+
       expect(result).toBe(false)
       expect(token.value).toBeNull()
     })

@@ -10,66 +10,70 @@
         <p>{{ t('routes.noRoutes', 'No routes found') }}</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <div v-for="route in routes" :key="route.id"
-            class="group flex flex-col border border-(--md-sys-color-outline-variant) rounded-md overflow-hidden  transition-colors">
-            <div class="h-48 w-full p-2 flex items-center justify-center">
-                <img v-if="route.image" :src="`/i/${route.image.hash}/thumbnail`"
-                    class="max-w-full max-h-full object-contain rounded-sm shadow" loading="lazy"
-                    :alt="route.image.file_name" />
-                <div v-else
-                    class="flex h-full w-full items-center justify-center text-(--md-sys-color-on-surface-variant)">
-                    <span class="text-sm">No Image</span>
-                </div>
-            </div>
-            <div class="flex flex-col flex-1 p-4 gap-3">
-                <div class="flex items-center justify-between gap-2">
-                    <div class="text-xl font-bold text-(--md-sys-color-primary) break-all select-all">
-                        /{{ route.route }}
+    <div v-else>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div v-for="route in routes" :key="route.id"
+                class="group flex flex-col border border-(--md-sys-color-outline-variant) rounded-md overflow-hidden  transition-colors">
+                <div class="h-48 w-full p-2 flex items-center justify-center">
+                    <img v-if="route.image" :src="`/i/${route.image.hash}/thumbnail`"
+                        class="max-w-full max-h-full object-contain rounded-sm shadow" loading="lazy"
+                        :alt="route.image.file_name" />
+                    <div v-else
+                        class="flex h-full w-full items-center justify-center text-(--md-sys-color-on-surface-variant)">
+                        <span class="text-sm">No Image</span>
                     </div>
-                    <AnzuButton variant="text" class="w-8! h-8! p-0! min-w-0! shrink-0"
-                        @click="copyLink(route.route)" :title="t('common.actions.copyLink')">
-                        <LinkIcon class="h-5 w-5" />
-                    </AnzuButton>
                 </div>
-
-                <div class="min-w-0 flex flex-col gap-1">
-                    <p class="text-sm text-(--md-sys-color-on-surface) truncate" :title="route.image?.file_name">
-                        {{ route.image?.file_name || 'Unknown File' }}
-                    </p>
-                    <p class="text-xs text-(--md-sys-color-on-surface-variant) font-mono truncate"
-                        :title="route.image?.hash">
-                        {{ route.image?.hash }}
-                    </p>
-                </div>
-                <div
-                    class="mt-auto flex items-center justify-between pt-3 border-t border-(--md-sys-color-outline-variant)/50">
-                    <span class="text-xs text-(--md-sys-color-on-surface-variant)">
-                        {{ formatDate(route.created_at) }}
-                    </span>
-
-                    <div class="flex items-center gap-1">
-                        <a :href="`/i/r/${route.route}`" target="_blank" class="block">
-                            <AnzuButton variant="text" class="w-8! h-8! p-0! min-w-0!"
-                                :title="t('common.actions.open')">
-                                <ArrowTopRightOnSquareIcon class="h-4 w-4" />
-                            </AnzuButton>
-                        </a>
-
-                        <AnzuButton variant="text"
-                            class="w-8! h-8! p-0! min-w-0!"
-                            @click="deleteRoute(route.route)" :title="t('common.actions.delete')">
-                            <TrashIcon class="h-4 w-4" />
+                <div class="flex flex-col flex-1 p-4 gap-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-xl font-bold text-(--md-sys-color-primary) break-all select-all">
+                            /{{ route.route }}
+                        </div>
+                        <AnzuButton variant="text" class="w-8! h-8! p-0! min-w-0! shrink-0"
+                            @click="copyLink(route.route)" :title="t('common.actions.copyLink')">
+                            <LinkIcon class="h-5 w-5" />
                         </AnzuButton>
                     </div>
+
+                    <div class="min-w-0 flex flex-col gap-1">
+                        <p class="text-sm text-(--md-sys-color-on-surface) truncate" :title="route.image?.file_name">
+                            {{ route.image?.file_name || 'Unknown File' }}
+                        </p>
+                        <p class="text-xs text-(--md-sys-color-on-surface-variant) font-mono truncate"
+                            :title="route.image?.hash">
+                            {{ route.image?.hash }}
+                        </p>
+                    </div>
+                    <div
+                        class="mt-auto flex items-center justify-between pt-3 border-t border-(--md-sys-color-outline-variant)/50">
+                        <span class="text-xs text-(--md-sys-color-on-surface-variant)">
+                            {{ formatDate(route.created_at) }}
+                        </span>
+
+                        <div class="flex items-center gap-1">
+                            <a :href="`/i/r/${route.route}`" target="_blank" class="block">
+                                <AnzuButton variant="text" class="w-8! h-8! p-0! min-w-0!"
+                                    :title="t('common.actions.open')">
+                                    <ArrowTopRightOnSquareIcon class="h-4 w-4" />
+                                </AnzuButton>
+                            </a>
+
+                            <AnzuButton variant="text" class="w-8! h-8! p-0! min-w-0!" @click="deleteRoute(route.route)"
+                                :title="t('common.actions.delete')">
+                                <TrashIcon class="h-4 w-4" />
+                            </AnzuButton>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+        <div class="mt-8 flex justify-center">
+            <AnzuPagination :current-page="currentPage" :total-pages="totalPages" base-url="/routes" />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import { formatDate } from '~/utils/format';
 import { useNotification } from '~/composables/useNotification';
@@ -77,17 +81,16 @@ import { useDialog } from '~/composables/useDialog';
 import { NotificationType } from '~/types/notification';
 import { DialogVariant } from '~/types/dialog';
 import AnzuButton from '~/components/AnzuButton.vue';
+import AnzuPagination from '~/components/AnzuPagination.vue';
 import AnzuProgressRing from '~/components/AnzuProgressRing.vue';
 import { LinkIcon, ArrowTopRightOnSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const { t } = useI18n();
-const { token } = useAuth();
+useAuth();
 const { notify } = useNotification();
 const { confirm } = useDialog();
+const route = useRoute();
 
-if (!token.value) {
-  navigateTo('/login');
-}
 
 interface Route {
     id: number;
@@ -100,17 +103,38 @@ interface Route {
     };
 }
 
+interface RouteListResponse {
+    data: Route[];
+    total: number;
+    page: number;
+    size: number;
+}
+
 const routes = ref<Route[]>([]);
 const loading = ref(true);
+const limit = 20;
+const totalRoutes = ref(0);
+
+const currentPage = computed(() => {
+    const p = Number(route.query.page);
+    return Number.isNaN(p) || p < 1 ? 1 : p;
+});
+
+const totalPages = computed(() => {
+    return Math.ceil(totalRoutes.value / limit);
+});
 
 const fetchRoutes = async () => {
-    if (!token.value) return;
     loading.value = true;
     try {
-        const data = await $fetch<Route[]>('/api/v1/routes', {
-            headers: { Authorization: `Bearer ${token.value}` }
+        const data = await $fetch<RouteListResponse>('/api/v1/routes', {
+            query: {
+                page: currentPage.value,
+                page_size: limit
+            }
         });
-        routes.value = data;
+        routes.value = data.data;
+        totalRoutes.value = data.total;
     } catch (e) {
         notify({
             message: 'Failed to load routes',
@@ -120,6 +144,10 @@ const fetchRoutes = async () => {
         loading.value = false;
     }
 };
+
+watch(currentPage, () => {
+    fetchRoutes();
+});
 
 const deleteRoute = async (routePath: string) => {
     try {
@@ -140,7 +168,6 @@ const deleteRoute = async (routePath: string) => {
 
         await $fetch(`/api/v1/routes/${routePath}`, {
             method: 'DELETE',
-            headers: { Authorization: `Bearer ${token.value}` }
         });
         notify({
             message: t('common.actions.deleteSuccess'),

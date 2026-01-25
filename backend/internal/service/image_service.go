@@ -278,13 +278,23 @@ func (s *ImageService) ListImages(page, pageSize int, tag string, fileName strin
 	return images, total, nil
 }
 
-// GetAllRoutes 获取所有路由信息
-func (s *ImageService) GetAllRoutes() ([]model.ImageRoute, error) {
+// ListRoutes 分页获取路由信息
+func (s *ImageService) ListRoutes(page, pageSize int) ([]model.ImageRoute, int64, error) {
 	var routes []model.ImageRoute
-	if err := s.db.Preload("Image").Find(&routes).Error; err != nil {
-		return nil, err
+	var total int64
+
+	query := s.db.Model(&model.ImageRoute{})
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return routes, nil
+
+	offset := (page - 1) * pageSize
+	if err := query.Preload("Image").Order("created_at DESC").Limit(pageSize).Offset(offset).Find(&routes).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return routes, total, nil
 }
 
 // DeleteRoute 删除指定路由
@@ -361,14 +371,21 @@ func (s *ImageService) UpdateImage(hash string, description string, tags []strin
 	}
 	img.Tags = datatypes.JSON(tagsBytes)
 
-	if err := s.db.Model(&img).Select("Description", "Tags").Updates(img).Error; err != nil {
+	fields := []string{"Description", "Tags"}
+	if fileName != "" {
+		fields = append(fields, "FileName")
+	}
+	if err := s.db.Model(&img).Select(fields).Updates(img).Error; err != nil {
 		return nil, fmt.Errorf("failed to update image: %w", err)
 	}
 
 	return &img, nil
 }
 
-
 func (s *ImageService) DB() *gorm.DB {
 	return s.db
+}
+
+func (s *ImageService) Config() *config.Config {
+	return s.cfg
 }

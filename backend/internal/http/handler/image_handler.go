@@ -31,7 +31,15 @@ func NewImageHandler(cfg *config.Config, db *gorm.DB) *ImageHandler {
 // POST /api/v1/images
 // form-data: file=<file> (can be multiple), route=<optional>, description=<optional>, tags=<optional>
 func (h *ImageHandler) Upload(c *gin.Context) {
-	if err := c.Request.ParseMultipartForm(100 * 1024 * 1024); err != nil {
+	maxTotal := int64(100 * 1024 * 1024)
+	if h.svc != nil {
+		if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadBytes > 0 {
+			maxTotal = cfg.MaxUploadBytes
+		}
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxTotal)
+
+	if err := c.Request.ParseMultipartForm(maxTotal); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file size exceeds limit or invalid form"})
 		return
 	}
@@ -45,6 +53,18 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	files := form.File["file"]
 	if len(files) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+
+	// 文件数量限制
+	maxFiles := 20
+	if h.svc != nil {
+		if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadFiles > 0 {
+			maxFiles = cfg.MaxUploadFiles
+		}
+	}
+	if maxFiles > 0 && len(files) > maxFiles {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "too many files"})
 		return
 	}
 
@@ -94,16 +114,35 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	var results []gin.H
 
 	for i, fileHeader := range files {
+		maxPerFile := int64(60 * 1024 * 1024)
+		if h.svc != nil {
+			if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadFileBytes > 0 {
+				maxPerFile = cfg.MaxUploadFileBytes
+			}
+		}
+		if maxPerFile > 0 && fileHeader.Size > maxPerFile {
+			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "file too large"})
+			continue
+		}
+
 		f, err := fileHeader.Open()
 		if err != nil {
 			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "open file failed: " + err.Error()})
 			continue
 		}
 
-		buf, err := io.ReadAll(f)
+		reader := io.Reader(f)
+		if maxPerFile > 0 {
+			reader = io.LimitReader(f, maxPerFile+1)
+		}
+		buf, err := io.ReadAll(reader)
 		f.Close()
 		if err != nil {
 			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "read file failed: " + err.Error()})
+			continue
+		}
+		if maxPerFile > 0 && int64(len(buf)) > maxPerFile {
+			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "file too large"})
 			continue
 		}
 
@@ -148,7 +187,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		} else {
 			originalFileName = cleanPath
 		}
-		
+
 		if originalFileName == "" || originalFileName == "." || originalFileName == ".." {
 			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "invalid filename"})
 			continue
@@ -345,12 +384,28 @@ func (h *ImageHandler) Update(c *gin.Context) {
 
 // GET /api/v1/routes
 func (h *ImageHandler) ListRoutes(c *gin.Context) {
-	routes, err := h.svc.GetAllRoutes()
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	routes, total, err := h.svc.ListRoutes(page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, routes)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  routes,
+		"total": total,
+		"page":  page,
+		"size":  pageSize,
+	})
 }
 
 // DELETE /api/v1/routes/:route

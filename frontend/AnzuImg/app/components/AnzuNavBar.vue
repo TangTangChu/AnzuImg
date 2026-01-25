@@ -205,7 +205,7 @@
 
         <div class="ml-2 flex min-w-0 items-center gap-1 sm:ml-4 sm:gap-2">
           <!-- User Menu -->
-          <div v-if="token" class="shrink-0">
+          <div v-if="authenticated" class="shrink-0">
             <AnzuDropdown v-model="userMenuOpen" width-class="w-48" panel-class="p-1.5" open-on-hover
               :hover-close-delay="180" @mouseenter="
                 closeAllDropdowns();
@@ -354,12 +354,14 @@ import {
 import { useDropdownController } from "~/composables/useDropdownController";
 import ToggleLocale from "./ToggleLocale.vue";
 import { useAuth } from "~/composables/useAuth";
+import { useAuthState } from "~/composables/useAuthState";
 import { useNotification } from "~/composables/useNotification";
 import { useNavTitle } from "~/composables/useNavTitle";
 import { NotificationType } from "~/types/notification";
 
 const { t } = useI18n();
-const { token, logout, registerPasskey } = useAuth();
+const { logout, registerPasskey } = useAuth();
+const { authenticated } = useAuthState();
 const { notify } = useNotification();
 const route = useRoute();
 const { navTitleBox, reset: resetNavTitle } = useNavTitle();

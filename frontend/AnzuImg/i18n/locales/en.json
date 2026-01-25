@@ -85,6 +85,8 @@
     "setup": {
         "title": "Initial Setup",
         "description": "Please set a system password to secure your instance.",
+        "setupTokenLabel": "Setup Token",
+        "setupTokenPlaceholder": "Required if ANZUIMG_SETUP_TOKEN is set",
         "confirmPasswordLabel": "Confirm Password",
         "submit": "Complete Setup",
         "passwordPlaceholder": "At least 8 chars with upper, lower case and number",

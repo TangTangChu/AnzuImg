@@ -67,6 +67,21 @@ func (h *AuthHandler) CheckInit(c *gin.Context) {
 
 // 设置初始密码
 func (h *AuthHandler) Setup(c *gin.Context) {
+	if h.cfg.SetupToken != "" {
+		if c.GetHeader("X-Setup-Token") != h.cfg.SetupToken {
+			c.JSON(http.StatusForbidden, gin.H{"error": "setup token required"})
+			return
+		}
+	}
+	// 如果没有设置 token，则仅允许本机初始化
+	if h.cfg.SetupToken == "" {
+		ip := c.ClientIP()
+		if ip != "127.0.0.1" && ip != "::1" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "setup is only allowed from localhost"})
+			return
+		}
+	}
+
 	if h.userService.IsInitialized() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "system already initialized"})
 		return
@@ -151,6 +166,12 @@ func (h *AuthHandler) ValidateSession(c *gin.Context) {
 	})
 }
 
+// Logout 注销当前会话
+func (h *AuthHandler) Logout(c *gin.Context) {
+	_ = h.sessionService.RevokeCurrentSession(c)
+	h.sessionService.ClearSessionCookie(c)
+	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
+}
 
 func (h *AuthHandler) RegisterPasskeyBegin(c *gin.Context) {
 	if h.passkeyService == nil {

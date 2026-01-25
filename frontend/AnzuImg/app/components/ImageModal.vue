@@ -165,10 +165,9 @@ import {
   ArrowDownTrayIcon
 } from "@heroicons/vue/24/outline";
 import type { ImageModalProps, ImageModalEmits, ImageDetail } from "~/types/image";
-import { useAuth } from "~/composables/useAuth";
+
 import { formatDate, formatFileSize } from "~/utils/format";
 const { t } = useI18n();
-const { token } = useAuth();
 
 const props = withDefaults(defineProps<ImageModalProps>(), {
   image: null,
@@ -281,12 +280,11 @@ const cancelEdit = () => {
 };
 
 const saveEdit = async () => {
-  if (!displayImage.value || !token.value) return;
+  if (!displayImage.value) return;
   saving.value = true;
   try {
     const updated = await $fetch<ImageDetail>(`/api/v1/images/${displayImage.value.hash}`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token.value}` },
       body: {
         file_name: editForm.value.file_name,
         description: editForm.value.description,
@@ -311,16 +309,11 @@ const saveEdit = async () => {
 };
 
 const fetchImageDetail = async (hash: string) => {
-  if (!token.value) return;
-
   loadingDetail.value = true;
   detailError.value = null;
 
   try {
     const data = await $fetch<ImageDetail>(`/api/v1/images/${hash}/info`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
     });
     detailedImage.value = data;
   } catch (error: any) {

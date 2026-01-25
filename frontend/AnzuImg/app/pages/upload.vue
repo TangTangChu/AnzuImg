@@ -171,12 +171,8 @@ import { useNotification } from '~/composables/useNotification';
 import { NotificationType } from '~/types/notification';
 
 const { t } = useI18n();
-const { token } = useAuth();
+useAuth();
 const { notify } = useNotification();
-
-if (!token.value) {
-    navigateTo('/login');
-}
 
 interface UploadFileItem {
     file: File;
@@ -306,7 +302,6 @@ const startUpload = async () => {
         const data = await $fetch<any[]>('/api/v1/images', {
             method: 'POST',
             body: formData,
-            headers: { Authorization: `Bearer ${token.value}` }
         });
 
         if (Array.isArray(data)) {

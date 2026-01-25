@@ -2,6 +2,7 @@ package service
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -95,28 +96,79 @@ func (s *SessionService) SetSessionCookie(c *gin.Context, token string) {
 		secure = true
 	}
 
-	c.SetCookie(
-		SessionCookieName,
-		token,
-		int(model.SessionExpirationHours*60*60),
-		"/",
-		"",
-		secure,
-		true,   // HttpOnly
-	)
+	maxAge := int(model.SessionExpirationHours * 60 * 60)
+	ss := "Lax"
+	if v, ok := c.Get("cookie_samesite"); ok {
+		if ssv, ok2 := v.(string); ok2 && ssv != "" {
+			ss = ssv
+		}
+	}
+	ssLower := strings.ToLower(ss)
+	if ssLower != "lax" && ssLower != "strict" && ssLower != "none" {
+		ss = "Lax"
+	}
+
+	cookie := &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	}
+	switch strings.ToLower(ss) {
+	case "strict":
+		cookie.SameSite = http.SameSiteStrictMode
+	case "none":
+		cookie.SameSite = http.SameSiteNoneMode
+	}
+
+	if cookie.SameSite == http.SameSiteNoneMode {
+		cookie.Secure = true
+	}
+
+	http.SetCookie(c.Writer, cookie)
 }
 
 // ClearSessionCookie 清除会话Cookie
 func (s *SessionService) ClearSessionCookie(c *gin.Context) {
-	c.SetCookie(
-		SessionCookieName,
-		"",
-		-1, // 立即过期
-		"/",
-		"",
-		false,
-		true,
-	)
+	secure := false
+	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+		secure = true
+	}
+
+	ss := "Lax"
+	if v, ok := c.Get("cookie_samesite"); ok {
+		if ssv, ok2 := v.(string); ok2 && ssv != "" {
+			ss = ssv
+		}
+	}
+	ssLower := strings.ToLower(ss)
+	if ssLower != "lax" && ssLower != "strict" && ssLower != "none" {
+		ss = "Lax"
+	}
+
+	cookie := &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	}
+	switch strings.ToLower(ss) {
+	case "strict":
+		cookie.SameSite = http.SameSiteStrictMode
+	case "none":
+		cookie.SameSite = http.SameSiteNoneMode
+	}
+	if cookie.SameSite == http.SameSiteNoneMode {
+		cookie.Secure = true
+	}
+
+	http.SetCookie(c.Writer, cookie)
 }
 
 // RevokeCurrentSession 撤销当前会话

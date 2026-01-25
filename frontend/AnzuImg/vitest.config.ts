@@ -24,6 +24,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '#imports': new URL('./test/nuxt-imports.ts', import.meta.url).pathname,
       '~': new URL('./app', import.meta.url).pathname,
       '@': new URL('./app', import.meta.url).pathname
     }

@@ -5,6 +5,9 @@
             <p class="mb-6 text-center text-(--md-sys-color-on-surface-variant)">{{ t('setup.description') }}</p>
 
             <form @submit.prevent="handleSetup" class="flex flex-col gap-4">
+                <AnzuInput v-model="setupToken" type="password" :label="t('setup.setupTokenLabel')"
+                    :placeholder="t('setup.setupTokenPlaceholder')" />
+
                 <AnzuInput v-model="password" type="password" :label="t('common.labels.password')"
                     :placeholder="t('setup.passwordPlaceholder')" />
 
@@ -29,6 +32,7 @@ import { NotificationType } from '~/types/notification';
 import { validatePassword } from '~/utils/password';
 
 const { t } = useI18n();
+const setupToken = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 const loading = ref(false);
@@ -58,7 +62,8 @@ const handleSetup = async () => {
 
     loading.value = true;
 
-    const success = await setup(password.value);
+    const token = setupToken.value.trim();
+    const success = await setup(password.value, token ? token : undefined);
     if (success) {
         notify({
             message: t('setup.success'),

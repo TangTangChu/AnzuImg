@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16
@@ -46,10 +44,24 @@ services:
       ANZUIMG_PASSKEY_RP_ID: "localhost"
       ANZUIMG_PASSKEY_RP_ORIGIN: "http://localhost:3000"
       ANZUIMG_PASSKEY_RP_DISPLAY_NAME: "AnzuImg"
+
+      # 生产环境建议设置：初始化保护 token（完成初始化后可移除）
+      ANZUIMG_SETUP_TOKEN: ${ANZUIMG_SETUP_TOKEN:-}
+
+      # 可信代理（宿主机 Nginx / 本机 / 常见内网网段）
+      ANZUIMG_TRUSTED_PROXIES: ${ANZUIMG_TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+
+      # 上传限制
+      ANZUIMG_MAX_UPLOAD_MB: ${ANZUIMG_MAX_UPLOAD_MB:-110}
+      ANZUIMG_MAX_UPLOAD_FILE_MB: ${ANZUIMG_MAX_UPLOAD_FILE_MB:-60}
+      ANZUIMG_MAX_UPLOAD_FILES: ${ANZUIMG_MAX_UPLOAD_FILES:-20}
+
+      # Cookie SameSite
+      ANZUIMG_COOKIE_SAMESITE: ${ANZUIMG_COOKIE_SAMESITE:-Lax}
     volumes:
       - anzuimg-images:/data/images
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
   frontend:
     build:
@@ -60,7 +72,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   anzuimg-db-data:

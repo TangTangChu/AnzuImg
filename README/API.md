@@ -87,6 +87,9 @@ Base URL: `/api/v1/auth`
 
 设置管理员初始密码。仅在 `initialized: false` 时可用。
 
+> [!NOTE]
+> 若服务端设置了 `ANZUIMG_SETUP_TOKEN`，则此接口需要携带请求头：`X-Setup-Token: <token>`。
+
 - **请求**:
   ```json
   {

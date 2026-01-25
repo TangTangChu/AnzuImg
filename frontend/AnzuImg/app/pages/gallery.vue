@@ -72,15 +72,12 @@ import type { Image, ImageListResponse } from "~/types/image";
 import { LinkIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
 
 const { t } = useI18n();
-const { token } = useAuth();
+useAuth();
 const { notify } = useNotification();
 const { confirm } = useDialog();
 const router = useRouter();
 const route = useRoute();
 
-if (!token.value) {
-  navigateTo("/login");
-}
 
 const currentPage = computed(() => {
   const p = Number(route.query.page);
@@ -114,9 +111,6 @@ const {
   error,
   refresh,
 } = await useFetch<ImageListResponse>("/api/v1/images", {
-  headers: {
-    Authorization: `Bearer ${token.value}`,
-  },
   query: computed(() => ({
     page: currentPage.value,
     page_size: limit,
@@ -236,7 +230,6 @@ const deleteImage = async (hash: string) => {
 
     await $fetch(`/api/v1/images/${hash}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token.value}` },
     });
     notify({
       message: t("common.actions.deleteSuccess"),

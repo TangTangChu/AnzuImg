@@ -81,6 +81,8 @@
     "setup": {
         "title": "初期設定",
         "description": "インスタンスを保護するためにシステムパスワードを設定してください。",
+        "setupTokenLabel": "Setup Token",
+        "setupTokenPlaceholder": "ANZUIMG_SETUP_TOKEN を設定した場合は必須",
         "confirmPasswordLabel": "パスワード（確認）",
         "submit": "設定を完了",
         "passwordPlaceholder": "8文字以上、大小文字と数字を含む",

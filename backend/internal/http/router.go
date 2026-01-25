@@ -12,7 +12,10 @@ import (
 func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.SecurityHeaders())
-	r.Use(middleware.CORS(cfg.AllowedOrigins))
+	r.Use(func(c *gin.Context) {
+		c.Set("cookie_samesite", cfg.CookieSameSite)
+		c.Next()
+	})
 	healthH := handler.NewHealthHandler()
 	imageH := handler.NewImageHandler(cfg, db)
 	authH := handler.NewAuthHandler(cfg, db)
@@ -20,8 +23,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 
 	registerHealthRoutes(r, healthH)
 	registerPublicImageRoutes(r, imageH)
-	registerAuthRoutes(r, authH, apiTokenH)
-	registerAPIRoutes(r, healthH, imageH, authH)
+	registerAuthRoutes(r, cfg, authH, apiTokenH)
+	registerAPIRoutes(r, cfg, healthH, imageH, authH)
 
 	return r
 }
@@ -41,12 +44,13 @@ func registerPublicImageRoutes(r *gin.Engine, h *handler.ImageHandler) {
 	}
 }
 
-func registerAuthRoutes(r *gin.Engine, h *handler.AuthHandler, tokenH *handler.APITokenHandler) {
-	auth := r.Group("/api/v1/auth")
+func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandler, tokenH *handler.APITokenHandler) {
+	auth := r.Group("/api/v1/auth", middleware.CORS(cfg.AllowedOrigins))
 	{
 		auth.GET("/status", h.CheckInit)
 		auth.POST("/setup", h.Setup)
 		auth.POST("/login", h.AuthWithPassword)
+		auth.POST("/logout", h.Logout)
 		auth.GET("/validate", h.ValidateSession)
 
 		// Passkey Login
@@ -77,8 +81,8 @@ func registerAuthRoutes(r *gin.Engine, h *handler.AuthHandler, tokenH *handler.A
 	}
 }
 
-func registerAPIRoutes(r *gin.Engine, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler) {
-	api := r.Group("/api/v1", middleware.Session(ah.DB()))
+func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler) {
+	api := r.Group("/api/v1", middleware.CORS(cfg.AllowedOrigins), middleware.Session(ah.DB()))
 	{
 		api.GET("/ping", hh.Ping)
 		api.POST("/images", ih.Upload)

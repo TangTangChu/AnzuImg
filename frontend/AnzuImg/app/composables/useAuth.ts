@@ -1,8 +1,11 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import type { APIToken, CreateTokenResponse } from '~/types/api_token';
+import { navigateTo, useCookie } from '#imports';
+import { useAuthState } from '~/composables/useAuthState';
 
 export const useAuth = () => {
-    const token = useCookie('auth_token');
+    const token = useCookie<string | null>('auth_token');
+    const authState = useAuthState();
 
     const login = async (password: string) => {
         try {
@@ -10,10 +13,12 @@ export const useAuth = () => {
                 method: 'POST',
                 body: { password }
             });
-            token.value = data.token;
+            token.value = null;
+            authState.setAuthenticated(true)
             return true;
         } catch (error: any) {
             console.error('Login failed', error);
+            authState.resetAuth()
             return false;
         }
     };
@@ -28,11 +33,12 @@ export const useAuth = () => {
         }
     };
 
-    const setup = async (password: string) => {
+    const setup = async (password: string, setupToken?: string) => {
         try {
             await $fetch('/api/v1/auth/setup', {
                 method: 'POST',
-                body: { password }
+                body: { password },
+                headers: setupToken ? { 'X-Setup-Token': setupToken } : undefined,
             });
             return true;
         } catch (error: any) {
@@ -41,8 +47,14 @@ export const useAuth = () => {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await $fetch('/api/v1/auth/logout', { method: 'POST' })
+        } catch (error: any) {
+            console.warn('Logout request failed', error)
+        }
         token.value = null;
+        authState.resetAuth()
         navigateTo('/login');
     };
 
@@ -71,10 +83,12 @@ export const useAuth = () => {
                 }
             });
 
-            token.value = finishData.token;
+            token.value = null;
+            authState.setAuthenticated(true)
             return true;
         } catch (error: any) {
             console.error('Passkey login failed', error);
+            authState.resetAuth()
             return false;
         }
     };
@@ -82,9 +96,6 @@ export const useAuth = () => {
     const registerPasskey = async () => {
         try {
             const beginData = await $fetch<any>('/api/v1/auth/passkey/register/begin', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             const publicKey = beginData.creation?.publicKey;
 
@@ -104,7 +115,6 @@ export const useAuth = () => {
                 method: 'POST',
                 body: authResp,
                 headers: {
-                    'Authorization': `Bearer ${token.value}`,
                     'X-Session-ID': beginData.session_id
                 }
             });
@@ -121,9 +131,6 @@ export const useAuth = () => {
         try {
             await $fetch('/api/v1/auth/change-password', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                },
                 body: {
                     current_password: currentPassword,
                     new_password: newPassword
@@ -140,9 +147,6 @@ export const useAuth = () => {
     const listPasskeys = async () => {
         try {
             const data = await $fetch<{ credentials: any[], count: number }>('/api/v1/auth/passkeys', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             return data.credentials;
         } catch (error: any) {
@@ -156,9 +160,6 @@ export const useAuth = () => {
         try {
             await $fetch(`/api/v1/auth/passkeys/${credentialId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             return true;
         } catch (error: any) {
@@ -171,9 +172,6 @@ export const useAuth = () => {
     const checkPasskeyExists = async () => {
         try {
             const data = await $fetch<{ has_passkey: boolean }>('/api/v1/auth/passkeys/check', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             return data.has_passkey;
         } catch (error: any) {
@@ -187,9 +185,6 @@ export const useAuth = () => {
         try {
             const data = await $fetch<CreateTokenResponse>('/api/v1/auth/tokens', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                },
                 body: { name, ip_allowlist: ipAllowlist }
             });
             return data;
@@ -202,9 +197,6 @@ export const useAuth = () => {
     const listAPITokens = async () => {
         try {
             const data = await $fetch<APIToken[]>('/api/v1/auth/tokens', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             return data;
         } catch (error: any) {
@@ -217,9 +209,6 @@ export const useAuth = () => {
         try {
             await $fetch(`/api/v1/auth/tokens/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
             });
             return true;
         } catch (error: any) {

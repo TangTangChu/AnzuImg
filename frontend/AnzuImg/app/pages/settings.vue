@@ -208,13 +208,9 @@ import { TrashIcon } from "@heroicons/vue/24/outline";
 import type { APIToken } from '~/types/api_token';
 
 const { t, locale } = useI18n()
-const { token, changePassword, logout, listPasskeys, deletePasskey, registerPasskey, checkPasskeyExists, createAPIToken, listAPITokens, deleteAPIToken } = useAuth()
+const { changePassword, logout, listPasskeys, deletePasskey, registerPasskey, checkPasskeyExists, createAPIToken, listAPITokens, deleteAPIToken } = useAuth()
 const { notify } = useNotification()
 const { confirm } = useDialog()
-
-if (!token.value) {
-  navigateTo('/login')
-}
 
 const passwordForm = ref({
   currentPassword: '',

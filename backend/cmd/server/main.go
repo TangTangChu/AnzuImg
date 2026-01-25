@@ -226,6 +226,10 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := httpserver.NewRouter(cfg, db)
 
+	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		log.Fatalf("set trusted proxies failed: %v", err)
+	}
+
 	log.Infof("AnzuImg backend listening on %s", cfg.ServerAddr)
 	if err := r.Run(cfg.ServerAddr); err != nil {
 		log.Fatalf("server run failed: %v", err)

@@ -20,6 +20,16 @@ type Config struct {
 	
 	// CORS配置
 	AllowedOrigins []string
+	TrustedProxies []string
+	SetupToken string
+
+	// 上传限制（单位：字节）
+	MaxUploadBytes     int64
+	MaxUploadFileBytes int64
+	MaxUploadFiles     int
+
+	// Cookie SameSite: Lax/Strict/None
+	CookieSameSite string
 	
 	// Passkey配置
 	PasskeyRPID          string
@@ -60,6 +70,23 @@ func getEnvBool(key string, def bool) bool {
 	return def
 }
 
+func getEnvInt64(key string, def int64) int64 {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+func getEnvInt64MB(key string, defMB int64) int64 {
+	mb := getEnvInt64(key, defMB)
+	if mb < 0 {
+		mb = 0
+	}
+	return mb * 1024 * 1024
+}
+
 func Load() *Config {
 	// 解析允许的Origins
 	allowedOrigins := []string{"http://localhost:3000"}
@@ -67,6 +94,14 @@ func Load() *Config {
 		allowedOrigins = strings.Split(originsEnv, ",")
 		for i := range allowedOrigins {
 			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+		}
+	}
+
+	trustedProxies := []string{"127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	if proxiesEnv := os.Getenv("ANZUIMG_TRUSTED_PROXIES"); proxiesEnv != "" {
+		trustedProxies = strings.Split(proxiesEnv, ",")
+		for i := range trustedProxies {
+			trustedProxies[i] = strings.TrimSpace(trustedProxies[i])
 		}
 	}
 	
@@ -85,6 +120,13 @@ func Load() *Config {
 		
 		// CORS配置
 		AllowedOrigins: allowedOrigins,
+		TrustedProxies: trustedProxies,
+		SetupToken:     getEnv("ANZUIMG_SETUP_TOKEN", ""),
+
+		MaxUploadBytes:     getEnvInt64MB("ANZUIMG_MAX_UPLOAD_MB", 110),
+		MaxUploadFileBytes: getEnvInt64MB("ANZUIMG_MAX_UPLOAD_FILE_MB", 60),
+		MaxUploadFiles:     getEnvInt("ANZUIMG_MAX_UPLOAD_FILES", 20),
+		CookieSameSite:     getEnv("ANZUIMG_COOKIE_SAMESITE", "Lax"),
 		
 		// Passkey配置
 		PasskeyRPID:          getEnv("ANZUIMG_PASSKEY_RP_ID", "localhost"),
