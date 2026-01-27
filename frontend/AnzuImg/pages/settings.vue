@@ -55,10 +55,10 @@
 
     <div v-else class="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
       <div v-for="passkey in passkeys" :key="passkey.id"
-        class="relative flex flex-col justify-between rounded-xl border border-(--md-sys-color-outline-variant) p-4 transition-colors">
+        class="relative flex flex-col justify-between rounded-xl border border-(--md-sys-color-outline-variant) p-4 transition-colors min-w-0">
 
         <div class="flex items-start justify-between mb-3">
-          <div class="flex items-start gap-3 overflow-hidden">
+          <div class="flex items-start gap-3 overflow-hidden min-w-0">
             <div
               class="rounded-full bg-(--md-sys-color-secondary-container) p-2.5 text-(--md-sys-color-on-secondary-container) shrink-0">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,12 +96,13 @@
         </div>
 
         <div class="mt-2 pt-3 border-t border-(--md-sys-color-outline-variant) border-opacity-50 space-y-1">
-          <div v-if="passkey.UserAgent" class="text-xs text-(--md-sys-color-on-surface-variant) opacity-75 truncate"
+          <div v-if="passkey.UserAgent"
+            class="text-xs text-(--md-sys-color-on-surface-variant) opacity-75 truncate min-w-0"
             :title="passkey.UserAgent">
             {{ passkey.UserAgent }}
           </div>
           <div class="flex items-center justify-between gap-2">
-            <div class="text-xs text-(--md-sys-color-on-surface-variant) opacity-60 font-mono truncate flex-1"
+            <div class="text-xs text-(--md-sys-color-on-surface-variant) opacity-60 font-mono truncate flex-1 min-w-0"
               :title="passkey.CredentialID">
               ID: {{ passkey.CredentialID }}
             </div>
