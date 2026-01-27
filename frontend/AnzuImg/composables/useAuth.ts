@@ -37,8 +37,10 @@ export const useAuth = () => {
         try {
             await $fetch('/api/v1/auth/setup', {
                 method: 'POST',
-                body: { password },
-                headers: setupToken ? { 'X-Setup-Token': setupToken } : undefined,
+                body: {
+                    password,
+                    setup_token: setupToken
+                },
             });
             return true;
         } catch (error: any) {

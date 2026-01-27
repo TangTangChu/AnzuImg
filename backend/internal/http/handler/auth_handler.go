@@ -44,7 +44,8 @@ type PasswordAuthRequest struct {
 }
 
 type SetupRequest struct {
-	Password string `json:"password" binding:"required,min=8"`
+	Password   string `json:"password" binding:"required,min=8"`
+	SetupToken string `json:"setup_token"`
 }
 
 type ChangePasswordRequest struct {
@@ -67,8 +68,20 @@ func (h *AuthHandler) CheckInit(c *gin.Context) {
 
 // 设置初始密码
 func (h *AuthHandler) Setup(c *gin.Context) {
+	var req SetupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid password (min 8 chars)"})
+		return
+	}
+
+	// 优先从 body 读取 token，其次从 header 读取（向后兼容）
+	setupToken := req.SetupToken
+	if setupToken == "" {
+		setupToken = c.GetHeader("X-Setup-Token")
+	}
+
 	if h.cfg.SetupToken != "" {
-		if c.GetHeader("X-Setup-Token") != h.cfg.SetupToken {
+		if setupToken != h.cfg.SetupToken {
 			c.JSON(http.StatusForbidden, gin.H{"error": "setup token required"})
 			return
 		}
@@ -84,12 +97,6 @@ func (h *AuthHandler) Setup(c *gin.Context) {
 
 	if h.userService.IsInitialized() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "system already initialized"})
-		return
-	}
-
-	var req SetupRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid password (min 8 chars)"})
 		return
 	}
 	if err := h.userService.EnsureAdminExists(); err != nil {
