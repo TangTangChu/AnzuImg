@@ -333,8 +333,8 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, computed, nextTick, watch } from "vue";
 import ToggleTheme from "./ToggleTheme.vue";
-import AnzuDropdown from "@/components/AnzuDropdown.vue";
-import { useClickAway } from "@/composables/useClickAway";
+import AnzuDropdown from "~/components/AnzuDropdown.vue";
+import { useClickAway } from "~/composables/useClickAway";
 import {
   Bars3Icon,
   XMarkIcon,

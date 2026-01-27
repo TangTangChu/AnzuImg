@@ -3,7 +3,7 @@ import {
     NotificationType,
     NotificationPosition,
     type Notification,
-} from "@/types/notification";
+} from "~/types/notification";
 import { ref } from "vue";
 import {
     CheckCircleIcon,

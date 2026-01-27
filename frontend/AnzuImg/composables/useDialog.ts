@@ -7,7 +7,7 @@ import {
     type DialogPosition,
     type DialogVariant,
     type DialogAction,
-} from "@/types/dialog";
+} from "~/types/dialog";
 
 interface DialogInstance extends Dialog {
     resolve?: (value: any) => void;

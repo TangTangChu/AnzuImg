@@ -85,7 +85,7 @@ import {
     DialogVariant,
     type DialogAction,
     type DialogOptions,
-} from "@/types/dialog";
+} from "~/types/dialog";
 import AnzuButton from "./AnzuButton.vue";
 import {
     ExclamationTriangleIcon,
@@ -94,7 +94,7 @@ import {
     InformationCircleIcon,
     QuestionMarkCircleIcon,
 } from "@heroicons/vue/24/outline";
-import { useClickAway } from "@/composables/useClickAway";
+import { useClickAway } from "~/composables/useClickAway";
 
 const props = withDefaults(
     defineProps<

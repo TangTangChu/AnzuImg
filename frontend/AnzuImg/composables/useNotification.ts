@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { NotificationOptions } from '@/types/notification'
+import type { NotificationOptions } from '~/types/notification'
 
 const notificationRef = ref<{
     addNotification: (notification: NotificationOptions) => void

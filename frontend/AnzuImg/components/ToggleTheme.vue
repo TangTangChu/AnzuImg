@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { MoonIcon, SunIcon } from "@heroicons/vue/24/outline";
-import { useColorPalette } from "@/composables/useColorPalette";
-import AnzuDropdown from "@/components/AnzuDropdown.vue";
+import { useColorPalette } from "~/composables/useColorPalette";
+import AnzuDropdown from "~/components/AnzuDropdown.vue";
 
 const { isDark } = useTheme();
 const { primaryColor, setPrimaryColor } = useColorPalette();

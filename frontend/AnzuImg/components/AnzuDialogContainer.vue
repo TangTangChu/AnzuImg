@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useDialog } from "@/composables/useDialog";
+import { useDialog } from "~/composables/useDialog";
 import AnzuDialog from "./AnzuDialog.vue";
 
 const {
