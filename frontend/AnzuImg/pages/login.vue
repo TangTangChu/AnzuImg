@@ -5,9 +5,10 @@
         {{ t("login.title") }}
       </h1>
 
-      <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
-        <AnzuInput v-model="password" type="password" :label="t('common.labels.password')"
-          placeholder="Enter password" />
+      <form @submit.prevent="handleLogin" class="flex flex-col gap-4" autocomplete="on">
+        <input type="text" name="username" autocomplete="username" value="anzuimg" style="display: none;" />
+        <AnzuInput v-model="password" type="password" :label="t('common.labels.password')" placeholder="Enter password"
+          name="password" autocomplete="current-password" />
 
         <AnzuButton type="submit" :status="loading ? 'loading' : 'default'" class="w-full">
           {{ t("common.actions.login") }}

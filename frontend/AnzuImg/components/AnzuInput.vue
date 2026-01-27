@@ -4,7 +4,8 @@
             {{ label }}
         </label>
         <div class="relative">
-            <input :type="type" :value="modelValue" :placeholder="placeholder" :disabled="disabled"
+            <input :type="type" :value="modelValue" :placeholder="placeholder" :disabled="disabled" :name="name"
+                :autocomplete="autocomplete" :readonly="readonly"
                 class="w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-(--md-sys-color-on-surface) outline-none transition-all duration-200 placeholder:text-(--md-sys-color-on-surface-variant)/50"
                 :class="[
                     localError
@@ -45,6 +46,9 @@ interface Props {
     error?: boolean | string;
     disabled?: boolean;
     hint?: string;
+    name?: string;
+    autocomplete?: string;
+    readonly?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -53,6 +57,7 @@ const props = withDefaults(defineProps<Props>(), {
     error: false,
     disabled: false,
     placeholder: "",
+    readonly: false,
 });
 
 const emit = defineEmits<{

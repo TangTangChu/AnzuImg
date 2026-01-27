@@ -6,17 +6,22 @@
     </h2>
     <p class="mb-6 text-(--md-sys-color-on-surface-variant)">{{ t('settings.changePassword.description') }}</p>
 
-    <form @submit.prevent="handleChangePassword" class="flex flex-col gap-4">
+    <form @submit.prevent="handleChangePassword" class="flex flex-col gap-4" autocomplete="on">
+      <input type="text" name="username" autocomplete="username" value="anzuimg" style="display: none;" />
+
       <AnzuInput v-model="passwordForm.currentPassword" type="password"
         :label="t('settings.changePassword.currentPassword')"
-        :placeholder="t('settings.changePassword.currentPasswordPlaceholder')" :disabled="changingPassword" />
+        :placeholder="t('settings.changePassword.currentPasswordPlaceholder')" :disabled="changingPassword"
+        name="current-password" autocomplete="current-password" />
 
       <AnzuInput v-model="passwordForm.newPassword" type="password" :label="t('settings.changePassword.newPassword')"
-        :placeholder="t('settings.changePassword.newPasswordPlaceholder')" :disabled="changingPassword" />
+        :placeholder="t('settings.changePassword.newPasswordPlaceholder')" :disabled="changingPassword"
+        name="new-password" autocomplete="new-password" />
 
       <AnzuInput v-model="passwordForm.confirmPassword" type="password"
         :label="t('settings.changePassword.confirmPassword')"
-        :placeholder="t('settings.changePassword.confirmPasswordPlaceholder')" :disabled="changingPassword" />
+        :placeholder="t('settings.changePassword.confirmPasswordPlaceholder')" :disabled="changingPassword"
+        name="confirm-new-password" autocomplete="new-password" />
 
       <AnzuButton type="submit" :status="changingPassword ? 'loading' : 'default'" class="w-full sm:w-auto">
         {{ t('settings.changePassword.submit') }}
@@ -168,7 +173,7 @@
   ]">
     <div class="flex flex-col gap-4">
       <AnzuInput v-model="tokenForm.name" :label="t('settings.apiTokens.name')"
-        :placeholder="t('settings.apiTokens.namePlaceholder')" />
+        :placeholder="t('settings.apiTokens.namePlaceholder')" name="token-name" autocomplete="off" />
       <AnzuTags v-model="tokenForm.ipAllowlist" :label="t('settings.apiTokens.ipAllowlist')" :max-tags="10"
         :hint="t('settings.apiTokens.ipAllowlistTip')" />
     </div>
@@ -181,7 +186,7 @@
     <div class="flex flex-col gap-4">
       <p class="text-(--md-sys-color-on-surface-variant)">{{ t('settings.apiTokens.tokenCreatedMessage') }}</p>
       <div class="relative">
-        <AnzuInput :model-value="createdTokenRaw" readonly />
+        <AnzuInput :model-value="createdTokenRaw" readonly name="api-token" autocomplete="off" />
         <AnzuButton @click="copyToken" variant="tonal" class="absolute right-1 top-1 bottom-1">
           {{ t('settings.apiTokens.copy') }}
         </AnzuButton>

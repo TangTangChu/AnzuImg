@@ -4,15 +4,18 @@
             <h1 class="mb-2 text-center text-2xl font-bold">{{ t('setup.title') }}</h1>
             <p class="mb-6 text-center text-(--md-sys-color-on-surface-variant)">{{ t('setup.description') }}</p>
 
-            <form @submit.prevent="handleSetup" class="flex flex-col gap-4">
+            <form @submit.prevent="handleSetup" class="flex flex-col gap-4" autocomplete="on">
+                <input type="text" name="username" autocomplete="username" value="anzuimg" style="display: none;" />
+
                 <AnzuInput v-model="setupToken" type="password" :label="t('setup.setupTokenLabel')"
-                    :placeholder="t('setup.setupTokenPlaceholder')" />
+                    :placeholder="t('setup.setupTokenPlaceholder')" name="setup-token" autocomplete="off" />
 
                 <AnzuInput v-model="password" type="password" :label="t('common.labels.password')"
-                    :placeholder="t('setup.passwordPlaceholder')" />
+                    :placeholder="t('setup.passwordPlaceholder')" name="new-password" autocomplete="new-password" />
 
                 <AnzuInput v-model="confirmPassword" type="password" :label="t('setup.confirmPasswordLabel')"
-                    :placeholder="t('setup.confirmPasswordPlaceholder')" />
+                    :placeholder="t('setup.confirmPasswordPlaceholder')" name="confirm-password"
+                    autocomplete="new-password" />
 
                 <AnzuButton type="submit" :status="loading ? 'loading' : 'default'" class="w-full">
                     {{ t('setup.submit') }}
