@@ -39,11 +39,15 @@ services:
       ANZUIMG_DB_SSLMODE: "disable"
 
       ANZUIMG_STORAGE_BASE: "/data/images"
+      ANZUIMG_STORAGE_TYPE: ${ANZUIMG_STORAGE_TYPE:-local}
+
+      # CORS 配置
+      ANZUIMG_ALLOWED_ORIGINS: ${ANZUIMG_ALLOWED_ORIGINS:-http://localhost:3000}
 
       # Passkey配置
-      ANZUIMG_PASSKEY_RP_ID: "localhost"
-      ANZUIMG_PASSKEY_RP_ORIGIN: "http://localhost:3000"
-      ANZUIMG_PASSKEY_RP_DISPLAY_NAME: "AnzuImg"
+      ANZUIMG_PASSKEY_RP_ID: ${ANZUIMG_PASSKEY_RP_ID:-localhost}
+      ANZUIMG_PASSKEY_RP_ORIGIN: ${ANZUIMG_PASSKEY_RP_ORIGIN:-http://localhost:3000}
+      ANZUIMG_PASSKEY_RP_DISPLAY_NAME: ${ANZUIMG_PASSKEY_RP_DISPLAY_NAME:-AnzuImg}
 
       # 生产环境建议设置：初始化保护 token（完成初始化后可移除）
       ANZUIMG_SETUP_TOKEN: ${ANZUIMG_SETUP_TOKEN:-}
