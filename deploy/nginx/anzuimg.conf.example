@@ -2,35 +2,30 @@ server {
   listen 80;
   server_name example.com;
 
-  # 如果你用 HTTPS（推荐），请把此 server 作为 80->443 跳转。
+  # 若HTTPS，但是使用certbot管理更方便
   # return 301 https://$host$request_uri;
 
   client_max_body_size 110m;
 
-  # 通用反向代理头：保证后端能拿到真实 client ip / scheme
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   proxy_set_header X-Forwarded-Proto $scheme;
 
-  # 1) API 直达后端（避免 Nuxt 再代理一层）
   location ^~ /api/ {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:5423;
   }
 
-  # 2) 图片直达后端
   location ^~ /i/ {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:5423;
   }
 
-  # 3) 健康检查
   location = /health {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:5423;
   }
 
-  # 4) 页面与静态资源交给 Nuxt
   location / {
-    proxy_pass http://127.0.0.1:3000;
+    proxy_pass http://127.0.0.1:5423;
   }
 }
 

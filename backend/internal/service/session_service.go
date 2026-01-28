@@ -54,14 +54,22 @@ func (s *SessionService) ValidateSession(c *gin.Context) (*model.Session, error)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 严格的IP地址验证
-	clientIP := c.ClientIP()
-	if clientIP != "" && clientIP != "unknown" && session.IPAddress != "" && session.IPAddress != "unknown" {
-		if clientIP != session.IPAddress {
-			// IP地址不匹配，撤销会话并返回错误
-			_ = model.RevokeSession(s.db, model.HashToken(token))
-			return nil, gorm.ErrRecordNotFound
+	strictIP := false
+	if v, ok := c.Get("strict_session_ip"); ok {
+		if b, ok2 := v.(bool); ok2 {
+			strictIP = b
+		}
+	}
+	if strictIP {
+		clientIP := c.ClientIP()
+		if clientIP != "" && clientIP != "unknown" && session.IPAddress != "" && session.IPAddress != "unknown" {
+			if clientIP != session.IPAddress {
+				// IP地址不匹配，撤销会话并返回错误
+				_ = model.RevokeSession(s.db, model.HashToken(token))
+				return nil, gorm.ErrRecordNotFound
+			}
 		}
 	}
 

@@ -14,6 +14,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r.Use(middleware.SecurityHeaders())
 	r.Use(func(c *gin.Context) {
 		c.Set("cookie_samesite", cfg.CookieSameSite)
+		c.Set("strict_session_ip", cfg.StrictSessionIP)
 		c.Next()
 	})
 	healthH := handler.NewHealthHandler()

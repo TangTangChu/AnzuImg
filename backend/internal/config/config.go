@@ -8,20 +8,20 @@ import (
 
 type Config struct {
 	ServerAddr string
-	DBHost string
-	DBPort int
-	DBUser string
-	DBPass string
-	DBName string
-	DBSSL  string
+	DBHost     string
+	DBPort     int
+	DBUser     string
+	DBPass     string
+	DBName     string
+	DBSSL      string
 
 	StorageBase string
 	StorageType string // "local" 或 "cloud"
-	
+
 	// CORS配置
 	AllowedOrigins []string
 	TrustedProxies []string
-	SetupToken string
+	SetupToken     string
 
 	// 上传限制（单位：字节）
 	MaxUploadBytes     int64
@@ -30,19 +30,21 @@ type Config struct {
 
 	// Cookie SameSite: Lax/Strict/None
 	CookieSameSite string
-	
+	// 是否启用会话严格IP绑定校验
+	StrictSessionIP bool
+
 	// Passkey配置
 	PasskeyRPID          string
 	PasskeyRPOrigin      string
 	PasskeyRPDisplayName string
-	
+
 	// 云端存储配置
-	CloudEndpoint string
-	CloudBucket   string
-	CloudRegion   string
+	CloudEndpoint  string
+	CloudBucket    string
+	CloudRegion    string
 	CloudAccessKey string
 	CloudSecretKey string
-	CloudUseSSL   bool
+	CloudUseSSL    bool
 }
 
 func getEnv(key, def string) string {
@@ -104,7 +106,7 @@ func Load() *Config {
 			trustedProxies[i] = strings.TrimSpace(trustedProxies[i])
 		}
 	}
-	
+
 	return &Config{
 		ServerAddr: getEnv("ANZUIMG_SERVER_ADDR", ":8080"),
 
@@ -117,7 +119,7 @@ func Load() *Config {
 
 		StorageBase: getEnv("ANZUIMG_STORAGE_BASE", "./data/images"),
 		StorageType: getEnv("ANZUIMG_STORAGE_TYPE", "local"),
-		
+
 		// CORS配置
 		AllowedOrigins: allowedOrigins,
 		TrustedProxies: trustedProxies,
@@ -127,12 +129,13 @@ func Load() *Config {
 		MaxUploadFileBytes: getEnvInt64MB("ANZUIMG_MAX_UPLOAD_FILE_MB", 60),
 		MaxUploadFiles:     getEnvInt("ANZUIMG_MAX_UPLOAD_FILES", 20),
 		CookieSameSite:     getEnv("ANZUIMG_COOKIE_SAMESITE", "Lax"),
-		
+		StrictSessionIP:    getEnvBool("ANZUIMG_STRICT_SESSION_IP", false),
+
 		// Passkey配置
 		PasskeyRPID:          getEnv("ANZUIMG_PASSKEY_RP_ID", "localhost"),
 		PasskeyRPOrigin:      getEnv("ANZUIMG_PASSKEY_RP_ORIGIN", "http://localhost:8080"),
 		PasskeyRPDisplayName: getEnv("ANZUIMG_PASSKEY_RP_DISPLAY_NAME", "AnzuImg"),
-		
+
 		// 云端存储配置
 		CloudEndpoint:  getEnv("ANZUIMG_CLOUD_ENDPOINT", "s3.amazonaws.com"),
 		CloudBucket:    getEnv("ANZUIMG_CLOUD_BUCKET", "anzuimg-bucket"),

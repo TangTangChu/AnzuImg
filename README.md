@@ -34,6 +34,10 @@ ANZUIMG_MAX_UPLOAD_FILES=20
 # Cookie SameSite: Lax / Strict / None
 ANZUIMG_COOKIE_SAMESITE=Lax
 
+# Strict session IP binding (true/false)
+# 会话严格IP绑定校验，默认关闭
+ANZUIMG_STRICT_SESSION_IP=false
+
 # Passkey Configuration (WebAuthn/FIDO2)
 ANZUIMG_PASSKEY_RP_ID=localhost
 ANZUIMG_PASSKEY_RP_ORIGIN=http://localhost:8080

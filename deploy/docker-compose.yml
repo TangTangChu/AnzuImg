@@ -62,10 +62,12 @@ services:
 
       # Cookie SameSite
       ANZUIMG_COOKIE_SAMESITE: ${ANZUIMG_COOKIE_SAMESITE:-Lax}
+
+      ANZUIMG_STRICT_SESSION_IP: ${ANZUIMG_STRICT_SESSION_IP:-false}
     volumes:
       - anzuimg-images:/data/images
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:5423:8080"
 
   frontend:
     build:
@@ -73,8 +75,6 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: anzuimg-frontend
     restart: always
-    depends_on:
-      - backend
     ports:
       - "127.0.0.1:3000:3000"
 
