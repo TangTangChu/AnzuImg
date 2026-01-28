@@ -67,7 +67,7 @@ services:
     volumes:
       - anzuimg-images:/data/images
     ports:
-      - "127.0.0.1:5423:8080"
+      - "127.0.0.1:8000:8080"
 
   frontend:
     build:
@@ -76,7 +76,7 @@ services:
     container_name: anzuimg-frontend
     restart: always
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:5423:3000"
 
 volumes:
   anzuimg-db-data:

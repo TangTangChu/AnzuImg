@@ -13,15 +13,15 @@ server {
   proxy_set_header X-Forwarded-Proto $scheme;
 
   location ^~ /api/ {
-    proxy_pass http://127.0.0.1:5423;
+    proxy_pass http://127.0.0.1:8000;
   }
 
   location ^~ /i/ {
-    proxy_pass http://127.0.0.1:5423;
+    proxy_pass http://127.0.0.1:8000;
   }
 
   location = /health {
-    proxy_pass http://127.0.0.1:5423;
+    proxy_pass http://127.0.0.1:8000;
   }
 
   location / {
