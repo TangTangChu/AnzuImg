@@ -175,8 +175,9 @@ func ConvertImage(reader io.Reader, targetFormat string, quality int, effort int
 		mimeType = "image/webp"
 	case "avif":
 		buf, err = img.HeifsaveBuffer(&vips.HeifsaveBufferOptions{
-			Q:      quality,
-			Effort: effort,
+			Q:           quality,
+			Effort:      effort,
+			Compression: vips.HeifCompressionAv1,
 		})
 		mimeType = "image/avif"
 	}
