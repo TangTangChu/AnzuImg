@@ -41,12 +41,20 @@ services:
       ANZUIMG_STORAGE_BASE: "/data/images"
       ANZUIMG_STORAGE_TYPE: ${ANZUIMG_STORAGE_TYPE:-local}
 
+      # 云存储配置 (S3)
+      ANZUIMG_CLOUD_ENDPOINT: ${ANZUIMG_CLOUD_ENDPOINT:-}
+      ANZUIMG_CLOUD_BUCKET: ${ANZUIMG_CLOUD_BUCKET:-}
+      ANZUIMG_CLOUD_REGION: ${ANZUIMG_CLOUD_REGION:-}
+      ANZUIMG_CLOUD_ACCESS_KEY: ${ANZUIMG_CLOUD_ACCESS_KEY:-}
+      ANZUIMG_CLOUD_SECRET_KEY: ${ANZUIMG_CLOUD_SECRET_KEY:-}
+      ANZUIMG_CLOUD_USE_SSL: ${ANZUIMG_CLOUD_USE_SSL:-true}
+
       # CORS 配置
-      ANZUIMG_ALLOWED_ORIGINS: ${ANZUIMG_ALLOWED_ORIGINS:-http://localhost:3000}
+      ANZUIMG_ALLOWED_ORIGINS: ${ANZUIMG_ALLOWED_ORIGINS:-http://localhost:9200}
 
       # Passkey配置
       ANZUIMG_PASSKEY_RP_ID: ${ANZUIMG_PASSKEY_RP_ID:-localhost}
-      ANZUIMG_PASSKEY_RP_ORIGIN: ${ANZUIMG_PASSKEY_RP_ORIGIN:-http://localhost:3000}
+      ANZUIMG_PASSKEY_RP_ORIGIN: ${ANZUIMG_PASSKEY_RP_ORIGIN:-http://localhost:9200}
       ANZUIMG_PASSKEY_RP_DISPLAY_NAME: ${ANZUIMG_PASSKEY_RP_DISPLAY_NAME:-AnzuImg}
 
       # 生产环境建议设置：初始化保护 token（完成初始化后可移除）
@@ -67,7 +75,7 @@ services:
     volumes:
       - anzuimg-images:/data/images
     ports:
-      - "127.0.0.1:8000:8080"
+      - "127.0.0.1:9211:8080"
 
   frontend:
     build:
@@ -75,8 +83,11 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: anzuimg-frontend
     restart: always
+    environment:
+      # Nuxt服务端请求后端 (容器间通信)
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
     ports:
-      - "127.0.0.1:5423:3000"
+      - "127.0.0.1:9200:3000"
 
 volumes:
   anzuimg-db-data:

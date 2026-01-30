@@ -9,78 +9,90 @@
 使用前请先配置.env文件，样例文件位于`deploy/.env.example`中
 
 ```
-# PostgreSQL
+
+# 后端配置
+
+# 监听地址
+ANZUIMG_SERVER_ADDR=:8080
+
+# 数据库
+# 主机地址
+ANZUIMG_DB_HOST=db
+ANZUIMG_DB_PORT=5432
 ANZUIMG_DB_USER=anzuuser
 ANZUIMG_DB_PASSWORD=anzupass
 ANZUIMG_DB_NAME=anzuimg
+# SSL模式: disable, require, verify-full
+ANZUIMG_DB_SSLMODE=disable
 
-# CORS Configuration
-# CORS 配置，配置允许的Origin
-ANZUIMG_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+# 存储 local / cloud
+ANZUIMG_STORAGE_TYPE=local
+# 本地存储路径
+ANZUIMG_STORAGE_BASE=/data/images
 
-# Trusted proxies (Gin ClientIP)
-# 逗号分隔；建议只信任宿主机 Nginx / 本机回环 / docker 内网段
+# S3云存储配置，当 TYPE=cloud 时生效
+ANZUIMG_CLOUD_ENDPOINT=s3.amazonaws.com
+ANZUIMG_CLOUD_BUCKET=anzuimg-bucket
+ANZUIMG_CLOUD_REGION=us-east-1
+ANZUIMG_CLOUD_ACCESS_KEY=
+ANZUIMG_CLOUD_SECRET_KEY=
+ANZUIMG_CLOUD_USE_SSL=true
+
+# 网络/安全
+# 允许跨域的源，通常就是前端访问地址
+ANZUIMG_ALLOWED_ORIGINS=http://localhost:9200
+# 信任代理网段 ，用于获取真实IP
 ANZUIMG_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-
-# Setup protection: require header X-Setup-Token for POST /api/v1/auth/setup
-# 首次初始化时请临时设置一个随机值，初始化完成后可移除。
+# 初始化设置Token ，留空则不校验，但是在生产环境中将不接受外网访问
 ANZUIMG_SETUP_TOKEN=
-
-# Upload limits (MB)
-ANZUIMG_MAX_UPLOAD_MB=110
-ANZUIMG_MAX_UPLOAD_FILE_MB=60
-ANZUIMG_MAX_UPLOAD_FILES=20
-
-# Cookie SameSite: Lax / Strict / None
+# Cookie SameSite策略：Lax/Strict
 ANZUIMG_COOKIE_SAMESITE=Lax
-
-# Strict session IP binding (true/false)
-# 会话严格IP绑定校验，默认关闭
+# 严格Session IP绑定
 ANZUIMG_STRICT_SESSION_IP=false
 
-# Passkey Configuration (WebAuthn/FIDO2)
+# Passkey (WebAuthn)
+# 一般填写域名 youdomain.cn
 ANZUIMG_PASSKEY_RP_ID=localhost
-ANZUIMG_PASSKEY_RP_ORIGIN=http://localhost:8080
+# 一般填写浏览器访问的完整URL
+ANZUIMG_PASSKEY_RP_ORIGIN=http://localhost:9200
 ANZUIMG_PASSKEY_RP_DISPLAY_NAME=AnzuImg
 
-# Storage Configuration
-# Storage type: "local" or "cloud"
-ANZUIMG_STORAGE_TYPE=local
-ANZUIMG_STORAGE_BASE=./data/images
+# 上传限制
+# 单次请求最大体积 (MB)
+ANZUIMG_MAX_UPLOAD_MB=110
+# 单个文件最大体积 (MB)
+ANZUIMG_MAX_UPLOAD_FILE_MB=60
+# 单词请求最大文件数
+ANZUIMG_MAX_UPLOAD_FILES=20
 
-# CloudFlare R1 Configuration
-ANZUIMG_CLOUD_ENDPOINT=https://r2.cloudflarestorage.com
-ANZUIMG_CLOUD_BUCKET=your-bucket-name
-ANZUIMG_CLOUD_REGION=auto
-ANZUIMG_CLOUD_ACCESS_KEY=your-access-key-id
-ANZUIMG_CLOUD_SECRET_KEY=your-secret-access-key
-ANZUIMG_CLOUD_USE_SSL=true
+# 前端配置
+# 后端API地址
+BACKEND_URL=http://backend:8080
 
 ```
 
 使用docker
 
 ```bash
-docker compose -f deploy/docker-compose.yml -d
+docker compose -f deploy/docker-compose.yml up -d
 ```
-
-> [!NOTE]
->
-> 首次运行，需要完成**系统初始化**
->
-> 生产环境建议在 `.env` 中设置一次性初始化口令 `ANZUIMG_SETUP_TOKEN`（初始化完成后可移除），用于防止初始化接口被抢占.
 
 > [!CAUTION]
 >
-> 如果没有配置 `ANZUIMG_SETUP_TOKEN`，后端将只接受本地路径访问进行初始化
+> 首次运行，前端将引导进行初始化密码，如果没有配置 `ANZUIMG_SETUP_TOKEN`，后端将只接受本地路径访问进行初始化
+>
+> 如果使用了CDN服务，请关闭严格IP模式，否则无法正常访问控制服务
+>
 > 务必正确配置CORS
+>
+> cloud存储策略我没有测试过
 
 ### 生产部署建议
 
 虽然说，Nuxt前端的Nitro服务器配置了Proxy代理，可以代理请求到后端，但是还是推荐把 **宿主机 Nginx 作为唯一对外入口**，即：
 
-- `/api/**`、`/i/**` 直接反代到后端 `127.0.0.1:8080`
-- 其他页面与静态资源反代到前端 `127.0.0.1:3000`
+- `/api/**`、`/i/**` 直接反代到后端 `127.0.0.1:9211`
+- 其他页面与静态资源反代到前端 `127.0.0.1:9200`
 
 示例配置见 [`deploy/nginx/anzuimg.conf.example`](deploy/nginx/anzuimg.conf.example)。
 

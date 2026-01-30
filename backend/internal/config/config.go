@@ -91,7 +91,7 @@ func getEnvInt64MB(key string, defMB int64) int64 {
 
 func Load() *Config {
 	// 解析允许的Origins
-	allowedOrigins := []string{"http://localhost:3000"}
+	allowedOrigins := []string{"http://localhost:9200"}
 	if originsEnv := os.Getenv("ANZUIMG_ALLOWED_ORIGINS"); originsEnv != "" {
 		allowedOrigins = strings.Split(originsEnv, ",")
 		for i := range allowedOrigins {

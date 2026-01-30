@@ -6,6 +6,7 @@
     </main>
     <AnzuNotification ref="notificationRef" />
     <AnzuDialogContainer />
+    <PageFooter />
   </div>
 </template>
 
