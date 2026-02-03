@@ -1,5 +1,5 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import type { APIToken, CreateTokenResponse } from '~/types/api_token';
+import type { APIToken, APITokenLogListResponse, CreateTokenResponse } from '~/types/api_token';
 import { navigateTo, useCookie } from '#imports';
 import { useAuthState } from '~/composables/useAuthState';
 
@@ -165,8 +165,15 @@ export const useAuth = () => {
             });
             return true;
         } catch (error: any) {
-            console.error('Delete passkey failed', error);
-            return false;
+            try {
+                await $fetch(`/api/v1/auth/passkeys/${credentialId}/delete`, {
+                    method: 'POST',
+                });
+                return true;
+            } catch (fallbackError: any) {
+                console.error('Delete passkey failed', fallbackError);
+                return false;
+            }
         }
     };
 
@@ -183,11 +190,11 @@ export const useAuth = () => {
     };
 
     // API Token Management
-    const createAPIToken = async (name: string, ipAllowlist: string[]) => {
+    const createAPIToken = async (name: string, ipAllowlist: string[], tokenType: string) => {
         try {
             const data = await $fetch<CreateTokenResponse>('/api/v1/auth/tokens', {
                 method: 'POST',
-                body: { name, ip_allowlist: ipAllowlist }
+                body: { name, ip_allowlist: ipAllowlist, token_type: tokenType }
             });
             return data;
         } catch (error: any) {
@@ -214,8 +221,48 @@ export const useAuth = () => {
             });
             return true;
         } catch (error: any) {
-            console.error('Delete API token failed', error);
-            return false;
+            try {
+                await $fetch(`/api/v1/auth/tokens/${id}/delete`, {
+                    method: 'POST',
+                });
+                return true;
+            } catch (fallbackError: any) {
+                console.error('Delete API token failed', fallbackError);
+                return false;
+            }
+        }
+    };
+
+    const listAPITokenLogs = async (page = 1, pageSize = 20) => {
+        try {
+            const data = await $fetch<APITokenLogListResponse>('/api/v1/auth/tokens/logs', {
+                query: { page, page_size: pageSize }
+            });
+            return data;
+        } catch (error: any) {
+            console.error('List API token logs failed', error);
+            return { data: [], total: 0, page, size: pageSize } as APITokenLogListResponse;
+        }
+    };
+
+    const cleanupAPITokenLogs = async (days: number) => {
+        try {
+            const data = await $fetch<{ deleted: number; cutoff: string }>('/api/v1/auth/tokens/logs', {
+                method: 'DELETE',
+                query: { days }
+            });
+            return data;
+        } catch (error: any) {
+            try {
+                const data = await $fetch<{ deleted: number; cutoff: string }>('/api/v1/auth/tokens/logs/cleanup', {
+                    method: 'POST',
+                    body: { days }
+                });
+                return data;
+            } catch (fallbackError: any) {
+                console.error('Cleanup API token logs failed', fallbackError);
+                return null;
+            }
         }
     };
 
@@ -233,6 +280,8 @@ export const useAuth = () => {
         checkPasskeyExists,
         createAPIToken,
         listAPITokens,
-        deleteAPIToken
+        deleteAPIToken,
+        listAPITokenLogs,
+        cleanupAPITokenLogs
     };
 }

@@ -127,7 +127,8 @@
         "detailLoadFailed": "Failed to load details",
         "updated": "Updated",
         "routes": "Route Mappings",
-        "urls": "Access URLs"
+        "urls": "Access URLs",
+        "uploadedByToken": "Uploaded via API Token"
     },
     "tags": {
         "addPlaceholder": "Add tag...",
@@ -185,8 +186,16 @@
             "noTokens": "No service tokens found",
             "name": "Token Name",
             "namePlaceholder": "e.g., Docker Backup",
+            "tokenType": "Token Type",
+            "tokenTypePlaceholder": "Select a token type",
+            "tokenTypes": {
+                "full": "Full Access",
+                "upload": "Upload + List",
+                "list": "List Only"
+            },
             "ipAllowlist": "IP Allowlist",
             "ipAllowlistTip": "Enter IP or CIDR (e.g. 192.168.1.0/24) and press Enter. Leave empty to allow all IPs.",
+            "anyIP": "Any IP",
             "created": "Created At",
             "lastUsed": "Last Used",
             "neverUsed": "Never",
@@ -195,7 +204,27 @@
             "tokenCreatedTitle": "Token Generated",
             "tokenCreatedMessage": "Please copy this token now. For security reasons, it will not be shown again.",
             "copy": "Copy",
-            "copySuccess": "Token copied"
+            "copySuccess": "Token copied",
+            "logsTitle": "Token Logs",
+            "logsDescription": "Recent API token activities.",
+            "logsEmpty": "No token logs found",
+            "refreshLogs": "Refresh",
+            "cleanupTitle": "Cleanup Logs",
+            "cleanupButton": "Cleanup",
+            "cleanupDaysPlaceholder": "Days",
+            "cleanupInvalidDays": "Please enter a valid number of days",
+            "cleanupConfirm": "Delete logs older than {days} days?",
+            "cleanupSuccess": "Deleted {count} logs",
+            "cleanupFailed": "Cleanup failed",
+            "logToken": "Token",
+            "logIP": "IP",
+            "logImage": "Image",
+            "logActions": {
+                "tokenCreate": "Token created",
+                "tokenDelete": "Token deleted",
+                "imageUpload": "Image uploaded",
+                "imageList": "Image list"
+            }
         }
     },
     "routes": {

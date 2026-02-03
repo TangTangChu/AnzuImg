@@ -7,6 +7,7 @@ import (
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/handler"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
+	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
 func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
@@ -48,6 +49,7 @@ func registerPublicImageRoutes(r *gin.Engine, h *handler.ImageHandler) {
 func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandler, tokenH *handler.APITokenHandler) {
 	auth := r.Group("/api/v1/auth", middleware.CORS(cfg.AllowedOrigins))
 	{
+		auth.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
 		auth.GET("/status", h.CheckInit)
 		auth.POST("/setup", h.Setup)
 		auth.POST("/login", h.AuthWithPassword)
@@ -71,6 +73,7 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 		protectedAuth.GET("/passkeys/count", h.GetPasskeyCount)
 		protectedAuth.GET("/passkeys/check", h.CheckPasskeyExists)
 		protectedAuth.DELETE("/passkeys/:credential_id", h.DeletePasskey)
+		protectedAuth.POST("/passkeys/:credential_id/delete", h.DeletePasskey)
 
 		// Password Management
 		protectedAuth.POST("/change-password", h.ChangePassword)
@@ -78,21 +81,35 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 		// API Token Management
 		protectedAuth.POST("/tokens", tokenH.Create)
 		protectedAuth.GET("/tokens", tokenH.List)
+		protectedAuth.GET("/tokens/logs", tokenH.ListLogs)
+		protectedAuth.DELETE("/tokens/logs", tokenH.CleanupLogs)
+		protectedAuth.POST("/tokens/logs/cleanup", tokenH.CleanupLogs)
 		protectedAuth.DELETE("/tokens/:id", tokenH.Delete)
+		protectedAuth.POST("/tokens/:id/delete", tokenH.Delete)
 	}
 }
 
 func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler) {
 	api := r.Group("/api/v1", middleware.CORS(cfg.AllowedOrigins), middleware.Session(ah.DB()))
 	{
-		api.GET("/ping", hh.Ping)
-		api.POST("/images", ih.Upload)
-		api.GET("/images", ih.List)
-		api.GET("/tags", ih.ListTags)
-		api.GET("/images/:hash/info", ih.GetInfo)
-		api.DELETE("/images/:hash", ih.Delete)
-		api.PATCH("/images/:hash", ih.Update)
-		api.GET("/routes", ih.ListRoutes)
-		api.DELETE("/routes/:route", ih.DeleteRoute)
+		api.GET("/ping", middleware.RequireTokenType(model.TokenTypeFull), hh.Ping)
+		api.POST("/images", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.Upload)
+		api.GET("/images", middleware.RequireTokenScopes(model.ScopeImagesList), ih.List)
+		api.GET("/tags", middleware.RequireTokenType(model.TokenTypeFull), ih.ListTags)
+		api.GET("/images/:hash/info", middleware.RequireTokenType(model.TokenTypeFull), ih.GetInfo)
+		api.DELETE("/images/:hash", middleware.RequireTokenType(model.TokenTypeFull), ih.Delete)
+		api.POST("/images/:hash/delete", middleware.RequireTokenType(model.TokenTypeFull), ih.Delete)
+		api.PATCH("/images/:hash", middleware.RequireTokenType(model.TokenTypeFull), ih.Update)
+		api.GET("/routes", middleware.RequireTokenType(model.TokenTypeFull), ih.ListRoutes)
+		api.DELETE("/routes/:route", middleware.RequireTokenType(model.TokenTypeFull), ih.DeleteRoute)
+		api.POST("/routes/:route/delete", middleware.RequireTokenType(model.TokenTypeFull), ih.DeleteRoute)
+
+		api.OPTIONS("/ping", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/images", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/tags", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/images/:hash/info", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/images/:hash", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/routes", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/routes/:route", func(c *gin.Context) { c.Status(204) })
 	}
 }

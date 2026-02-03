@@ -28,6 +28,13 @@ const getEnabled = (enabled?: ClickAwayEnabled) => {
 const onDocumentPointerDown = (event: Event) => {
     const targetNode = event.target as Node | null;
     if (!targetNode) return;
+
+    if (targetNode instanceof Element) {
+        if (targetNode.closest('[data-click-away-ignore="true"]')) {
+            return;
+        }
+    }
+
     const snapshot = entries.slice();
 
     for (const entry of snapshot) {

@@ -84,6 +84,7 @@ func (h *AuthHandler) Setup(c *gin.Context) {
 		if setupToken != h.cfg.SetupToken {
 			c.JSON(http.StatusForbidden, gin.H{"error": "setup token required"})
 			return
+
 		}
 	}
 	// 如果没有设置 token，则仅允许本机初始化

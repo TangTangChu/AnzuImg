@@ -114,7 +114,8 @@
         "noImages": "이미지가 없습니다",
         "downloadStarted": "다운로드가 시작되었습니다",
         "previous": "이전",
-        "next": "다음"
+        "next": "다음",
+        "uploadedByToken": "API 토큰으로 업로드"
     },
     "tags": {
         "addPlaceholder": "태그 추가...",
@@ -165,6 +166,52 @@
             "lastUsed": "마지막 사용",
             "registerSuccess": "PassKey가 등록되었습니다",
             "registerFailed": "PassKey 등록에 실패했습니다"
+        },
+        "apiTokens": {
+            "description": "외부 서비스가 API에 접근할 수 있도록 영구 토큰을 생성합니다. IP 허용 목록을 지원합니다.",
+            "createNew": "새 토큰 생성",
+            "noTokens": "서비스 토큰이 없습니다",
+            "name": "토큰 이름",
+            "namePlaceholder": "예: Docker Backup",
+            "tokenType": "토큰 유형",
+            "tokenTypePlaceholder": "토큰 유형 선택",
+            "tokenTypes": {
+                "full": "전체 권한",
+                "upload": "업로드 + 목록",
+                "list": "목록만"
+            },
+            "ipAllowlist": "IP 허용 목록",
+            "ipAllowlistTip": "IP 또는 CIDR (예: 192.168.1.0/24)을 입력하고 Enter를 누르세요. 비워두면 모든 IP 허용.",
+            "anyIP": "모든 IP",
+            "created": "생성일",
+            "lastUsed": "마지막 사용",
+            "neverUsed": "사용 안 함",
+            "createSuccess": "토큰이 생성되었습니다",
+            "createFailed": "토큰 생성 실패",
+            "tokenCreatedTitle": "토큰 생성됨",
+            "tokenCreatedMessage": "보안을 위해 이 토큰은 다시 표시되지 않습니다. 지금 복사하세요.",
+            "copy": "복사",
+            "copySuccess": "토큰이 복사되었습니다",
+            "logsTitle": "토큰 로그",
+            "logsDescription": "최근 API 토큰 활동 기록입니다.",
+            "logsEmpty": "토큰 로그가 없습니다",
+            "refreshLogs": "새로고침",
+            "cleanupTitle": "로그 정리",
+            "cleanupButton": "일괄 정리",
+            "cleanupDaysPlaceholder": "일수",
+            "cleanupInvalidDays": "유효한 일수를 입력하세요",
+            "cleanupConfirm": "{days}일 이전 로그를 삭제합니다. 계속할까요?",
+            "cleanupSuccess": "로그 {count}건을 삭제했습니다",
+            "cleanupFailed": "정리에 실패했습니다",
+            "logToken": "토큰",
+            "logIP": "IP",
+            "logImage": "이미지",
+            "logActions": {
+                "tokenCreate": "토큰 생성",
+                "tokenDelete": "토큰 삭제",
+                "imageUpload": "이미지 업로드",
+                "imageList": "이미지 목록"
+            }
         }
     },
     "routes": {

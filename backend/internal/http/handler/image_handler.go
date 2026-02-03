@@ -31,6 +31,12 @@ func NewImageHandler(cfg *config.Config, db *gorm.DB) *ImageHandler {
 // POST /api/v1/images
 // form-data: file=<file> (can be multiple), route=<optional>, description=<optional>, tags=<optional>
 func (h *ImageHandler) Upload(c *gin.Context) {
+	var uploaderToken *model.APIToken
+	if v, ok := c.Get("api_token"); ok {
+		if t, ok2 := v.(*model.APIToken); ok2 {
+			uploaderToken = t
+		}
+	}
 	maxTotal := int64(100 * 1024 * 1024)
 	if h.svc != nil {
 		if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadBytes > 0 {
@@ -217,10 +223,34 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			}
 		}
 
-		res, err := h.svc.Upload(buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convert, targetFormat, quality, effort)
+		var uploadedByTokenID *uint
+		var uploadedByTokenName string
+		var uploadedByTokenType string
+		if uploaderToken != nil {
+			uploadedByTokenID = &uploaderToken.ID
+			uploadedByTokenName = uploaderToken.Name
+			uploadedByTokenType = uploaderToken.NormalizedType()
+		}
+
+		res, err := h.svc.Upload(buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convert, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
 		if err != nil {
 			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": err.Error()})
 			continue
+		}
+
+		if uploaderToken != nil {
+			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			_ = tokenSvc.RecordLog(&model.APITokenLog{
+				TokenID:   uploaderToken.ID,
+				TokenName: uploaderToken.Name,
+				TokenType: uploaderToken.NormalizedType(),
+				Action:    "image_upload",
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				IPAddress: c.ClientIP(),
+				UserAgent: c.Request.UserAgent(),
+				ImageHash: res.Image.Hash,
+			})
 		}
 
 		results = append(results, gin.H{
@@ -315,6 +345,22 @@ func (h *ImageHandler) List(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	if v, ok := c.Get("api_token"); ok {
+		if token, ok2 := v.(*model.APIToken); ok2 && token != nil {
+			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			_ = tokenSvc.RecordLog(&model.APITokenLog{
+				TokenID:   token.ID,
+				TokenName: token.Name,
+				TokenType: token.NormalizedType(),
+				Action:    "image_list",
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.RequestURI(),
+				IPAddress: c.ClientIP(),
+				UserAgent: c.Request.UserAgent(),
+			})
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -470,17 +516,20 @@ func (h *ImageHandler) GetInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"hash":        img.Hash,
-		"file_name":   img.FileName,
-		"mime_type":   img.MimeType,
-		"size":        img.Size,
-		"width":       img.Width,
-		"height":      img.Height,
-		"description": img.Description,
-		"tags":        img.Tags,
-		"created_at":  img.CreatedAt,
-		"updated_at":  img.UpdatedAt,
-		"routes":      routes,
+		"hash":                   img.Hash,
+		"file_name":              img.FileName,
+		"mime_type":              img.MimeType,
+		"size":                   img.Size,
+		"width":                  img.Width,
+		"height":                 img.Height,
+		"description":            img.Description,
+		"tags":                   img.Tags,
+		"uploaded_by_token_id":   img.UploadedByTokenID,
+		"uploaded_by_token_name": img.UploadedByTokenName,
+		"uploaded_by_token_type": img.UploadedByTokenType,
+		"created_at":             img.CreatedAt,
+		"updated_at":             img.UpdatedAt,
+		"routes":                 routes,
 	})
 }
 

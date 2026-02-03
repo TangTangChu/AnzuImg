@@ -128,7 +128,8 @@
         "detailLoadFailed": "加载详细信息失败",
         "updated": "更新",
         "routes": "路由映射",
-        "urls": "访问链接"
+        "urls": "访问链接",
+        "uploadedByToken": "API Token 上传"
     },
     "tags": {
         "addPlaceholder": "添加标签...",
@@ -186,8 +187,16 @@
             "noTokens": "暂无服务令牌",
             "name": "令牌名称",
             "namePlaceholder": "例如：Docker Backup",
+            "tokenType": "令牌类型",
+            "tokenTypePlaceholder": "选择令牌类型",
+            "tokenTypes": {
+                "full": "完全权限",
+                "upload": "上传 + 检索",
+                "list": "仅检索"
+            },
             "ipAllowlist": "IP 白名单",
             "ipAllowlistTip": "输入 IP 或 CIDR (如 192.168.1.0/24) 并回车。留空则允许所有 IP。",
+            "anyIP": "任意 IP",
             "created": "创建于",
             "lastUsed": "最后使用",
             "neverUsed": "未使用",
@@ -196,7 +205,27 @@
             "tokenCreatedTitle": "令牌已生成",
             "tokenCreatedMessage": "请务必现在复制此令牌。出于安全原因，它将无法再次显示。",
             "copy": "复制",
-            "copySuccess": "令牌已复制"
+            "copySuccess": "令牌已复制",
+            "logsTitle": "令牌日志",
+            "logsDescription": "近期 API 令牌活动记录。",
+            "logsEmpty": "暂无令牌日志",
+            "refreshLogs": "刷新",
+            "cleanupTitle": "清理日志",
+            "cleanupButton": "一键清理",
+            "cleanupDaysPlaceholder": "天数",
+            "cleanupInvalidDays": "请输入有效天数",
+            "cleanupConfirm": "将清理 {days} 天前的日志，是否继续？",
+            "cleanupSuccess": "已清理 {count} 条日志",
+            "cleanupFailed": "清理失败",
+            "logToken": "令牌",
+            "logIP": "IP",
+            "logImage": "图像",
+            "logActions": {
+                "tokenCreate": "令牌已创建",
+                "tokenDelete": "令牌已删除",
+                "imageUpload": "上传图片",
+                "imageList": "检索列表"
+            }
         }
     },
     "routes": {

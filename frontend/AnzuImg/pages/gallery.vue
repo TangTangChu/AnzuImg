@@ -285,9 +285,15 @@ const deleteImage = async (hash: string) => {
 
     if (!result) return;
 
-    await $fetch(`/api/v1/images/${hash}`, {
-      method: "DELETE",
-    });
+    try {
+      await $fetch(`/api/v1/images/${hash}`, {
+        method: "DELETE",
+      });
+    } catch (error: any) {
+      await $fetch(`/api/v1/images/${hash}/delete`, {
+        method: "POST",
+      });
+    }
     notify({
       message: t("common.actions.deleteSuccess"),
       type: NotificationType.SUCCESS,

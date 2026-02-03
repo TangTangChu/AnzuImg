@@ -66,7 +66,7 @@ type UploadResult struct {
 // fileName 参数：显示用的文件名
 // mimeType 参数：调用者提供的MIME类型
 // width, height 参数：调用者提供的图片尺寸，如果是图片的话
-func (s *ImageService) Upload(buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int) (*UploadResult, error) {
+func (s *ImageService) Upload(buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int, uploadedByTokenID *uint, uploadedByTokenName string, uploadedByTokenType string) (*UploadResult, error) {
 	// 如果需要转换
 	if convert {
 		newBuf, newMime, err := ConvertImage(bytes.NewReader(buf), targetFormat, quality, effort)
@@ -148,15 +148,18 @@ func (s *ImageService) Upload(buf []byte, fileName string, routes []string, desc
 	}
 
 	img := model.Image{
-		Hash:        hashStr,
-		FileName:    fileName,
-		MimeType:    mimeType,
-		Size:        size,
-		Path:        relPath,
-		Width:       width,
-		Height:      height,
-		Description: description,
-		Tags:        tagsJSON,
+		Hash:                hashStr,
+		FileName:            fileName,
+		MimeType:            mimeType,
+		Size:                size,
+		Path:                relPath,
+		Width:               width,
+		Height:              height,
+		Description:         description,
+		Tags:                tagsJSON,
+		UploadedByTokenID:   uploadedByTokenID,
+		UploadedByTokenName: uploadedByTokenName,
+		UploadedByTokenType: uploadedByTokenType,
 	}
 
 	if err := s.db.Create(&img).Error; err != nil {

@@ -8,6 +8,9 @@ export interface Image {
     tags?: string[];
     description?: string;
     mime?: string;
+    uploaded_by_token_id?: number | null;
+    uploaded_by_token_name?: string;
+    uploaded_by_token_type?: string;
 }
 
 export interface ImageDetail extends Image {

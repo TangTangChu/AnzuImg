@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 
+	"time"
+
+	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"github.com/davidbyttow/govips/v2/vips"
-	"time"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	httpserver "github.com/TangTangChu/AnzuImg/backend/internal/http"
@@ -61,15 +62,29 @@ CREATE TABLE IF NOT EXISTS images (
     height        INTEGER,
     description   TEXT,
     tags          JSONB,
+	uploaded_by_token_id   BIGINT,
+	uploaded_by_token_name VARCHAR(255),
+	uploaded_by_token_type VARCHAR(32),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_images_hash ON images(hash);
 CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
 CREATE INDEX IF NOT EXISTS idx_images_tags ON images USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_images_uploaded_by_token_id ON images(uploaded_by_token_id);
 `
 		if err := tx.Exec(createImagesTable).Error; err != nil {
 			return fmt.Errorf("create images table failed: %w", err)
+		}
+
+		alterImagesTable := `
+ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_id BIGINT;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_name VARCHAR(255);
+ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_type VARCHAR(32);
+CREATE INDEX IF NOT EXISTS idx_images_uploaded_by_token_id ON images(uploaded_by_token_id);
+`
+		if err := tx.Exec(alterImagesTable).Error; err != nil {
+			return fmt.Errorf("alter images table failed: %w", err)
 		}
 
 		createRoutesTable := `
@@ -169,6 +184,7 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     id            BIGSERIAL PRIMARY KEY,
     user_id       BIGINT NOT NULL DEFAULT 1,
     name          VARCHAR(255) NOT NULL,
+	token_type    VARCHAR(32) NOT NULL DEFAULT 'full',
     token_hash    VARCHAR(128) NOT NULL UNIQUE,
     ip_allowlist  JSONB,
     last_used_at  TIMESTAMPTZ,
@@ -182,7 +198,35 @@ CREATE INDEX IF NOT EXISTS idx_api_tokens_token_hash ON api_tokens(token_hash);
 			return fmt.Errorf("create api_tokens table failed: %w", err)
 		}
 
-		log.Infof("ensured images, image_routes, users, passkey_credentials, system_configs, login_attempts, sessions and api_tokens tables exist")
+		alterAPITokensTable := `
+ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS token_type VARCHAR(32) NOT NULL DEFAULT 'full';
+`
+		if err := tx.Exec(alterAPITokensTable).Error; err != nil {
+			return fmt.Errorf("alter api_tokens table failed: %w", err)
+		}
+
+		createAPITokenLogsTable := `
+CREATE TABLE IF NOT EXISTS api_token_logs (
+	id          BIGSERIAL PRIMARY KEY,
+	token_id    BIGINT NOT NULL,
+	token_name  VARCHAR(255) NOT NULL,
+	token_type  VARCHAR(32) NOT NULL,
+	action      VARCHAR(64) NOT NULL,
+	method      VARCHAR(16),
+	path        VARCHAR(512),
+	ip_address  VARCHAR(45),
+	user_agent  VARCHAR(512),
+	image_hash  VARCHAR(64),
+	created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_api_token_logs_token_id ON api_token_logs(token_id);
+CREATE INDEX IF NOT EXISTS idx_api_token_logs_created_at ON api_token_logs(created_at);
+`
+		if err := tx.Exec(createAPITokenLogsTable).Error; err != nil {
+			return fmt.Errorf("create api_token_logs table failed: %w", err)
+		}
+
+		log.Infof("ensured images, image_routes, users, passkey_credentials, system_configs, login_attempts, sessions, api_tokens and api_token_logs tables exist")
 		return nil
 	})
 }

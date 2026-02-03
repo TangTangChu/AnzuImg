@@ -113,7 +113,8 @@
         "noImages": "画像がありません",
         "downloadStarted": "ダウンロードを開始しました",
         "previous": "前へ",
-        "next": "次へ"
+        "next": "次へ",
+        "uploadedByToken": "API トークンでアップロード"
     },
     "tags": {
         "addPlaceholder": "タグを追加...",
@@ -164,6 +165,52 @@
             "lastUsed": "最後使用",
             "registerSuccess": "PassKeyを登録しました",
             "registerFailed": "PassKeyの登録に失敗しました"
+        },
+        "apiTokens": {
+            "description": "外部サービスが API にアクセスするための恒久トークンを生成します。IP の許可リストをサポートします。",
+            "createNew": "新しいトークンを作成",
+            "noTokens": "サービス トークンが見つかりません",
+            "name": "トークン名",
+            "namePlaceholder": "例: Docker Backup",
+            "tokenType": "トークン種別",
+            "tokenTypePlaceholder": "トークン種別を選択",
+            "tokenTypes": {
+                "full": "フルアクセス",
+                "upload": "アップロード + 一覧",
+                "list": "一覧のみ"
+            },
+            "ipAllowlist": "IP 許可リスト",
+            "ipAllowlistTip": "IP または CIDR (例: 192.168.1.0/24) を入力して Enter。空欄で全ての IP を許可。",
+            "anyIP": "すべての IP",
+            "created": "作成日時",
+            "lastUsed": "最終使用",
+            "neverUsed": "未使用",
+            "createSuccess": "トークンを作成しました",
+            "createFailed": "トークンの作成に失敗しました",
+            "tokenCreatedTitle": "トークン生成完了",
+            "tokenCreatedMessage": "安全上の理由から、このトークンは二度と表示されません。今すぐコピーしてください。",
+            "copy": "コピー",
+            "copySuccess": "トークンをコピーしました",
+            "logsTitle": "トークンログ",
+            "logsDescription": "最近の API トークンの操作履歴。",
+            "logsEmpty": "トークンログがありません",
+            "refreshLogs": "更新",
+            "cleanupTitle": "ログ削除",
+            "cleanupButton": "一括削除",
+            "cleanupDaysPlaceholder": "日数",
+            "cleanupInvalidDays": "有効な日数を入力してください",
+            "cleanupConfirm": "{days} 日より前のログを削除します。続行しますか？",
+            "cleanupSuccess": "{count} 件のログを削除しました",
+            "cleanupFailed": "削除に失敗しました",
+            "logToken": "トークン",
+            "logIP": "IP",
+            "logImage": "画像",
+            "logActions": {
+                "tokenCreate": "トークン作成",
+                "tokenDelete": "トークン削除",
+                "imageUpload": "画像アップロード",
+                "imageList": "画像一覧"
+            }
         }
     },
     "routes": {

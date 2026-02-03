@@ -31,14 +31,32 @@
                   :title="displayImage.file_name">
                   {{ displayImage.file_name }}
                 </h3>
+                <div v-if="displayImage.uploaded_by_token_name"
+                  class="mt-1 inline-flex items-center gap-2 text-xs text-(--md-sys-color-on-surface-variant)">
+                  <span
+                    class="px-1.5 py-0.5 rounded bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)">
+                    {{ t("gallery.uploadedByToken") }}
+                  </span>
+                  <span class="font-medium">{{
+                    displayImage.uploaded_by_token_name
+                  }}</span>
+                </div>
                 <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-(--md-sys-color-on-surface-variant)">
                   <div class="flex items-center gap-1.5">
                     <DocumentIcon class="h-4 w-4" />
-                    <span>{{ displayImage.size ? formatFileSize(displayImage.size) : '-' }}</span>
+                    <span>{{
+                      displayImage.size
+                        ? formatFileSize(displayImage.size)
+                        : "-"
+                    }}</span>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <ArrowsPointingOutIcon class="h-4 w-4" />
-                    <span>{{ displayImage.width && displayImage.height ? `${displayImage.width} × ${displayImage.height}` : '-' }}</span>
+                    <span>{{
+                      displayImage.width && displayImage.height
+                        ? `${displayImage.width} × ${displayImage.height}`
+                        : "-"
+                    }}</span>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <PhotoIcon class="h-4 w-4" />
@@ -46,7 +64,11 @@
                   </div>
                   <div class="flex items-center gap-1.5">
                     <CalendarIcon class="h-4 w-4" />
-                    <span>{{ displayImage.created_at ? formatDate(displayImage.created_at) : '-' }}</span>
+                    <span>{{
+                      displayImage.created_at
+                        ? formatDate(displayImage.created_at)
+                        : "-"
+                    }}</span>
                   </div>
                 </div>
               </div>
@@ -96,14 +118,14 @@
                 <div v-if="loadingDetail" class="flex items-center">
                   <AnzuProgressRing status="loading" :size="20" />
                   <span
-                    class="ml-2 text-sm text-(--md-sys-color-on-surface-variant)">{{ t('gallery.loadingDetails') }}</span>
+                    class="ml-2 text-sm text-(--md-sys-color-on-surface-variant)">{{ t("gallery.loadingDetails") }}</span>
                 </div>
                 <div v-else-if="displayImage.description"
                   class="text-sm text-(--md-sys-color-on-surface) whitespace-pre-wrap leading-relaxed">
                   {{ displayImage.description }}
                 </div>
                 <div v-else class="text-sm text-(--md-sys-color-on-surface-variant) italic">
-                  {{ 'No description' }}
+                  {{ "No description" }}
                 </div>
               </div>
               <div class="space-y-3">
@@ -118,11 +140,13 @@
                 </div>
 
                 <div>
-                  <span class="text-xs font-bold text-(--md-sys-color-primary) uppercase">{{ 'Tags' }}</span>
+                  <span class="text-xs font-bold text-(--md-sys-color-primary) uppercase">{{ "Tags" }}</span>
                   <div v-if="displayImage.tags && displayImage.tags.length > 0" class="mt-1">
                     <TagList :tags="displayImage.tags" class="text-sm" />
                   </div>
-                  <div v-else class="mt-1 text-sm text-(--md-sys-color-on-surface-variant) italic">No tags</div>
+                  <div v-else class="mt-1 text-sm text-(--md-sys-color-on-surface-variant) italic">
+                    No tags
+                  </div>
                 </div>
               </div>
             </div>
@@ -134,7 +158,6 @@
               <AnzuTags v-model="editForm.tags" :label="t('common.labels.tags')" />
               <AnzuTags v-model="editForm.routes" :label="t('upload.route')" />
             </div>
-
           </div>
         </div>
       </div>
@@ -162,9 +185,13 @@ import {
   LinkIcon,
   PhotoIcon,
   TrashIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
 } from "@heroicons/vue/24/outline";
-import type { ImageModalProps, ImageModalEmits, ImageDetail } from "~/types/image";
+import type {
+  ImageModalProps,
+  ImageModalEmits,
+  ImageDetail,
+} from "~/types/image";
 
 import { formatDate, formatFileSize } from "~/utils/format";
 const { t } = useI18n();
@@ -193,10 +220,10 @@ const lastMousePosition = ref({ x: 0, y: 0 });
 
 const isEditing = ref(false);
 const editForm = ref({
-  file_name: '',
-  description: '',
+  file_name: "",
+  description: "",
   tags: [] as string[],
-  routes: [] as string[]
+  routes: [] as string[],
 });
 const saving = ref(false);
 
@@ -225,9 +252,8 @@ watch(
       await fetchImageDetail(newImage.hash);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
-
 
 const handleWheel = (e: WheelEvent) => {
   e.preventDefault();
@@ -268,9 +294,9 @@ const startEdit = () => {
   if (!displayImage.value) return;
   editForm.value = {
     file_name: displayImage.value.file_name,
-    description: displayImage.value.description || '',
+    description: displayImage.value.description || "",
     tags: [...(displayImage.value.tags || [])],
-    routes: [...(detailedImage.value?.routes || [])]
+    routes: [...(detailedImage.value?.routes || [])],
   };
   isEditing.value = true;
 };
@@ -283,21 +309,24 @@ const saveEdit = async () => {
   if (!displayImage.value) return;
   saving.value = true;
   try {
-    const updated = await $fetch<ImageDetail>(`/api/v1/images/${displayImage.value.hash}`, {
-      method: 'PATCH',
-      body: {
-        file_name: editForm.value.file_name,
-        description: editForm.value.description,
-        tags: editForm.value.tags,
-        routes: editForm.value.routes
-      }
-    });
+    const updated = await $fetch<ImageDetail>(
+      `/api/v1/images/${displayImage.value.hash}`,
+      {
+        method: "PATCH",
+        body: {
+          file_name: editForm.value.file_name,
+          description: editForm.value.description,
+          tags: editForm.value.tags,
+          routes: editForm.value.routes,
+        },
+      },
+    );
 
     if (detailedImage.value) {
       detailedImage.value = {
         ...detailedImage.value,
         ...updated,
-        routes: editForm.value.routes
+        routes: editForm.value.routes,
       };
     }
     isEditing.value = false;
@@ -313,12 +342,11 @@ const fetchImageDetail = async (hash: string) => {
   detailError.value = null;
 
   try {
-    const data = await $fetch<ImageDetail>(`/api/v1/images/${hash}/info`, {
-    });
+    const data = await $fetch<ImageDetail>(`/api/v1/images/${hash}/info`, {});
     detailedImage.value = data;
   } catch (error: any) {
-    console.error('Failed to fetch image details:', error);
-    detailError.value = error.data?.error || t('gallery.detailLoadFailed');
+    console.error("Failed to fetch image details:", error);
+    detailError.value = error.data?.error || t("gallery.detailLoadFailed");
   } finally {
     loadingDetail.value = false;
   }
@@ -333,7 +361,9 @@ const hasRoutes = computed(() => {
 });
 
 const mimeType = computed(() => {
-  return detailedImage.value?.mime_type || detailedImage.value?.mime || 'Unknown';
+  return (
+    detailedImage.value?.mime_type || detailedImage.value?.mime || "Unknown"
+  );
 });
 
 const handleClose = () => {
@@ -366,7 +396,6 @@ const handleDelete = () => {
     emit("delete", props.image.hash);
   }
 };
-
 </script>
 
 <style scoped>

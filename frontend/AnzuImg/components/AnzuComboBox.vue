@@ -1,5 +1,6 @@
 <template>
-    <div ref="root" class="relative inline-flex w-full" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+    <div ref="root" class="relative inline-flex w-full" data-click-away-ignore="true" @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave">
         <slot name="trigger" :open="isOpen" :toggle="toggleMenu" :selected="selectedItem" :selectedLabel="selectedLabel"
             :query="query" :setQuery="setQuery">
             <button ref="triggerRef" type="button"
@@ -18,10 +19,12 @@
 
         <Teleport to="body">
             <transition enter-active-class="transition duration-150 ease-out"
-                enter-from-class="transform translate-y-1 opacity-0" enter-to-class="transform translate-y-0 opacity-100"
-                leave-active-class="transition duration-120 ease-in" leave-from-class="transform translate-y-0 opacity-100"
+                enter-from-class="transform translate-y-1 opacity-0"
+                enter-to-class="transform translate-y-0 opacity-100"
+                leave-active-class="transition duration-120 ease-in"
+                leave-from-class="transform translate-y-0 opacity-100"
                 leave-to-class="transform translate-y-1 opacity-0">
-                <div v-if="isOpen" ref="menuRef"
+                <div v-if="isOpen" ref="menuRef" data-click-away-ignore="true"
                     class="shadow-center-sm fixed z-50 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl bg-(--md-sys-color-surface-container) ring-1 ring-black/5"
                     :class="menuWidthClass" :style="menuPositionStyle" role="listbox" @mouseenter="handleMouseEnter"
                     @mouseleave="handleMouseLeave">
@@ -137,7 +140,12 @@ const updateMenuPosition = () => {
     const rect = trigger.getBoundingClientRect();
     menuPosition.value = {
         top: rect.bottom + 4,
-        left: props.menuAlign === "right" ? rect.right : props.menuAlign === "center" ? rect.left + rect.width / 2 : rect.left,
+        left:
+            props.menuAlign === "right"
+                ? rect.right
+                : props.menuAlign === "center"
+                    ? rect.left + rect.width / 2
+                    : rect.left,
         width: rect.width,
     };
 };
@@ -226,7 +234,10 @@ const setQuery = (v: string) => (query.value = v);
 const onDocClick = (e: MouseEvent) => {
     if (!root.value) return;
     const menu = menuRef.value;
-    if (!root.value.contains(e.target as Node) && (!menu || !menu.contains(e.target as Node))) {
+    if (
+        !root.value.contains(e.target as Node) &&
+        (!menu || !menu.contains(e.target as Node))
+    ) {
         closeNow();
     }
 };
@@ -255,7 +266,7 @@ const menuPositionStyle = computed(() => {
     const style: Record<string, string> = {
         top: `${menuPosition.value.top}px`,
     };
-    
+
     if (props.menuAlign === "right") {
         style.right = `${window.innerWidth - menuPosition.value.left}px`;
     } else if (props.menuAlign === "center") {
@@ -265,7 +276,7 @@ const menuPositionStyle = computed(() => {
         style.left = `${menuPosition.value.left}px`;
         style.width = `${menuPosition.value.width}px`;
     }
-    
+
     return style;
 });
 

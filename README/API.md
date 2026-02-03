@@ -97,6 +97,7 @@ Base URL: `/api/v1/auth`
   }
   ```
 - **响应**:
+
   ```json
 
   ```
@@ -109,6 +110,7 @@ Base URL: `/api/v1/auth`
   - `limit`: 返回数量上限 (默认 200，最大 1000)。
 
 - **响应**:
+
   ```json
   {
     "data": [
@@ -117,9 +119,11 @@ Base URL: `/api/v1/auth`
     ]
   }
   ```
+
   {
   "message": "system initialized successfully"
   }
+
   ```
 
   ```
@@ -186,6 +190,7 @@ Base URL: `/api/v1/auth`
 - `POST /api/v1/auth/passkey/register/finish`: 完成 Passkey 注册（需登录）。
 - `GET /api/v1/auth/passkeys`: 列出已注册的 Passkey。
 - `DELETE /api/v1/auth/passkeys/:credential_id`: 删除指定 Passkey。
+  - 兼容方式：`POST /api/v1/auth/passkeys/:credential_id/delete`
 
 #### API Token 管理
 
@@ -197,6 +202,7 @@ Base URL: `/api/v1/auth`
   ```json
   {
     "name": "Token Description",
+    "token_type": "full", // full | upload | list (默认 full)
     "ip_allowlist": ["192.168.1.1/32", "10.0.0.0/8"] // 可选
   }
   ```
@@ -217,6 +223,47 @@ Base URL: `/api/v1/auth`
 #### 删除 Token
 
 `DELETE /api/v1/auth/tokens/:id`
+
+兼容方式：
+
+`POST /api/v1/auth/tokens/:id/delete`
+
+#### Token 日志
+
+`GET /api/v1/auth/tokens/logs`
+
+- **Query 参数**:
+  - `page`: 页码 (默认 1)
+  - `page_size`: 每页数量 (默认 20)
+
+- **响应**:
+  ```json
+  {
+    "data": [APITokenLog Object],
+    "total": 100,
+    "page": 1,
+    "size": 50
+  }
+  ```
+
+#### 清理 Token 日志
+
+`DELETE /api/v1/auth/tokens/logs`
+
+兼容方式：
+
+`POST /api/v1/auth/tokens/logs/cleanup`
+
+- **Query 参数**:
+  - `days`: 清理 N 天前的日志 (必填)
+
+- **响应**:
+  ```json
+  {
+    "deleted": 120,
+    "cutoff": "2026-02-03T00:00:00Z"
+  }
+  ```
 
 ---
 
@@ -304,6 +351,9 @@ Base URL: `/api/v1/images`
     "height": 600,
     "description": "...",
     "tags": ["tag1", "tag2"],
+    "uploaded_by_token_id": 12,
+    "uploaded_by_token_name": "Upload Token",
+    "uploaded_by_token_type": "upload",
     "routes": ["route1", "route2"],
     "created_at": "...",
     "updated_at": "..."
@@ -329,6 +379,10 @@ Base URL: `/api/v1/images`
 
 `DELETE /api/v1/images/:hash`
 
+兼容方式：
+
+`POST /api/v1/images/:hash/delete`
+
 删除图片及其关联的缩略图和数据库记录。
 
 ---
@@ -348,5 +402,9 @@ Base URL: `/api/v1/routes`
 #### 删除路由
 
 `DELETE /api/v1/routes/:route`
+
+兼容方式：
+
+`POST /api/v1/routes/:route/delete`
 
 仅删除路由别名，不删除对应图片。
