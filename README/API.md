@@ -98,9 +98,30 @@ Base URL: `/api/v1/auth`
   ```
 - **响应**:
   ```json
+
+  ```
+
+#### 标签列表
+
+`GET /api/v1/tags`
+
+- **Query 参数**:
+  - `limit`: 返回数量上限 (默认 200，最大 1000)。
+
+- **响应**:
+  ```json
   {
-    "message": "system initialized successfully"
+    "data": [
+      { "tag": "cat", "count": 12 },
+      { "tag": "sunset", "count": 5 }
+    ]
   }
+  ```
+  {
+  "message": "system initialized successfully"
+  }
+  ```
+
   ```
 
 #### 密码登录

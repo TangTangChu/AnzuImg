@@ -3,12 +3,26 @@
     {{ t("gallery.title") }}
   </h1>
 
-  <div class="mx-auto mb-8 max-w-md">
-    <AnzuInput v-model="searchQuery" :placeholder="t('common.actions.search')" @keydown.enter="handleSearch">
-      <template #prefix>
-        <MagnifyingGlassIcon class="h-5 w-5" />
-      </template>
-    </AnzuInput>
+  <div class="mx-auto mb-8 w-full max-w-4xl">
+    <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] md:items-end">
+      <div>
+        <AnzuInput v-model="searchQuery" :placeholder="t('common.actions.search')" @keydown.enter="handleSearch">
+          <template #prefix>
+            <MagnifyingGlassIcon class="h-5 w-5" />
+          </template>
+        </AnzuInput>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <AnzuComboBox v-model="selectedTag" :items="tagItems" :placeholder="t('tags.filterPlaceholder')"
+            @change="handleTagChange" />
+          <AnzuButton class="shrink-0 whitespace-nowrap" :disabled="!selectedTag" @click="clearTagFilter">
+            {{ t("tags.clearFilter") }}
+          </AnzuButton>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-if="pending" class="flex justify-center p-8">
@@ -64,12 +78,17 @@ import AnzuAlert from "~/components/AnzuAlert.vue";
 import ImageModal from "~/components/ImageModal.vue";
 import AnzuPagination from "~/components/AnzuPagination.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
+import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import { useNotification } from "~/composables/useNotification";
 import { useDialog } from "~/composables/useDialog";
 import { NotificationType } from "~/types/notification";
 import { DialogVariant } from "~/types/dialog";
-import type { Image, ImageListResponse } from "~/types/image";
-import { LinkIcon, TrashIcon, MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
+import type { Image, ImageListResponse, TagListResponse } from "~/types/image";
+import {
+  LinkIcon,
+  TrashIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/vue/24/outline";
 
 const { t } = useI18n();
 useAuth();
@@ -78,7 +97,6 @@ const { confirm } = useDialog();
 const router = useRouter();
 const route = useRoute();
 
-
 const currentPage = computed(() => {
   const p = Number(route.query.page);
   return Number.isNaN(p) || p < 1 ? 1 : p;
@@ -86,6 +104,9 @@ const currentPage = computed(() => {
 const limit = 20;
 
 const searchQuery = ref("");
+const selectedTag = ref<string | null>(
+  route.query.tag ? String(route.query.tag) : null,
+);
 
 if (route.query.file_name) {
   searchQuery.value = String(route.query.file_name);
@@ -93,17 +114,45 @@ if (route.query.file_name) {
   searchQuery.value = "tag:" + String(route.query.tag);
 }
 
-const handleSearch = () => {
+const applyFilters = () => {
   const query: any = { page: 1 };
-  if (searchQuery.value) {
-    if (searchQuery.value.startsWith("tag:")) {
-      query.tag = searchQuery.value.substring(4);
+  const keyword = searchQuery.value.trim();
+
+  if (keyword) {
+    if (keyword.startsWith("tag:")) {
+      const tagValue = keyword.substring(4).trim();
+      if (tagValue) {
+        query.tag = tagValue;
+        selectedTag.value = tagValue;
+      }
     } else {
-      query.file_name = searchQuery.value;
+      query.file_name = keyword;
     }
   }
+
+  if (selectedTag.value) {
+    query.tag = selectedTag.value;
+  }
+
   router.push({ query });
 };
+
+const handleSearch = () => {
+  applyFilters();
+};
+
+const handleTagChange = (value: string | number | null) => {
+  const tagValue = value ? String(value) : null;
+  selectedTag.value = tagValue;
+  if (tagValue) {
+    searchQuery.value = `tag:${tagValue}`;
+  } else if (searchQuery.value.startsWith("tag:")) {
+    searchQuery.value = "";
+  }
+  applyFilters();
+};
+
+const clearTagFilter = () => handleTagChange(null);
 
 const {
   data: images,
@@ -115,10 +164,18 @@ const {
     page: currentPage.value,
     page_size: limit,
     file_name: route.query.file_name,
-    tag: route.query.tag
+    tag: route.query.tag,
   })),
-  watch: [currentPage, () => route.query]
+  watch: [currentPage, () => route.query],
 });
+
+const { data: tagList } = await useFetch<TagListResponse>("/api/v1/tags");
+const tagItems = computed(() =>
+  (tagList.value?.data ?? []).map((item) => ({
+    value: item.tag,
+    label: `${item.tag} (${item.count})`,
+  })),
+);
 
 const totalPages = computed(() => {
   if (!images.value) return 0;
@@ -183,7 +240,7 @@ const copyLink = (hash: string) => {
   const url = `${window.location.origin}/i/${hash}`;
   navigator.clipboard.writeText(url);
   notify({
-    message: t('common.actions.copySuccess'),
+    message: t("common.actions.copySuccess"),
     type: NotificationType.SUCCESS,
   });
 };
@@ -204,7 +261,7 @@ const downloadImage = () => {
     a.click();
     document.body.removeChild(a);
     notify({
-      message: t('common.actions.deleteStarted'),
+      message: t("common.actions.deleteStarted"),
       type: NotificationType.SUCCESS,
     });
   }
@@ -221,7 +278,7 @@ const deleteImage = async (hash: string) => {
           text: t("common.actions.delete"),
           primary: true,
           variant: "filled",
-          loading: false
+          loading: false,
         },
       ],
     });

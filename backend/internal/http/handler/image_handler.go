@@ -325,6 +325,24 @@ func (h *ImageHandler) List(c *gin.Context) {
 	})
 }
 
+// GET /api/v1/tags
+func (h *ImageHandler) ListTags(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "200"))
+	if limit < 1 || limit > 1000 {
+		limit = 200
+	}
+
+	tags, err := h.svc.ListTags(limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": tags,
+	})
+}
+
 // DELETE /api/v1/images/:hash
 func (h *ImageHandler) Delete(c *gin.Context) {
 	hash := c.Param("hash")

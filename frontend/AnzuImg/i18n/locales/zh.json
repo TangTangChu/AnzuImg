@@ -132,6 +132,12 @@
     },
     "tags": {
         "addPlaceholder": "添加标签...",
+        "selectLabel": "选择已有标签",
+        "selectPlaceholder": "选择标签",
+        "filterLabel": "按标签筛选",
+        "filterPlaceholder": "选择标签",
+        "clearFilter": "清除筛选",
+        "add": "添加",
         "remove": "移除",
         "removeLabel": "移除标签 {tag}",
         "maxTagsError": "最多只能添加 {max} 个标签",

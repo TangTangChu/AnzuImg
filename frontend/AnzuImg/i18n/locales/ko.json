@@ -116,6 +116,27 @@
         "previous": "이전",
         "next": "다음"
     },
+    "tags": {
+        "addPlaceholder": "태그 추가...",
+        "selectLabel": "기존 태그 선택",
+        "selectPlaceholder": "태그 선택",
+        "filterLabel": "태그로 필터",
+        "filterPlaceholder": "태그 선택",
+        "clearFilter": "지우기",
+        "add": "추가",
+        "remove": "제거",
+        "removeLabel": "태그 {tag} 제거",
+        "maxTagsError": "최대 {max}개까지 추가할 수 있습니다",
+        "duplicateError": "태그가 이미 존재합니다",
+        "validationError": "태그 검증 실패",
+        "counter": "{current} / {max}",
+        "hint": "태그 입력 후 Enter/쉼표/Tab으로 추가",
+        "validation": {
+            "tooShort": "태그가 너무 짧습니다 (최소 {min}자)",
+            "tooLong": "태그가 너무 깁니다 (최대 {max}자)",
+            "invalidChars": "태그는 한글/영문/숫자/공백/-/_만 허용됩니다"
+        }
+    },
     "settings": {
         "title": "설정",
         "changePassword": {

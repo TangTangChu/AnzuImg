@@ -23,6 +23,15 @@ export interface ImageListResponse {
     size: number;
 }
 
+export interface TagSummary {
+    tag: string;
+    count: number;
+}
+
+export interface TagListResponse {
+    data: TagSummary[];
+}
+
 export interface ImageModalProps {
     image: Image | null;
     visible: boolean;

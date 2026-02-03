@@ -131,6 +131,12 @@
     },
     "tags": {
         "addPlaceholder": "Add tag...",
+        "selectLabel": "Select existing tags",
+        "selectPlaceholder": "Select a tag",
+        "filterLabel": "Filter by tag",
+        "filterPlaceholder": "Select a tag",
+        "clearFilter": "Clear",
+        "add": "Add",
         "remove": "Remove",
         "removeLabel": "Remove tag {tag}",
         "maxTagsError": "Maximum {max} tags allowed",

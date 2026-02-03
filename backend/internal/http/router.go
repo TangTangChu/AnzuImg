@@ -88,6 +88,7 @@ func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHand
 		api.GET("/ping", hh.Ping)
 		api.POST("/images", ih.Upload)
 		api.GET("/images", ih.List)
+		api.GET("/tags", ih.ListTags)
 		api.GET("/images/:hash/info", ih.GetInfo)
 		api.DELETE("/images/:hash", ih.Delete)
 		api.PATCH("/images/:hash", ih.Update)

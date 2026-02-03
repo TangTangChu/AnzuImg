@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gorm.io/datatypes"
@@ -24,6 +25,11 @@ type ImageService struct {
 	log *logger.Logger
 
 	storage Storage
+}
+
+type TagCount struct {
+	Tag   string `json:"tag"`
+	Count int64  `json:"count"`
 }
 
 func NewImageService(cfg *config.Config, db *gorm.DB) *ImageService {
@@ -276,6 +282,67 @@ func (s *ImageService) ListImages(page, pageSize int, tag string, fileName strin
 	}
 
 	return images, total, nil
+}
+
+// ListTags 获取标签列表（按数量排序）
+func (s *ImageService) ListTags(limit int) ([]TagCount, error) {
+	if limit <= 0 {
+		limit = 200
+	}
+
+	if s.db.Dialector.Name() == "postgres" {
+		var tags []TagCount
+		err := s.db.Raw(`
+			SELECT tag, COUNT(*) AS count
+			FROM (
+				SELECT jsonb_array_elements_text(tags) AS tag
+				FROM images
+			) t
+			GROUP BY tag
+			ORDER BY count DESC, tag ASC
+			LIMIT ?`, limit).Scan(&tags).Error
+		return tags, err
+	}
+
+	var images []model.Image
+	if err := s.db.Select("tags").Find(&images).Error; err != nil {
+		return nil, err
+	}
+
+	counts := make(map[string]int64)
+	for _, img := range images {
+		if len(img.Tags) == 0 {
+			continue
+		}
+		var tagList []string
+		if err := json.Unmarshal(img.Tags, &tagList); err != nil {
+			continue
+		}
+		for _, tag := range tagList {
+			if strings.TrimSpace(tag) == "" {
+				continue
+			}
+			counts[tag]++
+		}
+	}
+
+	var result []TagCount
+	for tag, count := range counts {
+		result = append(result, TagCount{Tag: tag, Count: count})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Count == result[j].Count {
+			return result[i].Tag < result[j].Tag
+		}
+		return result[i].Count > result[j].Count
+	})
+
+	if len(result) > limit {
+		result = result[:limit]
+	}
+
+	return result, nil
 }
 
 // ListRoutes 分页获取路由信息

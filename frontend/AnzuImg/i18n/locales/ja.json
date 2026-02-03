@@ -115,6 +115,27 @@
         "previous": "前へ",
         "next": "次へ"
     },
+    "tags": {
+        "addPlaceholder": "タグを追加...",
+        "selectLabel": "既存タグを選択",
+        "selectPlaceholder": "タグを選択",
+        "filterLabel": "タグで絞り込む",
+        "filterPlaceholder": "タグを選択",
+        "clearFilter": "クリア",
+        "add": "追加",
+        "remove": "削除",
+        "removeLabel": "タグ {tag} を削除",
+        "maxTagsError": "最大 {max} 個まで追加できます",
+        "duplicateError": "タグは既に存在します",
+        "validationError": "タグの検証に失敗しました",
+        "counter": "{current} / {max}",
+        "hint": "タグ入力後、Enter/カンマ/Tabで追加",
+        "validation": {
+            "tooShort": "タグが短すぎます（最小 {min} 文字）",
+            "tooLong": "タグが長すぎます（最大 {max} 文字）",
+            "invalidChars": "タグは日本語/英数字/空白/-/_ のみ使用できます"
+        }
+    },
     "settings": {
         "title": "設定",
         "changePassword": {
