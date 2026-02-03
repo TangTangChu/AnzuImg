@@ -20,7 +20,7 @@ describe('useAuth', () => {
       const result = await login('valid-password')
 
       expect(result).toBe(true)
-      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/login', {
+      expect(fetchMock).toHaveBeenCalledWith('/korori/api/v1/auth/login', {
         method: 'POST',
         body: { password: 'valid-password' }
       })
@@ -50,7 +50,7 @@ describe('useAuth', () => {
       const result = await checkInit()
 
       expect(result).toBe(true)
-      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/status')
+      expect(fetchMock).toHaveBeenCalledWith('/korori/api/v1/auth/status')
     })
 
     it('should return false when system is not initialized', async () => {
@@ -86,10 +86,9 @@ describe('useAuth', () => {
       const result = await setup('new-password-123')
 
       expect(result).toBe(true)
-      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/setup', {
+      expect(fetchMock).toHaveBeenCalledWith('/korori/api/v1/auth/setup', {
         method: 'POST',
-        body: { password: 'new-password-123' },
-        headers: undefined,
+        body: { password: 'new-password-123', setup_token: undefined },
       })
     })
 
@@ -102,10 +101,9 @@ describe('useAuth', () => {
       const result = await setup('new-password-123', 'setup-token-abc')
 
       expect(result).toBe(true)
-      expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/setup', {
+      expect(fetchMock).toHaveBeenCalledWith('/korori/api/v1/auth/setup', {
         method: 'POST',
-        body: { password: 'new-password-123' },
-        headers: { 'X-Setup-Token': 'setup-token-abc' },
+        body: { password: 'new-password-123', setup_token: 'setup-token-abc' },
       })
     })
 
@@ -159,8 +157,8 @@ describe('useAuth', () => {
 
       expect(result).toBe(true)
       expect(fetchMock).toHaveBeenCalledTimes(2)
-      expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/auth/passkey/login/begin')
-      expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/auth/passkey/login/finish', {
+      expect(fetchMock).toHaveBeenNthCalledWith(1, '/korori/api/v1/auth/passkey/login/begin')
+      expect(fetchMock).toHaveBeenNthCalledWith(2, '/korori/api/v1/auth/passkey/login/finish', {
         method: 'POST',
         body: mockAuthResp,
         headers: {

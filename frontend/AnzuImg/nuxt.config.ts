@@ -2,6 +2,26 @@
 import tailwindcss from "@tailwindcss/vite";
 
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:9211';
+const apiPrefixRaw = process.env.API_PREFIX ?? '/korori';
+const appBaseUrlRaw = process.env.APP_BASE_URL || '/';
+
+const normalizeBaseUrl = (base: string): string => {
+  const trimmed = (base || '').trim();
+  if (trimmed === '' || trimmed === '/') return '/';
+  const withLeading = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  const withTrailing = withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+  return withTrailing.replace(/\/\/+/, '/');
+};
+
+const normalizePrefix = (prefix: string): string => {
+  const trimmed = (prefix || '').trim();
+  if (trimmed === '' || trimmed === '/') return '';
+  const withLeading = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeading.replace(/\/+$/, '');
+};
+
+const apiPrefix = normalizePrefix(apiPrefixRaw);
+const appBaseURL = normalizeBaseUrl(appBaseUrlRaw);
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -24,16 +44,22 @@ export default defineNuxtConfig({
     defaultLocale: 'zh',
   },
   routeRules: {
-    '/': { redirect: '/gallery' },
-    '/api/**': { proxy: `${backendUrl}/api/**` },
+    [`${apiPrefix}/api/**`]: { proxy: `${backendUrl}/api/**` },
+    [`${apiPrefix}/health`]: { proxy: `${backendUrl}/health` },
     '/health': { proxy: `${backendUrl}/health` },
     '/i/**': { proxy: `${backendUrl}/i/**` },
   },
+  runtimeConfig: {
+    public: {
+      apiPrefix,
+    },
+  },
   app: {
+    baseURL: appBaseURL,
     head: {
       title: 'AnzuIMG',
       link: [
-        { rel: 'icon', href: '/favicon.svg' },
+        { rel: 'icon', href: `${appBaseURL}favicon.svg` },
       ],
       htmlAttrs: {
         lang: 'zh-CN'

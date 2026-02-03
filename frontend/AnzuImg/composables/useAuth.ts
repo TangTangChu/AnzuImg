@@ -2,14 +2,16 @@ import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 import type { APIToken, APITokenLogListResponse, CreateTokenResponse } from '~/types/api_token';
 import { navigateTo, useCookie } from '#imports';
 import { useAuthState } from '~/composables/useAuthState';
+import { useApi } from '~/composables/useApi';
 
 export const useAuth = () => {
     const token = useCookie<string | null>('auth_token');
     const authState = useAuthState();
+    const { apiUrl } = useApi();
 
     const login = async (password: string) => {
         try {
-            const data = await $fetch<{ token: string }>('/api/v1/auth/login', {
+            const data = await $fetch<{ token: string }>(apiUrl('/api/v1/auth/login'), {
                 method: 'POST',
                 body: { password }
             });
@@ -25,7 +27,7 @@ export const useAuth = () => {
 
     const checkInit = async () => {
         try {
-            const data = await $fetch<{ initialized: boolean }>('/api/v1/auth/status');
+            const data = await $fetch<{ initialized: boolean }>(apiUrl('/api/v1/auth/status'));
             return data.initialized;
         } catch (error: any) {
             console.error('Check init failed', error);
@@ -35,7 +37,7 @@ export const useAuth = () => {
 
     const setup = async (password: string, setupToken?: string) => {
         try {
-            await $fetch('/api/v1/auth/setup', {
+            await $fetch(apiUrl('/api/v1/auth/setup'), {
                 method: 'POST',
                 body: {
                     password,
@@ -51,7 +53,7 @@ export const useAuth = () => {
 
     const logout = async () => {
         try {
-            await $fetch('/api/v1/auth/logout', { method: 'POST' })
+            await $fetch(apiUrl('/api/v1/auth/logout'), { method: 'POST' })
         } catch (error: any) {
             console.warn('Logout request failed', error)
         }
@@ -62,7 +64,7 @@ export const useAuth = () => {
 
     const loginWithPasskey = async () => {
         try {
-            const beginData = await $fetch<any>('/api/v1/auth/passkey/login/begin');
+            const beginData = await $fetch<any>(apiUrl('/api/v1/auth/passkey/login/begin'));
             const publicKey = beginData.assertion?.publicKey;
 
             if (!publicKey) {
@@ -77,7 +79,7 @@ export const useAuth = () => {
                 console.error('startAuthentication failed:', authenticationError);
                 return false;
             }
-            const finishData = await $fetch<{ token: string }>('/api/v1/auth/passkey/login/finish', {
+            const finishData = await $fetch<{ token: string }>(apiUrl('/api/v1/auth/passkey/login/finish'), {
                 method: 'POST',
                 body: authResp,
                 headers: {
@@ -97,8 +99,7 @@ export const useAuth = () => {
 
     const registerPasskey = async () => {
         try {
-            const beginData = await $fetch<any>('/api/v1/auth/passkey/register/begin', {
-            });
+            const beginData = await $fetch<any>(apiUrl('/api/v1/auth/passkey/register/begin'));
             const publicKey = beginData.creation?.publicKey;
 
             if (!publicKey) {
@@ -113,7 +114,7 @@ export const useAuth = () => {
                 console.error('startRegistration failed:', registrationError);
                 return false;
             }
-            await $fetch('/api/v1/auth/passkey/register/finish', {
+            await $fetch(apiUrl('/api/v1/auth/passkey/register/finish'), {
                 method: 'POST',
                 body: authResp,
                 headers: {
@@ -131,7 +132,7 @@ export const useAuth = () => {
     // 修改密码
     const changePassword = async (currentPassword: string, newPassword: string) => {
         try {
-            await $fetch('/api/v1/auth/change-password', {
+            await $fetch(apiUrl('/api/v1/auth/change-password'), {
                 method: 'POST',
                 body: {
                     current_password: currentPassword,
@@ -148,8 +149,7 @@ export const useAuth = () => {
     // 获取PassKey列表
     const listPasskeys = async () => {
         try {
-            const data = await $fetch<{ credentials: any[], count: number }>('/api/v1/auth/passkeys', {
-            });
+            const data = await $fetch<{ credentials: any[], count: number }>(apiUrl('/api/v1/auth/passkeys'));
             return data.credentials;
         } catch (error: any) {
             console.error('List passkeys failed', error);
@@ -160,13 +160,13 @@ export const useAuth = () => {
     // 删除PassKey
     const deletePasskey = async (credentialId: string) => {
         try {
-            await $fetch(`/api/v1/auth/passkeys/${credentialId}`, {
+            await $fetch(apiUrl(`/api/v1/auth/passkeys/${credentialId}`), {
                 method: 'DELETE',
             });
             return true;
         } catch (error: any) {
             try {
-                await $fetch(`/api/v1/auth/passkeys/${credentialId}/delete`, {
+                await $fetch(apiUrl(`/api/v1/auth/passkeys/${credentialId}/delete`), {
                     method: 'POST',
                 });
                 return true;
@@ -180,8 +180,7 @@ export const useAuth = () => {
     // 检查是否有PassKey
     const checkPasskeyExists = async () => {
         try {
-            const data = await $fetch<{ has_passkey: boolean }>('/api/v1/auth/passkeys/check', {
-            });
+            const data = await $fetch<{ has_passkey: boolean }>(apiUrl('/api/v1/auth/passkeys/check'));
             return data.has_passkey;
         } catch (error: any) {
             console.error('Check passkey exists failed', error);
@@ -192,7 +191,7 @@ export const useAuth = () => {
     // API Token Management
     const createAPIToken = async (name: string, ipAllowlist: string[], tokenType: string) => {
         try {
-            const data = await $fetch<CreateTokenResponse>('/api/v1/auth/tokens', {
+            const data = await $fetch<CreateTokenResponse>(apiUrl('/api/v1/auth/tokens'), {
                 method: 'POST',
                 body: { name, ip_allowlist: ipAllowlist, token_type: tokenType }
             });
@@ -205,8 +204,7 @@ export const useAuth = () => {
 
     const listAPITokens = async () => {
         try {
-            const data = await $fetch<APIToken[]>('/api/v1/auth/tokens', {
-            });
+            const data = await $fetch<APIToken[]>(apiUrl('/api/v1/auth/tokens'));
             return data;
         } catch (error: any) {
             console.error('List API tokens failed', error);
@@ -216,13 +214,13 @@ export const useAuth = () => {
 
     const deleteAPIToken = async (id: number) => {
         try {
-            await $fetch(`/api/v1/auth/tokens/${id}`, {
+            await $fetch(apiUrl(`/api/v1/auth/tokens/${id}`), {
                 method: 'DELETE',
             });
             return true;
         } catch (error: any) {
             try {
-                await $fetch(`/api/v1/auth/tokens/${id}/delete`, {
+                await $fetch(apiUrl(`/api/v1/auth/tokens/${id}/delete`), {
                     method: 'POST',
                 });
                 return true;
@@ -235,7 +233,7 @@ export const useAuth = () => {
 
     const listAPITokenLogs = async (page = 1, pageSize = 20) => {
         try {
-            const data = await $fetch<APITokenLogListResponse>('/api/v1/auth/tokens/logs', {
+            const data = await $fetch<APITokenLogListResponse>(apiUrl('/api/v1/auth/tokens/logs'), {
                 query: { page, page_size: pageSize }
             });
             return data;
@@ -247,14 +245,14 @@ export const useAuth = () => {
 
     const cleanupAPITokenLogs = async (days: number) => {
         try {
-            const data = await $fetch<{ deleted: number; cutoff: string }>('/api/v1/auth/tokens/logs', {
+            const data = await $fetch<{ deleted: number; cutoff: string }>(apiUrl('/api/v1/auth/tokens/logs'), {
                 method: 'DELETE',
                 query: { days }
             });
             return data;
         } catch (error: any) {
             try {
-                const data = await $fetch<{ deleted: number; cutoff: string }>('/api/v1/auth/tokens/logs/cleanup', {
+                const data = await $fetch<{ deleted: number; cutoff: string }>(apiUrl('/api/v1/auth/tokens/logs/cleanup'), {
                     method: 'POST',
                     body: { days }
                 });

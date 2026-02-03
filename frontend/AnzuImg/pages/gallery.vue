@@ -81,6 +81,7 @@ import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import { useNotification } from "~/composables/useNotification";
 import { useDialog } from "~/composables/useDialog";
+import { useApi } from "~/composables/useApi";
 import { NotificationType } from "~/types/notification";
 import { DialogVariant } from "~/types/dialog";
 import type { Image, ImageListResponse, TagListResponse } from "~/types/image";
@@ -96,6 +97,7 @@ const { notify } = useNotification();
 const { confirm } = useDialog();
 const router = useRouter();
 const route = useRoute();
+const { apiUrl } = useApi();
 
 const currentPage = computed(() => {
   const p = Number(route.query.page);
@@ -159,7 +161,7 @@ const {
   pending,
   error,
   refresh,
-} = await useFetch<ImageListResponse>("/api/v1/images", {
+} = await useFetch<ImageListResponse>(apiUrl("/api/v1/images"), {
   query: computed(() => ({
     page: currentPage.value,
     page_size: limit,
@@ -169,7 +171,9 @@ const {
   watch: [currentPage, () => route.query],
 });
 
-const { data: tagList } = await useFetch<TagListResponse>("/api/v1/tags");
+const { data: tagList } = await useFetch<TagListResponse>(
+  apiUrl("/api/v1/tags"),
+);
 const tagItems = computed(() =>
   (tagList.value?.data ?? []).map((item) => ({
     value: item.tag,
@@ -286,11 +290,11 @@ const deleteImage = async (hash: string) => {
     if (!result) return;
 
     try {
-      await $fetch(`/api/v1/images/${hash}`, {
+      await $fetch(apiUrl(`/api/v1/images/${hash}`), {
         method: "DELETE",
       });
     } catch (error: any) {
-      await $fetch(`/api/v1/images/${hash}/delete`, {
+      await $fetch(apiUrl(`/api/v1/images/${hash}/delete`), {
         method: "POST",
       });
     }

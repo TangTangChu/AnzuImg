@@ -12,8 +12,9 @@ server {
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   proxy_set_header X-Forwarded-Proto $scheme;
 
-  location ^~ /api/ {
-    proxy_pass http://127.0.0.1:8000;
+  # 后端 API
+  location ^~ /korori/ {
+    proxy_pass http://127.0.0.1:8000/;
   }
 
   location ^~ /i/ {
@@ -24,8 +25,13 @@ server {
     proxy_pass http://127.0.0.1:8000;
   }
 
-  location / {
-    proxy_pass http://127.0.0.1:5423;
+  # 前端
+  location ^~ /clannd/ {
+    proxy_pass http://127.0.0.1:5423/;
   }
+
+  # location / {
+  #   proxy_pass http://127.0.0.1:5423;
+  # }
 }
 

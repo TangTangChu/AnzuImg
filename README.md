@@ -89,12 +89,21 @@ docker compose -f deploy/docker-compose.yml up -d
 
 ### 生产部署建议
 
-虽然说，Nuxt前端的Nitro服务器配置了Proxy代理，可以代理请求到后端，但是还是推荐把 **宿主机 Nginx 作为唯一对外入口**，即：
+虽然 Nuxt 前端的 Nitro 支持 proxy，但生产环境仍建议把 **宿主机 Nginx 作为唯一对外入口**。
 
-- `/api/**`、`/i/**` 直接反代到后端 `127.0.0.1:9211`
-- 其他页面与静态资源反代到前端 `127.0.0.1:9200`
+本项目现在支持“子路径部署 + API 前缀”，推荐对外暴露 3 个入口：
 
-示例配置见 [`deploy/nginx/anzuimg.conf.example`](deploy/nginx/anzuimg.conf.example)。
+- **图床前端**：`/clannd/`（可配置）
+- **图床后端 API**：`/korori/`（可配置，通常只承载 `/api/v1/*`、`/health`）
+- **图片直链**：`/i/`（公开访问）
+
+对应前端环境变量：
+
+- `APP_BASE_URL=/clannd/`（前端挂载路径，必须以 `/` 结尾）
+- `API_PREFIX=/korori`（API 前缀，置空或 `/` 表示不加前缀）
+- `BACKEND_URL=http://backend:8080`（前端 SSR/Nitro 侧用于 proxy 的后端地址）
+
+示例 Nginx 配置见 [`deploy/nginx/anzuimg.conf.example`](deploy/nginx/anzuimg.conf.example)。
 
 ## API
 

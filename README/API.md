@@ -11,6 +11,14 @@
 - **图片资源**: `/i`
 - **API 接口**: `/api/v1`
 
+> [!TIP]
+> 如果你通过 Nginx 做了“API 前缀分流”（例如对外暴露 `/korori/`，内部转发到后端根路径），那么**对外访问路径**应当在所有 API 前加上该前缀：
+>
+> - 内部后端实际路径：`/api/v1/...`
+> - 对外暴露路径示例：`/korori/api/v1/...`
+>
+> 图片直链 `/i/...` 通常不建议加前缀，便于公开引用
+
 ---
 
 ## 1. 图片资源
@@ -88,12 +96,16 @@ Base URL: `/api/v1/auth`
 设置管理员初始密码。仅在 `initialized: false` 时可用。
 
 > [!NOTE]
-> 若服务端设置了 `ANZUIMG_SETUP_TOKEN`，则此接口需要携带请求头：`X-Setup-Token: <token>`。
+> 若服务端设置了 `ANZUIMG_SETUP_TOKEN`，则此接口需要提供 `setup_token`。
+> 
+> - 推荐：请求体携带 `setup_token` 字段
+> - 兼容：请求头 `X-Setup-Token: <token>`
 
 - **请求**:
   ```json
   {
-    "password": "your_password" // min 8 chars
+    "password": "your_password", // min 8 chars
+    "setup_token": "optional_setup_token"
   }
   ```
 - **响应**:

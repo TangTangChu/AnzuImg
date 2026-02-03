@@ -94,6 +94,7 @@ useAuth();
 const { notify } = useNotification();
 const { confirm } = useDialog();
 const route = useRoute();
+const { apiUrl } = useApi();
 
 interface Route {
     id: number;
@@ -130,7 +131,7 @@ const totalPages = computed(() => {
 const fetchRoutes = async () => {
     loading.value = true;
     try {
-        const data = await $fetch<RouteListResponse>("/api/v1/routes", {
+        const data = await $fetch<RouteListResponse>(apiUrl("/api/v1/routes"), {
             query: {
                 page: currentPage.value,
                 page_size: limit,
@@ -170,11 +171,11 @@ const deleteRoute = async (routePath: string) => {
         if (!result) return;
 
         try {
-            await $fetch(`/api/v1/routes/${routePath}`, {
+            await $fetch(apiUrl(`/api/v1/routes/${routePath}`), {
                 method: "DELETE",
             });
         } catch (error: any) {
-            await $fetch(`/api/v1/routes/${routePath}/delete`, {
+            await $fetch(apiUrl(`/api/v1/routes/${routePath}/delete`), {
                 method: "POST",
             });
         }

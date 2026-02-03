@@ -191,6 +191,7 @@ import type { TagListResponse } from "~/types/image";
 const { t } = useI18n();
 useAuth();
 const { notify } = useNotification();
+const { apiUrl } = useApi();
 
 interface UploadFileItem {
     file: File;
@@ -217,7 +218,9 @@ const quality = ref("");
 const effort = ref("");
 
 const selectedTagOption = ref<string | null>(null);
-const { data: tagList } = await useFetch<TagListResponse>("/api/v1/tags");
+const { data: tagList } = await useFetch<TagListResponse>(
+    apiUrl("/api/v1/tags"),
+);
 const tagItems = computed(() =>
     (tagList.value?.data ?? []).map((item) => ({
         value: item.tag,
@@ -338,7 +341,7 @@ const startUpload = async () => {
     }
 
     try {
-        const data = await $fetch<any[]>("/api/v1/images", {
+        const data = await $fetch<any[]>(apiUrl("/api/v1/images"), {
             method: "POST",
             body: formData,
         });

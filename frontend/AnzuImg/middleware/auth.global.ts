@@ -1,12 +1,13 @@
 // 全局鉴权中间件
 export default defineNuxtRouteMiddleware(async (to) => {
     const authState = useAuthState()
+    const { apiUrl } = useApi()
     const publicPaths = new Set<string>(['/login', '/setup'])
     const headers = process.server ? useRequestHeaders(['cookie']) : undefined
     let initialized = authState.initialized.value
     if (initialized !== true) {
         try {
-            const data = await $fetch<{ initialized: boolean }>('/api/v1/auth/status', { headers })
+            const data = await $fetch<{ initialized: boolean }>(apiUrl('/api/v1/auth/status'), { headers })
             initialized = !!data.initialized
             authState.setInitialized(initialized)
         } catch {
@@ -28,7 +29,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
     if (to.path === '/login') {
         try {
-            await $fetch('/api/v1/auth/validate', { headers })
+            await $fetch(apiUrl('/api/v1/auth/validate'), { headers })
             authState.setAuthenticated(true)
             return navigateTo('/gallery')
         } catch {
@@ -43,7 +44,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
         }
 
         try {
-            await $fetch('/api/v1/auth/validate', { headers })
+            await $fetch(apiUrl('/api/v1/auth/validate'), { headers })
             authState.setAuthenticated(true)
         } catch {
             authState.resetAuth()

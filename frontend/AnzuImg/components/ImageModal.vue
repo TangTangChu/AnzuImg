@@ -195,6 +195,7 @@ import type {
 
 import { formatDate, formatFileSize } from "~/utils/format";
 const { t } = useI18n();
+const { apiUrl } = useApi();
 
 const props = withDefaults(defineProps<ImageModalProps>(), {
   image: null,
@@ -310,7 +311,7 @@ const saveEdit = async () => {
   saving.value = true;
   try {
     const updated = await $fetch<ImageDetail>(
-      `/api/v1/images/${displayImage.value.hash}`,
+      apiUrl(`/api/v1/images/${displayImage.value.hash}`),
       {
         method: "PATCH",
         body: {
@@ -342,7 +343,10 @@ const fetchImageDetail = async (hash: string) => {
   detailError.value = null;
 
   try {
-    const data = await $fetch<ImageDetail>(`/api/v1/images/${hash}/info`, {});
+    const data = await $fetch<ImageDetail>(
+      apiUrl(`/api/v1/images/${hash}/info`),
+      {},
+    );
     detailedImage.value = data;
   } catch (error: any) {
     console.error("Failed to fetch image details:", error);
