@@ -14,7 +14,12 @@ RUN pnpm install --frozen-lockfile
 COPY frontend/AnzuImg .
 
 ARG BACKEND_URL=http://backend:8080
+ARG APP_BASE_URL=/
+ARG API_PREFIX=/kotori
+
 ENV BACKEND_URL=${BACKEND_URL}
+ENV APP_BASE_URL=${APP_BASE_URL}
+ENV API_PREFIX=${API_PREFIX}
 
 RUN pnpm build
 

@@ -81,6 +81,10 @@ services:
     build:
       context: ..
       dockerfile: frontend/Dockerfile
+      args:
+        BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+        APP_BASE_URL: ${APP_BASE_URL:-/}
+        API_PREFIX: ${API_PREFIX:-/kotori}
     container_name: anzuimg-frontend
     restart: always
     environment:
