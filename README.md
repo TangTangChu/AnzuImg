@@ -94,13 +94,13 @@ docker compose -f deploy/docker-compose.yml up -d
 本项目现在支持“子路径部署 + API 前缀”，推荐对外暴露 3 个入口：
 
 - **图床前端**：`/clannd/`（可配置）
-- **图床后端 API**：`/korori/`（可配置，通常只承载 `/api/v1/*`、`/health`）
+- **图床后端 API**：`/kotori/`（可配置，通常只承载 `/api/v1/*`、`/health`）
 - **图片直链**：`/i/`（公开访问）
 
 对应前端环境变量：
 
 - `APP_BASE_URL=/clannd/`（前端挂载路径，必须以 `/` 结尾）
-- `API_PREFIX=/korori`（API 前缀，置空或 `/` 表示不加前缀）
+- `API_PREFIX=/kotori`（API 前缀，置空或 `/` 表示不加前缀）
 - `BACKEND_URL=http://backend:8080`（前端 SSR/Nitro 侧用于 proxy 的后端地址）
 
 示例 Nginx 配置见 [`deploy/nginx/anzuimg.conf.example`](deploy/nginx/anzuimg.conf.example)。

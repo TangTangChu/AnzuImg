@@ -26,7 +26,7 @@ const getOrigin = (): string => {
 export const useApi = () => {
     const config = useRuntimeConfig()
     const raw = (config.public as any)?.apiPrefix
-    const apiPrefix = normalizePrefix(raw ?? '/korori')
+    const apiPrefix = normalizePrefix(raw ?? '/kotori')
 
     const useAbsoluteUrl = ((config.public as any)?.apiUseAbsoluteUrl ?? true) !== false
 

@@ -2,7 +2,7 @@
 import tailwindcss from "@tailwindcss/vite";
 
 const backendUrl = process.env.BACKEND_URL || 'http://localhost:9211';
-const apiPrefixRaw = process.env.API_PREFIX ?? '/korori';
+const apiPrefixRaw = process.env.API_PREFIX ?? '/kotori';
 const appBaseUrlRaw = process.env.APP_BASE_URL || '/';
 
 const normalizeBaseUrl = (base: string): string => {
