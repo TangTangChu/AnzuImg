@@ -52,6 +52,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiPrefix,
+      apiUseAbsoluteUrl: true,
     },
   },
   app: {

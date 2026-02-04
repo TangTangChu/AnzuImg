@@ -1,4 +1,4 @@
-import { useRuntimeConfig } from '#imports'
+import { useRequestURL, useRuntimeConfig } from '#imports'
 
 const normalizePrefix = (prefix: string): string => {
     const trimmed = (prefix || '').trim()
@@ -13,12 +13,30 @@ const joinPath = (prefix: string, path: string): string => {
     return `${normalizedPrefix}${normalizedPath}`
 }
 
+const getOrigin = (): string => {
+    if (import.meta.server) {
+        return useRequestURL().origin
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return window.location.origin
+    }
+    return ''
+}
+
 export const useApi = () => {
     const config = useRuntimeConfig()
     const raw = (config.public as any)?.apiPrefix
     const apiPrefix = normalizePrefix(raw ?? '/korori')
 
-    const apiUrl = (path: string) => joinPath(apiPrefix, path)
+    const useAbsoluteUrl = ((config.public as any)?.apiUseAbsoluteUrl ?? true) !== false
+
+    const apiUrl = (path: string) => {
+        const urlPath = joinPath(apiPrefix, path)
+        if (!useAbsoluteUrl) return urlPath
+
+        const origin = getOrigin()
+        return origin ? new URL(urlPath, origin).toString() : urlPath
+    }
 
     return {
         apiPrefix,
