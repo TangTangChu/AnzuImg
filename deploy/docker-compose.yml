@@ -81,6 +81,10 @@ services:
     build:
       context: ..
       dockerfile: frontend/Dockerfile
+      args:
+        BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+        APP_BASE_URL: ${APP_BASE_URL:-/}
+        API_PREFIX: ${API_PREFIX:-/kotori}
     container_name: anzuimg-frontend
     restart: always
     environment:
@@ -88,7 +92,7 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
       # 子路径部署与 API 前缀（反向代理场景）
       APP_BASE_URL: ${APP_BASE_URL:-/}
-      API_PREFIX: ${API_PREFIX:-/korori}
+      API_PREFIX: ${API_PREFIX:-/kotori}
     ports:
       - "127.0.0.1:9200:3000"
 
