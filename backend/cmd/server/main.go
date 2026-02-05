@@ -62,16 +62,12 @@ CREATE TABLE IF NOT EXISTS images (
     height        INTEGER,
     description   TEXT,
     tags          JSONB,
-	uploaded_by_token_id   BIGINT,
-	uploaded_by_token_name VARCHAR(255),
-	uploaded_by_token_type VARCHAR(32),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_images_hash ON images(hash);
 CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
 CREATE INDEX IF NOT EXISTS idx_images_tags ON images USING GIN(tags);
-CREATE INDEX IF NOT EXISTS idx_images_uploaded_by_token_id ON images(uploaded_by_token_id);
 `
 		if err := tx.Exec(createImagesTable).Error; err != nil {
 			return fmt.Errorf("create images table failed: %w", err)
