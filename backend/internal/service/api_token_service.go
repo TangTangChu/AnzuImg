@@ -17,6 +17,8 @@ type APITokenService struct {
 	db *gorm.DB
 }
 
+var ErrInvalidTokenType = errors.New("invalid token type")
+
 func NewAPITokenService(db *gorm.DB) *APITokenService {
 	return &APITokenService{db: db}
 }
@@ -33,7 +35,7 @@ func (s *APITokenService) CreateToken(name string, ipAllowlist []string, tokenTy
 	switch tokenType {
 	case model.TokenTypeFull, model.TokenTypeUploadList, model.TokenTypeListOnly:
 	default:
-		return "", nil, errors.New("invalid token type")
+		return "", nil, ErrInvalidTokenType
 	}
 
 	ipJSON, err := json.Marshal(ipAllowlist)

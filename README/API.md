@@ -21,6 +21,29 @@
 
 ---
 
+## 错误响应
+
+后端错误响应已统一为以下结构：
+
+```json
+{
+  "code": "bad_request",
+  "message": "invalid request",
+  "request_id": "2f6e1b2c9a3d4e5f..."
+}
+```
+
+- `code`: 稳定错误码，建议前端按该字段做逻辑分支
+- `message`: 人类可读错误信息
+- `request_id`: 请求追踪 ID，同时会通过响应头 `X-Request-ID` 返回
+
+前端对接建议：
+
+- 优先读取 `message` 展示给用户
+- 业务分支优先使用 `code`
+
+---
+
 ## 1. 图片资源
 
 用于公开访问已上传的图片资源。
@@ -75,6 +98,9 @@
 ### 2.2 认证管理
 
 Base URL: `/api/v1/auth`
+
+> [!NOTE]
+> `/api/v1/auth` 下需要登录态的管理接口（如改密、Passkey 管理、Token 管理）仅接受 **Session** 认证，不接受 API Token。
 
 #### 检查初始化状态
 
@@ -258,6 +284,40 @@ Base URL: `/api/v1/auth`
   }
   ```
 
+#### 安全日志
+
+`GET /api/v1/auth/security/logs`
+
+用于查看安全与关键操作事件（登录/登出、密码修改、Passkey 注册/登录/删除、API Token 创建/删除、Token 日志清理等）。
+
+- **Query 参数**:
+  - `page`: 页码 (默认 1)
+  - `page_size`: 每页数量 (默认 20)
+  - `failed_only`: 是否仅返回失败登录 (默认 `true`)
+
+- **响应**:
+  ```json
+  {
+    "data": [
+      {
+        "id": 1,
+        "category": "auth",
+        "level": "warning",
+        "action": "login_failed",
+        "message": "failed login attempt",
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "ip_address": "127.0.0.1",
+        "username": "admin",
+        "created_at": "2026-02-20T12:34:56Z"
+      }
+    ],
+    "total": 42,
+    "page": 1,
+    "size": 20
+  }
+  ```
+
 #### 清理 Token 日志
 
 `DELETE /api/v1/auth/tokens/logs`
@@ -324,6 +384,12 @@ Base URL: `/api/v1/images`
       "width": 100,
       "height": 100,
       ...
+    },
+    {
+      "success": false,
+      "file_name": "bad.txt",
+      "code": "unsupported_file_type",
+      "message": "unsupported file type: text/plain"
     }
   ]
   ```

@@ -35,7 +35,7 @@ func GenerateToken() (string, string, error) {
 	}
 	token := hex.EncodeToString(tokenBytes)
 	tokenHash := HashToken(token)
-	
+
 	return token, tokenHash, nil
 }
 
@@ -51,7 +51,7 @@ func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string) (str
 	if err != nil {
 		return "", nil, err
 	}
-	
+
 	now := time.Now()
 	session := &Session{
 		TokenHash: tokenHash,
@@ -62,11 +62,11 @@ func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string) (str
 		ExpiresAt: now.Add(time.Duration(SessionExpirationHours) * time.Hour),
 		LastUsed:  now,
 	}
-	
+
 	if err := db.Create(session).Error; err != nil {
 		return "", nil, err
 	}
-	
+
 	return token, session, nil
 }
 
@@ -75,21 +75,23 @@ func ValidateSession(db *gorm.DB, token string) (*Session, error) {
 	if token == "" {
 		return nil, gorm.ErrRecordNotFound
 	}
-	
+
 	tokenHash := HashToken(token)
-	
+
 	var session Session
 	if err := db.Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()).First(&session).Error; err != nil {
 		return nil, err
 	}
-	
+
 	session.LastUsed = time.Now()
 	if time.Until(session.ExpiresAt) < time.Duration(SessionExpirationHours/2)*time.Hour {
 		session.ExpiresAt = time.Now().Add(time.Duration(SessionExpirationHours) * time.Hour)
 	}
 
-	db.Save(&session)
-	
+	if err := db.Save(&session).Error; err != nil {
+		return nil, err
+	}
+
 	return &session, nil
 }
 

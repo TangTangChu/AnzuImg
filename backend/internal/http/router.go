@@ -12,6 +12,7 @@ import (
 
 func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.RequestID())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(func(c *gin.Context) {
 		c.Set("cookie_samesite", cfg.CookieSameSite)
@@ -47,7 +48,8 @@ func registerPublicImageRoutes(r *gin.Engine, h *handler.ImageHandler) {
 }
 
 func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandler, tokenH *handler.APITokenHandler) {
-	auth := r.Group("/api/v1/auth", middleware.CORS(cfg.AllowedOrigins))
+	apiPrefix := cfg.APIPrefix + "/api/v1"
+	auth := r.Group(apiPrefix+"/auth", middleware.CORS(cfg.AllowedOrigins))
 	{
 		auth.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
 		auth.GET("/status", h.CheckInit)
@@ -62,7 +64,7 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 	}
 
 	// Protected auth routes
-	protectedAuth := auth.Group("", middleware.Session(h.DB()))
+	protectedAuth := auth.Group("", middleware.Session(h.DB()), middleware.RequireSession())
 	{
 		// Passkey Registration
 		protectedAuth.GET("/passkey/register/begin", h.RegisterPasskeyBegin)
@@ -77,6 +79,7 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 
 		// Password Management
 		protectedAuth.POST("/change-password", h.ChangePassword)
+		protectedAuth.GET("/security/logs", h.ListSecurityLogs)
 
 		// API Token Management
 		protectedAuth.POST("/tokens", tokenH.Create)
@@ -90,7 +93,8 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 }
 
 func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler) {
-	api := r.Group("/api/v1", middleware.CORS(cfg.AllowedOrigins), middleware.Session(ah.DB()))
+	apiPrefix := cfg.APIPrefix + "/api/v1"
+	api := r.Group(apiPrefix, middleware.CORS(cfg.AllowedOrigins), middleware.Session(ah.DB()))
 	{
 		api.GET("/ping", middleware.RequireTokenType(model.TokenTypeFull), hh.Ping)
 		api.POST("/images", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.Upload)

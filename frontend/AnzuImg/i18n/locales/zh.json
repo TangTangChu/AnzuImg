@@ -226,6 +226,40 @@
                 "imageUpload": "上传图片",
                 "imageList": "检索列表"
             }
+        },
+        "securityLogs": {
+            "title": "安全日志",
+            "description": "近期安全与操作日志",
+            "empty": "暂无安全日志",
+            "refresh": "刷新",
+            "username": "用户",
+            "ip": "IP",
+            "actions": {
+                "loginFailed": "登录失败",
+                "loginSuccess": "登录成功",
+                "loginRateLimited": "登录触发频率限制",
+                "loginBruteforceAlert": "疑似爆破告警",
+                "logout": "用户登出",
+                "passwordChanged": "密码修改成功",
+                "passwordChangeFailed": "密码修改失败",
+                "passkeyRegisterSuccess": "Passkey 注册成功",
+                "passkeyRegisterFailed": "Passkey 注册失败",
+                "passkeyLoginSuccess": "Passkey 登录成功",
+                "passkeyLoginFailed": "Passkey 登录失败",
+                "passkeyDeleteSuccess": "Passkey 删除成功",
+                "passkeyDeleteFailed": "Passkey 删除失败",
+                "tokenCreateSuccess": "API 令牌创建成功",
+                "tokenCreateFailed": "API 令牌创建失败",
+                "tokenDeleteSuccess": "API 令牌删除成功",
+                "tokenDeleteFailed": "API 令牌删除失败",
+                "tokenLogsCleanup": "API 令牌日志清理完成",
+                "tokenLogsCleanupFailed": "API 令牌日志清理失败"
+            },
+            "levels": {
+                "info": "信息",
+                "warning": "警告",
+                "error": "错误"
+            }
         }
     },
     "routes": {

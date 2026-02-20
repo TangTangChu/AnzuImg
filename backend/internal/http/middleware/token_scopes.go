@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
@@ -18,13 +19,13 @@ func RequireTokenScopes(scopes ...string) gin.HandlerFunc {
 
 		token, ok := c.Get("api_token")
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "api token required"})
+			response.AbortErrorCode(c, http.StatusForbidden, "api_token_required", "api token required")
 			return
 		}
 
 		apiToken, ok := token.(*model.APIToken)
 		if !ok || apiToken == nil {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "api token required"})
+			response.AbortErrorCode(c, http.StatusForbidden, "api_token_required", "api token required")
 			return
 		}
 
@@ -35,7 +36,7 @@ func RequireTokenScopes(scopes ...string) gin.HandlerFunc {
 			}
 		}
 
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient api token scope"})
+		response.AbortErrorCode(c, http.StatusForbidden, "api_token_scope_denied", "insufficient api token scope")
 	}
 }
 
@@ -49,18 +50,18 @@ func RequireTokenType(tokenType string) gin.HandlerFunc {
 
 		token, ok := c.Get("api_token")
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "api token required"})
+			response.AbortErrorCode(c, http.StatusForbidden, "api_token_required", "api token required")
 			return
 		}
 
 		apiToken, ok := token.(*model.APIToken)
 		if !ok || apiToken == nil {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "api token required"})
+			response.AbortErrorCode(c, http.StatusForbidden, "api_token_required", "api token required")
 			return
 		}
 
 		if apiToken.NormalizedType() != tokenType {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient api token scope"})
+			response.AbortErrorCode(c, http.StatusForbidden, "api_token_scope_denied", "insufficient api token scope")
 			return
 		}
 

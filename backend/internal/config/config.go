@@ -7,16 +7,20 @@ import (
 )
 
 type Config struct {
-	ServerAddr string
-	DBHost     string
-	DBPort     int
-	DBUser     string
-	DBPass     string
-	DBName     string
-	DBSSL      string
+	ServerAddr         string
+	ShutdownTimeoutSec int
+	DBHost             string
+	DBPort             int
+	DBUser             string
+	DBPass             string
+	DBName             string
+	DBSSL              string
 
 	StorageBase string
 	StorageType string // "local" 或 "cloud"
+
+	// API前缀
+	APIPrefix string
 
 	// CORS配置
 	AllowedOrigins []string
@@ -89,6 +93,19 @@ func getEnvInt64MB(key string, defMB int64) int64 {
 	return mb * 1024 * 1024
 }
 
+func normalizeAPIPrefix(prefix string) string {
+	trimmed := strings.TrimSpace(prefix)
+	if trimmed == "" || trimmed == "/" {
+		return ""
+	}
+	// 确保以 / 开头，移除尾部 /
+	if !strings.HasPrefix(trimmed, "/") {
+		trimmed = "/" + trimmed
+	}
+	trimmed = strings.TrimRight(trimmed, "/")
+	return trimmed
+}
+
 func Load() *Config {
 	// 解析允许的Origins
 	allowedOrigins := []string{"http://localhost:9200"}
@@ -108,7 +125,8 @@ func Load() *Config {
 	}
 
 	return &Config{
-		ServerAddr: getEnv("ANZUIMG_SERVER_ADDR", ":8080"),
+		ServerAddr:         getEnv("ANZUIMG_SERVER_ADDR", ":8080"),
+		ShutdownTimeoutSec: getEnvInt("ANZUIMG_SHUTDOWN_TIMEOUT_SEC", 10),
 
 		DBHost: getEnv("ANZUIMG_DB_HOST", "localhost"),
 		DBPort: getEnvInt("ANZUIMG_DB_PORT", 5432),
@@ -119,6 +137,9 @@ func Load() *Config {
 
 		StorageBase: getEnv("ANZUIMG_STORAGE_BASE", "./data/images"),
 		StorageType: getEnv("ANZUIMG_STORAGE_TYPE", "local"),
+
+		// API前缀
+		APIPrefix: normalizeAPIPrefix(getEnv("ANZUIMG_API_PREFIX", "")),
 
 		// CORS配置
 		AllowedOrigins: allowedOrigins,

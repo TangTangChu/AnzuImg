@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 	"github.com/TangTangChu/AnzuImg/backend/internal/service"
 )
@@ -46,19 +47,19 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxTotal)
 
 	if err := c.Request.ParseMultipartForm(maxTotal); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file size exceeds limit or invalid form"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_multipart_form", "file size exceeds limit or invalid form")
 		return
 	}
 
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_multipart_form", "invalid multipart form")
 		return
 	}
 
 	files := form.File["file"]
 	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_required", "file is required")
 		return
 	}
 
@@ -70,7 +71,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 	}
 	if maxFiles > 0 && len(files) > maxFiles {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "too many files"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "too_many_files", "too many files")
 		return
 	}
 
@@ -110,14 +111,27 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		Tags        []string `json:"tags"`
 		Routes      []string `json:"routes"`
 		CustomName  string   `json:"custom_name"`
+		ClientIndex int      `json:"client_index"`
 	}
 	var metadataList []FileMetadata
 	metadataStr := c.PostForm("metadata")
 	if metadataStr != "" {
-		_ = json.Unmarshal([]byte(metadataStr), &metadataList)
+		if err := json.Unmarshal([]byte(metadataStr), &metadataList); err != nil {
+			response.WriteErrorCode(c, http.StatusBadRequest, "invalid_metadata", "invalid metadata json")
+			return
+		}
 	}
 
 	var results []gin.H
+	appendUploadError := func(clientIndex int, fileName, code, message string) {
+		results = append(results, gin.H{
+			"client_index": clientIndex,
+			"success":      false,
+			"file_name":    fileName,
+			"code":         code,
+			"message":      message,
+		})
+	}
 
 	for i, fileHeader := range files {
 		maxPerFile := int64(60 * 1024 * 1024)
@@ -126,14 +140,19 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 				maxPerFile = cfg.MaxUploadFileBytes
 			}
 		}
+		clientIndex := i
+		if i < len(metadataList) && metadataList[i].ClientIndex >= 0 {
+			clientIndex = metadataList[i].ClientIndex
+		}
+
 		if maxPerFile > 0 && fileHeader.Size > maxPerFile {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "file too large"})
+			appendUploadError(clientIndex, fileHeader.Filename, "file_too_large", "file too large")
 			continue
 		}
 
 		f, err := fileHeader.Open()
 		if err != nil {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "open file failed: " + err.Error()})
+			appendUploadError(clientIndex, fileHeader.Filename, "file_open_failed", "open file failed")
 			continue
 		}
 
@@ -144,11 +163,11 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		buf, err := io.ReadAll(reader)
 		f.Close()
 		if err != nil {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "read file failed: " + err.Error()})
+			appendUploadError(clientIndex, fileHeader.Filename, "file_read_failed", "read file failed")
 			continue
 		}
 		if maxPerFile > 0 && int64(len(buf)) > maxPerFile {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "file too large"})
+			appendUploadError(clientIndex, fileHeader.Filename, "file_too_large", "file too large")
 			continue
 		}
 
@@ -178,10 +197,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		if _, allowed := allowedMIMETypes[mimeType]; !allowed {
-			results = append(results, gin.H{
-				"file_name": fileHeader.Filename,
-				"error":     "unsupported file type: " + mimeType,
-			})
+			appendUploadError(clientIndex, fileHeader.Filename, "unsupported_file_type", "unsupported file type: "+mimeType)
 			continue
 		}
 
@@ -195,7 +211,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		if originalFileName == "" || originalFileName == "." || originalFileName == ".." {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": "invalid filename"})
+			appendUploadError(clientIndex, fileHeader.Filename, "invalid_filename", "invalid filename")
 			continue
 		}
 
@@ -232,9 +248,9 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			uploadedByTokenType = uploaderToken.NormalizedType()
 		}
 
-		res, err := h.svc.Upload(buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convert, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
+		res, err := h.svc.Upload(c.Request.Context(), buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convert, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
 		if err != nil {
-			results = append(results, gin.H{"file_name": fileHeader.Filename, "error": err.Error()})
+			appendUploadError(clientIndex, fileHeader.Filename, "upload_failed", "upload failed")
 			continue
 		}
 
@@ -254,22 +270,23 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		results = append(results, gin.H{
-			"hash":        res.Image.Hash,
-			"file_name":   res.Image.FileName,
-			"size":        res.Image.Size,
-			"mime":        res.Image.MimeType,
-			"path":        res.Image.Path,
-			"width":       res.Image.Width,
-			"height":      res.Image.Height,
-			"description": res.Image.Description,
-			"tags":        res.Image.Tags,
-			"created_at":  res.Image.CreatedAt,
-			"updated_at":  res.Image.UpdatedAt,
-			"reused":      res.Reused,
-			"url":         res.HashURL,
-			"route":       res.Route,
-			"route_url":   res.RouteURL,
-			"success":     true,
+			"client_index": clientIndex,
+			"hash":         res.Image.Hash,
+			"file_name":    res.Image.FileName,
+			"size":         res.Image.Size,
+			"mime":         res.Image.MimeType,
+			"path":         res.Image.Path,
+			"width":        res.Image.Width,
+			"height":       res.Image.Height,
+			"description":  res.Image.Description,
+			"tags":         res.Image.Tags,
+			"created_at":   res.Image.CreatedAt,
+			"updated_at":   res.Image.UpdatedAt,
+			"reused":       res.Reused,
+			"url":          res.HashURL,
+			"route":        res.Route,
+			"route_url":    res.RouteURL,
+			"success":      true,
 		})
 	}
 
@@ -280,9 +297,9 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 func (h *ImageHandler) GetByHash(c *gin.Context) {
 	hashStr := c.Param("hash")
 
-	_, absPath, err := h.svc.ResolveByHash(hashStr)
+	_, absPath, err := h.svc.ResolveByHash(c.Request.Context(), hashStr)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "image not found"})
+		response.WriteErrorCode(c, http.StatusNotFound, "image_not_found", "image not found")
 		return
 	}
 
@@ -297,9 +314,9 @@ func (h *ImageHandler) GetByHash(c *gin.Context) {
 func (h *ImageHandler) GetThumbnailByHash(c *gin.Context) {
 	hashStr := c.Param("hash")
 
-	absPath, err := h.svc.ResolveThumbnailByHash(hashStr)
+	absPath, err := h.svc.ResolveThumbnailByHash(c.Request.Context(), hashStr)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "thumbnail not found"})
+		response.WriteErrorCode(c, http.StatusNotFound, "thumbnail_not_found", "thumbnail not found")
 		return
 	}
 
@@ -314,9 +331,9 @@ func (h *ImageHandler) GetThumbnailByHash(c *gin.Context) {
 func (h *ImageHandler) GetByRoute(c *gin.Context) {
 	routeStr := c.Param("route")
 
-	_, absPath, err := h.svc.ResolveByRoute(routeStr)
+	_, absPath, err := h.svc.ResolveByRoute(c.Request.Context(), routeStr)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "route not found"})
+		response.WriteErrorCode(c, http.StatusNotFound, "route_not_found", "route not found")
 		return
 	}
 
@@ -343,7 +360,7 @@ func (h *ImageHandler) List(c *gin.Context) {
 
 	images, total, err := h.svc.ListImages(page, pageSize, tag, fileName)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "list_images_failed", "failed to list images")
 		return
 	}
 
@@ -380,7 +397,7 @@ func (h *ImageHandler) ListTags(c *gin.Context) {
 
 	tags, err := h.svc.ListTags(limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "list_tags_failed", "failed to list tags")
 		return
 	}
 
@@ -393,12 +410,12 @@ func (h *ImageHandler) ListTags(c *gin.Context) {
 func (h *ImageHandler) Delete(c *gin.Context) {
 	hash := c.Param("hash")
 	if hash == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "hash is required"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "hash_required", "hash is required")
 		return
 	}
 
-	if err := h.svc.DeleteImage(hash); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.svc.DeleteImage(c.Request.Context(), hash); err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "delete_image_failed", "failed to delete image")
 		return
 	}
 
@@ -416,19 +433,19 @@ type UpdateImageRequest struct {
 func (h *ImageHandler) Update(c *gin.Context) {
 	hash := c.Param("hash")
 	if hash == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "hash is required"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "hash_required", "hash is required")
 		return
 	}
 
 	var req UpdateImageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_update_request", "invalid request body")
 		return
 	}
 
 	img, err := h.svc.UpdateImage(hash, req.Description, req.Tags, req.FileName)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "update_image_failed", "failed to update image")
 		return
 	}
 
@@ -438,7 +455,11 @@ func (h *ImageHandler) Update(c *gin.Context) {
 			if containsDuplicateKey(err.Error()) {
 				status = http.StatusBadRequest
 			}
-			c.JSON(status, gin.H{"error": "failed to update routes: " + err.Error()})
+			if status == http.StatusBadRequest {
+				response.WriteErrorCode(c, status, "route_exists", "route already exists")
+			} else {
+				response.WriteErrorCode(c, status, "update_routes_failed", "failed to update routes")
+			}
 			return
 		}
 	}
@@ -460,7 +481,7 @@ func (h *ImageHandler) ListRoutes(c *gin.Context) {
 
 	routes, total, err := h.svc.ListRoutes(page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "list_routes_failed", "failed to list routes")
 		return
 	}
 
@@ -476,12 +497,12 @@ func (h *ImageHandler) ListRoutes(c *gin.Context) {
 func (h *ImageHandler) DeleteRoute(c *gin.Context) {
 	route := c.Param("route")
 	if route == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "route is required"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "route_required", "route is required")
 		return
 	}
 
 	if err := h.svc.DeleteRoute(route); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "delete_route_failed", "failed to delete route")
 		return
 	}
 
@@ -492,16 +513,16 @@ func (h *ImageHandler) DeleteRoute(c *gin.Context) {
 func (h *ImageHandler) GetInfo(c *gin.Context) {
 	hash := c.Param("hash")
 	if hash == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "hash is required"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "hash_required", "hash is required")
 		return
 	}
 
-	img, _, err := h.svc.ResolveByHash(hash)
+	img, _, err := h.svc.ResolveByHash(c.Request.Context(), hash)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "image not found"})
+			response.WriteErrorCode(c, http.StatusNotFound, "image_not_found", "image not found")
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			response.WriteErrorCode(c, http.StatusInternalServerError, "get_image_info_failed", "failed to get image info")
 		}
 		return
 	}

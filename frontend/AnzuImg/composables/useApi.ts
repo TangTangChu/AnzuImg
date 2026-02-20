@@ -26,9 +26,9 @@ const getOrigin = (): string => {
 export const useApi = () => {
     const config = useRuntimeConfig()
     const raw = (config.public as any)?.apiPrefix
-    const apiPrefix = normalizePrefix(raw ?? '/kotori')
+    const apiPrefix = normalizePrefix(raw ?? '')
 
-    const useAbsoluteUrl = ((config.public as any)?.apiUseAbsoluteUrl ?? true) !== false
+    const useAbsoluteUrl = ((config.public as any)?.apiUseAbsoluteUrl ?? false) === true
 
     const apiUrl = (path: string) => {
         const urlPath = joinPath(apiPrefix, path)

@@ -1,16 +1,19 @@
 // 全局鉴权中间件
 export default defineNuxtRouteMiddleware(async (to) => {
     const authState = useAuthState()
+    const { checkInit } = useAuth()
     const { apiUrl } = useApi()
     const publicPaths = new Set<string>(['/login', '/setup'])
     const headers = process.server ? useRequestHeaders(['cookie']) : undefined
     let initialized = authState.initialized.value
     if (initialized !== true) {
         try {
-            const data = await $fetch<{ initialized: boolean }>(apiUrl('/api/v1/auth/status'), { headers })
-            initialized = !!data.initialized
-            authState.setInitialized(initialized)
+            initialized = await checkInit({ headers, throwOnError: true })
         } catch {
+            authState.resetAuth()
+            if (!publicPaths.has(to.path)) {
+                return navigateTo('/login')
+            }
             return
         }
     }

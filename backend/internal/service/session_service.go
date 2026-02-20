@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
@@ -32,7 +33,7 @@ func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, 
 
 	userAgent := c.Request.UserAgent()
 	if err := model.RevokeAllUserSessions(s.db, model.DefaultUserID); err != nil {
-
+		return "", nil, err
 	}
 
 	token, session, err := model.CreateSession(s.db, model.DefaultUserID, clientIP, userAgent)
@@ -229,8 +230,6 @@ func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid or expired session/token",
-		})
+		response.AbortErrorCode(c, http.StatusUnauthorized, "session_or_token_invalid", "invalid or expired session/token")
 	}
 }

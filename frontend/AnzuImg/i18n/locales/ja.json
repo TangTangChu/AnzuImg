@@ -211,9 +211,49 @@
                 "imageUpload": "画像アップロード",
                 "imageList": "画像一覧"
             }
+        },
+        "securityLogs": {
+            "title": "セキュリティ警告",
+            "description": "最近のセキュリティ/操作イベント（ログイン、ログアウト、パスワード変更、Passkey 管理）。",
+            "empty": "セキュリティ警告はありません",
+            "refresh": "更新",
+            "username": "ユーザー",
+            "ip": "IP",
+            "actions": {
+                "loginFailed": "ログイン失敗",
+                "loginSuccess": "ログイン成功",
+                "loginRateLimited": "ログイン試行が制限されました",
+                "loginBruteforceAlert": "ブルートフォース疑いアラート",
+                "logout": "ログアウト",
+                "passwordChanged": "パスワード変更成功",
+                "passwordChangeFailed": "パスワード変更失敗",
+                "passkeyRegisterSuccess": "Passkey 登録成功",
+                "passkeyRegisterFailed": "Passkey 登録失敗",
+                "passkeyLoginSuccess": "Passkey ログイン成功",
+                "passkeyLoginFailed": "Passkey ログイン失敗",
+                "passkeyDeleteSuccess": "Passkey 削除成功",
+                "passkeyDeleteFailed": "Passkey 削除失敗",
+                "tokenCreateSuccess": "API トークン作成成功",
+                "tokenCreateFailed": "API トークン作成失敗",
+                "tokenDeleteSuccess": "API トークン削除成功",
+                "tokenDeleteFailed": "API トークン削除失敗",
+                "tokenLogsCleanup": "API トークンログ削除完了",
+                "tokenLogsCleanupFailed": "API トークンログ削除失敗"
+            },
+            "levels": {
+                "info": "情報",
+                "warning": "警告",
+                "error": "エラー"
+            }
         }
     },
     "routes": {
+        "title": "ルート管理",
+        "path": "ルートパス",
+        "target": "対象画像",
+        "createdAt": "作成日時",
+        "actions": "操作",
+        "visit": "アクセス",
         "noRoutes": "ルートが見つかりません"
     }
 }

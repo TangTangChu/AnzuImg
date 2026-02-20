@@ -225,6 +225,40 @@
                 "imageUpload": "Image uploaded",
                 "imageList": "Image list"
             }
+        },
+        "securityLogs": {
+            "title": "Security Alerts",
+            "description": "Recent security and operation events (login, logout, password changes, passkey management).",
+            "empty": "No security alerts found",
+            "refresh": "Refresh",
+            "username": "User",
+            "ip": "IP",
+            "actions": {
+                "loginFailed": "Login failed",
+                "loginSuccess": "Login successful",
+                "loginRateLimited": "Login rate limited",
+                "loginBruteforceAlert": "Possible brute-force alert",
+                "logout": "User logged out",
+                "passwordChanged": "Password changed",
+                "passwordChangeFailed": "Password change failed",
+                "passkeyRegisterSuccess": "Passkey registered",
+                "passkeyRegisterFailed": "Passkey registration failed",
+                "passkeyLoginSuccess": "Passkey login successful",
+                "passkeyLoginFailed": "Passkey login failed",
+                "passkeyDeleteSuccess": "Passkey deleted",
+                "passkeyDeleteFailed": "Passkey deletion failed",
+                "tokenCreateSuccess": "API token created",
+                "tokenCreateFailed": "API token creation failed",
+                "tokenDeleteSuccess": "API token deleted",
+                "tokenDeleteFailed": "API token deletion failed",
+                "tokenLogsCleanup": "API token logs cleaned up",
+                "tokenLogsCleanupFailed": "API token logs cleanup failed"
+            },
+            "levels": {
+                "info": "Info",
+                "warning": "Warning",
+                "error": "Error"
+            }
         }
     },
     "routes": {

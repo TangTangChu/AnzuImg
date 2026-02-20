@@ -66,7 +66,7 @@ type UploadResult struct {
 // fileName 参数：显示用的文件名
 // mimeType 参数：调用者提供的MIME类型
 // width, height 参数：调用者提供的图片尺寸，如果是图片的话
-func (s *ImageService) Upload(buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int, uploadedByTokenID *uint, uploadedByTokenName string, uploadedByTokenType string) (*UploadResult, error) {
+func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int, uploadedByTokenID *uint, uploadedByTokenName string, uploadedByTokenType string) (*UploadResult, error) {
 	// 如果需要转换
 	if convert {
 		newBuf, newMime, err := ConvertImage(bytes.NewReader(buf), targetFormat, quality, effort)
@@ -95,7 +95,6 @@ func (s *ImageService) Upload(buf []byte, fileName string, routes []string, desc
 		return nil, fmt.Errorf("marshal tags failed: %w", err)
 	}
 	tagsJSON := datatypes.JSON(tagsBytes)
-	ctx := context.Background()
 	sum := sha256.Sum256(buf)
 	hashStr := hex.EncodeToString(sum[:])
 
@@ -103,14 +102,19 @@ func (s *ImageService) Upload(buf []byte, fileName string, routes []string, desc
 	var existing model.Image
 	if err := s.db.Where("hash = ?", hashStr).First(&existing).Error; err == nil {
 		if len(routes) > 0 {
-			for _, rStr := range routes {
-				if rStr == "" {
-					continue
+			if err := s.db.Transaction(func(tx *gorm.DB) error {
+				for _, rStr := range routes {
+					if rStr == "" {
+						continue
+					}
+					r := model.ImageRoute{ImageID: existing.ID, Route: rStr}
+					if err := tx.Create(&r).Error; err != nil {
+						return fmt.Errorf("route insert failed: %w", err)
+					}
 				}
-				r := model.ImageRoute{ImageID: existing.ID, Route: rStr}
-				if err := s.db.Create(&r).Error; err != nil {
-					return nil, fmt.Errorf("route insert failed: %w", err)
-				}
+				return nil
+			}); err != nil {
+				return nil, err
 			}
 		}
 
@@ -162,20 +166,31 @@ func (s *ImageService) Upload(buf []byte, fileName string, routes []string, desc
 		UploadedByTokenType: uploadedByTokenType,
 	}
 
-	if err := s.db.Create(&img).Error; err != nil {
-		return nil, fmt.Errorf("db save image failed: %w", err)
-	}
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&img).Error; err != nil {
+			return fmt.Errorf("db save image failed: %w", err)
+		}
 
-	if len(routes) > 0 {
 		for _, rStr := range routes {
 			if rStr == "" {
 				continue
 			}
 			r := model.ImageRoute{ImageID: img.ID, Route: rStr}
-			if err := s.db.Create(&r).Error; err != nil {
-				return nil, fmt.Errorf("route insert failed: %w", err)
+			if err := tx.Create(&r).Error; err != nil {
+				return fmt.Errorf("route insert failed: %w", err)
 			}
 		}
+
+		return nil
+	}); err != nil {
+		if delErr := s.storage.Delete(ctx, relPath); delErr != nil {
+			s.log.Warnf("Failed to cleanup file after db rollback: %v", delErr)
+		}
+		suffixes := []string{"_thumb.webp", "_thumb.jpg", "_thumb"}
+		for _, suffix := range suffixes {
+			_ = s.storage.Delete(ctx, relPath+suffix)
+		}
+		return nil, err
 	}
 
 	firstRoute := ""
@@ -200,8 +215,7 @@ func routeURL(route string) string {
 }
 
 // ResolveByHash：返回图片和绝对路径或访问URL。
-func (s *ImageService) ResolveByHash(hash string) (*model.Image, string, error) {
-	ctx := context.Background()
+func (s *ImageService) ResolveByHash(ctx context.Context, hash string) (*model.Image, string, error) {
 	var img model.Image
 	if err := s.db.Where("hash = ?", hash).First(&img).Error; err != nil {
 		return nil, "", err
@@ -214,8 +228,7 @@ func (s *ImageService) ResolveByHash(hash string) (*model.Image, string, error) 
 }
 
 // ResolveThumbnailByHash：返回图片缩略图的绝对路径或访问URL。
-func (s *ImageService) ResolveThumbnailByHash(hash string) (string, error) {
-	ctx := context.Background()
+func (s *ImageService) ResolveThumbnailByHash(ctx context.Context, hash string) (string, error) {
 	var img model.Image
 	if err := s.db.Where("hash = ?", hash).First(&img).Error; err != nil {
 		return "", err
@@ -234,8 +247,7 @@ func (s *ImageService) ResolveThumbnailByHash(hash string) (string, error) {
 	return s.storage.GetAbsPath(ctx, img.Path)
 }
 
-func (s *ImageService) ResolveByRoute(route string) (*model.Image, string, error) {
-	ctx := context.Background()
+func (s *ImageService) ResolveByRoute(ctx context.Context, route string) (*model.Image, string, error) {
 	var r model.ImageRoute
 	if err := s.db.Where("route = ?", route).First(&r).Error; err != nil {
 		return nil, "", err
@@ -398,13 +410,12 @@ func (s *ImageService) UpdateRoutes(imageID uint64, routes []string) error {
 }
 
 // DeleteImage 删除图片
-func (s *ImageService) DeleteImage(hash string) error {
+func (s *ImageService) DeleteImage(ctx context.Context, hash string) error {
 	var img model.Image
 	if err := s.db.Where("hash = ?", hash).First(&img).Error; err != nil {
 		return err
 	}
 
-	ctx := context.Background()
 	if err := s.storage.Delete(ctx, img.Path); err != nil {
 		s.log.Warnf("Failed to delete file from storage: %v", err)
 	}

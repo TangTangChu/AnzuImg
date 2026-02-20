@@ -10,27 +10,36 @@
 
 ```
 
-# 后端配置
+# 后端核心配置
 
 # 监听地址
 ANZUIMG_SERVER_ADDR=:8080
+# 优雅停机等待秒数，默认 10
+ANZUIMG_SHUTDOWN_TIMEOUT_SEC=10
 
-# 数据库
-# 主机地址
+# API 前缀配置
+# API 路由前缀，例如 /kotori，留空表示无前缀
+# 默认为空，此时 API 路由为 /api/v1/...
+# 设置为 /kotori 时，API 路由为 /kotori/api/v1/...
+ANZUIMG_API_PREFIX=
+
+# 数据库配置
+# 主机地址，Docker 部署通常填 db
 ANZUIMG_DB_HOST=db
 ANZUIMG_DB_PORT=5432
 ANZUIMG_DB_USER=anzuuser
 ANZUIMG_DB_PASSWORD=anzupass
 ANZUIMG_DB_NAME=anzuimg
-# SSL模式: disable, require, verify-full
+# SSL 模式，支持 disable require verify-full，默认 disable
 ANZUIMG_DB_SSLMODE=disable
 
-# 存储 local / cloud
+# 存储配置
+# 存储类型，local 或 cloud，默认 local
 ANZUIMG_STORAGE_TYPE=local
-# 本地存储路径
+# 本地存储路径，仅在 STORAGE_TYPE=local 时使用
 ANZUIMG_STORAGE_BASE=/data/images
 
-# S3云存储配置，当 TYPE=cloud 时生效
+# S3 或 S3 兼容云存储配置，仅在 STORAGE_TYPE=cloud 时使用
 ANZUIMG_CLOUD_ENDPOINT=s3.amazonaws.com
 ANZUIMG_CLOUD_BUCKET=anzuimg-bucket
 ANZUIMG_CLOUD_REGION=us-east-1
@@ -38,36 +47,43 @@ ANZUIMG_CLOUD_ACCESS_KEY=
 ANZUIMG_CLOUD_SECRET_KEY=
 ANZUIMG_CLOUD_USE_SSL=true
 
-# 网络/安全
-# 允许跨域的源，通常就是前端访问地址
+# 网络与安全配置
+# 允许跨域访问的源，逗号分隔，填写前端访问地址
 ANZUIMG_ALLOWED_ORIGINS=http://localhost:9200
-# 信任代理网段 ，用于获取真实IP
+# 信任代理网段，用于获取真实 IP，逗号分隔
 ANZUIMG_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-# 初始化设置Token ，留空则不校验，但是在生产环境中将不接受外网访问
+# 初始化设置 Token，留空则不校验，首次部署建议设置
 ANZUIMG_SETUP_TOKEN=
-# Cookie SameSite策略：Lax/Strict
+# Cookie SameSite 策略，Lax Strict None，默认 Lax
 ANZUIMG_COOKIE_SAMESITE=Lax
-# 严格Session IP绑定
+# 是否启用会话严格 IP 绑定，默认 false
 ANZUIMG_STRICT_SESSION_IP=false
 
-# Passkey (WebAuthn)
-# 一般填写域名 youdomain.cn
+# Passkey WebAuthn 配置
+# Relying Party ID，通常为域名
 ANZUIMG_PASSKEY_RP_ID=localhost
-# 一般填写浏览器访问的完整URL
+# Relying Party Origin，浏览器访问的完整 URL
 ANZUIMG_PASSKEY_RP_ORIGIN=http://localhost:9200
+# Relying Party Display Name，注册时显示的应用名称
 ANZUIMG_PASSKEY_RP_DISPLAY_NAME=AnzuImg
 
-# 上传限制
-# 单次请求最大体积 (MB)
+# 上传限制配置
+# 单次请求的最大体积，单位 MB，默认 110
 ANZUIMG_MAX_UPLOAD_MB=110
-# 单个文件最大体积 (MB)
+# 单个文件的最大体积，单位 MB，默认 60
 ANZUIMG_MAX_UPLOAD_FILE_MB=60
-# 单词请求最大文件数
+# 单次请求的最大文件数，默认 20
 ANZUIMG_MAX_UPLOAD_FILES=20
 
 # 前端配置
-# 后端API地址
-BACKEND_URL=http://backend:8080
+# 后端 API 地址
+ANZUIMG_FRONTEND_BACKEND_URL=http://backend:8080
+# 前端子路径部署，例如 /app/，建议以 / 结尾
+ANZUIMG_FRONTEND_APP_BASE_URL=/clannd/
+# 前端 API 路由前缀，应与 ANZUIMG_API_PREFIX 一致
+# 留空或 / 表示不加前缀，此时前端 API 为 /api/v1/...
+# 设置为 /kotori 时，前端 API 为 /kotori/api/v1/...
+ANZUIMG_FRONTEND_API_PREFIX=/kotori
 
 ```
 
@@ -91,17 +107,21 @@ docker compose -f deploy/docker-compose.yml up -d
 
 虽然 Nuxt 前端的 Nitro 支持 proxy，但生产环境仍建议把 **宿主机 Nginx 作为唯一对外入口**。
 
-本项目现在支持“子路径部署 + API 前缀”，推荐对外暴露 3 个入口：
+本项目支持子路径部署和 API 前缀，推荐对外暴露 3 个入口：
 
-- **图床前端**：`/clannd/`（可配置）
-- **图床后端 API**：`/kotori/`（可配置，通常只承载 `/api/v1/*`、`/health`）
-- **图片直链**：`/i/`（公开访问）
+- **图床前端**：`/clannd/`
+- **图床后端 API**：`/kotori/`，通常只承载 `/api/v1/*` 与 `/health`
+- **图片直链**：`/i/`
 
 对应前端环境变量：
 
-- `APP_BASE_URL=/clannd/`（前端挂载路径，必须以 `/` 结尾）
-- `API_PREFIX=/kotori`（API 前缀，置空或 `/` 表示不加前缀）
-- `BACKEND_URL=http://backend:8080`（前端 SSR/Nitro 侧用于 proxy 的后端地址）
+- `ANZUIMG_FRONTEND_APP_BASE_URL=/clannd/`，前端挂载路径，建议以 `/` 结尾
+- `ANZUIMG_FRONTEND_API_PREFIX=/kotori`，置空或 `/` 表示不加前缀
+- `ANZUIMG_FRONTEND_BACKEND_URL=http://backend:8080`，前端 SSR 和 Nitro 侧用于 proxy 的后端地址
+
+后端如需原生前缀支持可设置：
+
+- `ANZUIMG_API_PREFIX=/kotori`，后端路由将变为 `/kotori/api/v1/...`
 
 示例 Nginx 配置见 [`deploy/nginx/anzuimg.conf.example`](deploy/nginx/anzuimg.conf.example)。
 
