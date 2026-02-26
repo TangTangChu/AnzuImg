@@ -306,7 +306,10 @@ func main() {
 	}(cleanupCtx)
 
 	gin.SetMode(gin.ReleaseMode)
-	r := httpserver.NewRouter(cfg, db)
+	r, err := httpserver.NewRouter(cfg, db)
+	if err != nil {
+		log.Fatalf("init router failed: %v", err)
+	}
 
 	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
 		log.Fatalf("set trusted proxies failed: %v", err)

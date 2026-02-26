@@ -122,7 +122,7 @@ export const useAuth = () => {
 
             let authResp;
             try {
-                authResp = await startAuthentication({ optionsJSON: publicKey });
+                authResp = await startAuthentication({ optionsJSON: publicKey as any });
             } catch (authenticationError) {
                 console.error('startAuthentication failed:', authenticationError);
                 return false;
@@ -164,7 +164,7 @@ export const useAuth = () => {
 
             let authResp;
             try {
-                authResp = await startRegistration({ optionsJSON: publicKey });
+                authResp = await startRegistration({ optionsJSON: publicKey as any });
             } catch (registrationError) {
                 console.error('startRegistration failed:', registrationError);
                 return false;
@@ -296,10 +296,10 @@ export const useAuth = () => {
         }
     };
 
-    const listAPITokenLogs = async (page = 1, pageSize = 20) => {
+    const listAPITokenLogs = async (page = 1, pageSize = 20, search = "", startDate = "", endDate = "", type = "") => {
         try {
             const data = await $fetch<APITokenLogListResponse>(apiUrl('/api/v1/auth/tokens/logs'), {
-                query: { page, page_size: pageSize }
+                query: { page, page_size: pageSize, search, start_date: startDate, end_date: endDate, type }
             });
             clearLastApiError()
             return data;
@@ -332,13 +332,17 @@ export const useAuth = () => {
         }
     };
 
-    const listSecurityLogs = async (page = 1, pageSize = 20, failedOnly = false) => {
+    const listSecurityLogs = async (page = 1, pageSize = 20, failedOnly = false, search = "", startDate = "", endDate = "", type = "") => {
         try {
             const data = await $fetch<SecurityLogListResponse>(apiUrl('/api/v1/auth/security/logs'), {
                 query: {
                     page,
                     page_size: pageSize,
                     failed_only: failedOnly,
+                    search,
+                    start_date: startDate,
+                    end_date: endDate,
+                    type
                 }
             });
             clearLastApiError()

@@ -33,6 +33,7 @@
             "passwordNumber": "パスワードには少なくとも1つの数字が必要です"
         },
         "labels": {
+            "all": "すべて",
             "description": "説明",
             "tags": "タグ",
             "password": "パスワード",
@@ -72,6 +73,15 @@
         "upload": "アップロード",
         "settings": "設定"
     },
+    "dashboard": {
+        "totalImages": "画像総数",
+        "totalSize": "ストレージ使用量",
+        "loginFailures24h": "ログイン失敗 (24h)",
+        "securityEvents24h": "セキュリティイベント (24h)",
+        "riskDisposition": "リスク処理",
+        "situationalAwareness": "状況認識",
+        "safeSystem": "異常なし"
+    },
     "auth": {
         "registerPasskey": "Passkeyを登録"
     },
@@ -106,7 +116,12 @@
         "route": "ルートパス設定",
         "customFileName": "カスタムファイル名",
         "customFileNamePlaceholder": "例：my-image",
-        "submit": "アップロード開始"
+        "convert": "フォーマット変換",
+        "targetFormat": "出力フォーマット",
+        "quality": "画質 (1-100)",
+        "effort": "圧縮強度 (0-9)",
+        "submit": "アップロード開始",
+        "routeUniqueWarning": "一意のルートエイリアス（オプション）"
     },
     "gallery": {
         "title": "ギャラリー",
@@ -114,6 +129,11 @@
         "downloadStarted": "ダウンロードを開始しました",
         "previous": "前へ",
         "next": "次へ",
+        "loadingDetails": "詳細を読み込み中...",
+        "detailLoadFailed": "詳細の読み込みに失敗しました",
+        "updated": "更新",
+        "routes": "ルートマッピング",
+        "urls": "アクセスURL",
         "uploadedByToken": "API トークンでアップロード"
     },
     "tags": {

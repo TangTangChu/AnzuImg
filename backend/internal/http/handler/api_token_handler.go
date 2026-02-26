@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
@@ -66,7 +67,7 @@ func (h *APITokenHandler) Create(c *gin.Context) {
 		Action:    "token_create",
 		Method:    c.Request.Method,
 		Path:      c.Request.URL.Path,
-		IPAddress: c.ClientIP(),
+		IPAddress: middleware.ClientIP(c),
 		UserAgent: c.Request.UserAgent(),
 	})
 	h.recordSecurityEvent(c, "info", "token_create_success", "api token created")
@@ -114,7 +115,7 @@ func (h *APITokenHandler) deleteTokenByID(c *gin.Context, id uint) {
 			Action:    "token_delete",
 			Method:    c.Request.Method,
 			Path:      c.Request.URL.Path,
-			IPAddress: c.ClientIP(),
+			IPAddress: middleware.ClientIP(c),
 			UserAgent: c.Request.UserAgent(),
 		})
 	}
@@ -127,7 +128,12 @@ func (h *APITokenHandler) ListLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	logs, total, err := h.svc.ListLogs(page, pageSize)
+	search := c.DefaultQuery("search", "")
+	startDate := c.DefaultQuery("start_date", "")
+	endDate := c.DefaultQuery("end_date", "")
+	actionType := c.DefaultQuery("type", "")
+
+	logs, total, err := h.svc.ListLogs(page, pageSize, search, startDate, endDate, actionType)
 	if err != nil {
 		response.WriteErrorCode(c, http.StatusInternalServerError, "list_token_logs_failed", "failed to list token logs")
 		return
@@ -187,7 +193,7 @@ func (h *APITokenHandler) recordSecurityEvent(c *gin.Context, level, action, mes
 		Message:   message,
 		Method:    c.Request.Method,
 		Path:      c.Request.URL.Path,
-		IPAddress: c.ClientIP(),
+		IPAddress: middleware.ClientIP(c),
 		Username:  "admin",
 		CreatedAt: time.Now(),
 	}

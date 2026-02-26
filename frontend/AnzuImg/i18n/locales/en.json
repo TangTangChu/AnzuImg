@@ -35,6 +35,7 @@
             "passwordNumber": "Password must contain at least one number"
         },
         "labels": {
+            "all": "All",
             "files": "files",
             "description": "Description",
             "tags": "Tags",
@@ -75,6 +76,15 @@
         "upload": "Upload",
         "routes": "Routes",
         "settings": "Settings"
+    },
+    "dashboard": {
+        "totalImages": "Total Images",
+        "totalSize": "Storage Usage",
+        "loginFailures24h": "Login Failures (24h)",
+        "securityEvents24h": "Security Events (24h)",
+        "riskDisposition": "Risk Disposition",
+        "situationalAwareness": "Situational Awareness",
+        "safeSystem": "No anomalies found"
     },
     "auth": {
         "registerPasskey": "Register Passkey"

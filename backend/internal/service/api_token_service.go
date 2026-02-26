@@ -109,10 +109,38 @@ func (s *APITokenService) RecordLog(log *model.APITokenLog) error {
 	return s.db.Create(log).Error
 }
 
-func (s *APITokenService) ListLogs(page, pageSize int) ([]model.APITokenLog, int64, error) {
+func (s *APITokenService) ListLogs(page, pageSize int, search, startDate, endDate, actionType string) ([]model.APITokenLog, int64, error) {
 	var logs []model.APITokenLog
 	var total int64
 	query := s.db.Model(&model.APITokenLog{})
+
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("token_name LIKE ? OR action LIKE ? OR path LIKE ? OR ip_address LIKE ? OR user_agent LIKE ?", like, like, like, like, like)
+	}
+
+	if startDate != "" {
+		if t, err := time.Parse(time.RFC3339, startDate); err == nil {
+			query = query.Where("created_at >= ?", t)
+		} else if t, err := time.Parse("2006-01-02", startDate); err == nil {
+			query = query.Where("created_at >= ?", t)
+		}
+	}
+
+	if endDate != "" {
+		if t, err := time.Parse(time.RFC3339, endDate); err == nil {
+			query = query.Where("created_at <= ?", t)
+		} else if t, err := time.Parse("2006-01-02", endDate); err == nil {
+			// End of the day
+			t = t.Add(24 * time.Hour).Add(-1 * time.Second)
+			query = query.Where("created_at <= ?", t)
+		}
+	}
+
+	if actionType != "" {
+		query = query.Where("action = ?", actionType)
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}

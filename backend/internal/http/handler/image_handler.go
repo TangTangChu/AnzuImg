@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 	"github.com/TangTangChu/AnzuImg/backend/internal/service"
@@ -263,7 +264,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 				Action:    "image_upload",
 				Method:    c.Request.Method,
 				Path:      c.Request.URL.Path,
-				IPAddress: c.ClientIP(),
+				IPAddress: middleware.ClientIP(c),
 				UserAgent: c.Request.UserAgent(),
 				ImageHash: res.Image.Hash,
 			})
@@ -374,7 +375,7 @@ func (h *ImageHandler) List(c *gin.Context) {
 				Action:    "image_list",
 				Method:    c.Request.Method,
 				Path:      c.Request.URL.RequestURI(),
-				IPAddress: c.ClientIP(),
+				IPAddress: middleware.ClientIP(c),
 				UserAgent: c.Request.UserAgent(),
 			})
 		}
@@ -552,6 +553,17 @@ func (h *ImageHandler) GetInfo(c *gin.Context) {
 		"updated_at":             img.UpdatedAt,
 		"routes":                 routes,
 	})
+}
+
+// GET /api/v1/stats
+func (h *ImageHandler) GetStats(c *gin.Context) {
+	stats, err := h.svc.GetStats()
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "get_stats_failed", "failed to get system stats")
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
 
 // 判断唯一冲突

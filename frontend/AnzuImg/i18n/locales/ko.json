@@ -33,6 +33,7 @@
             "passwordNumber": "비밀번호에는 숫자가 하나 이상 포함되어야 합니다"
         },
         "labels": {
+            "all": "전체",
             "description": "설명",
             "tags": "태그",
             "password": "비밀번호",
@@ -73,6 +74,15 @@
         "login": "로그인",
         "settings": "설정"
     },
+    "dashboard": {
+        "totalImages": "총 이미지",
+        "totalSize": "저장소 사용량",
+        "loginFailures24h": "로그인 실패 (24h)",
+        "securityEvents24h": "보안 이벤트 (24h)",
+        "riskDisposition": "위험 처리",
+        "situationalAwareness": "상황 인식",
+        "safeSystem": "이상 없음"
+    },
     "auth": {
         "registerPasskey": "Passkey 등록"
     },
@@ -107,7 +117,12 @@
         "route": "경로 매핑",
         "customFileName": "사용자 지정 파일 이름",
         "customFileNamePlaceholder": "예: my-image",
-        "submit": "업로드 시작"
+        "convert": "형식 변환",
+        "targetFormat": "대상 형식",
+        "quality": "품질 (1-100)",
+        "effort": "압축 강도 (0-9)",
+        "submit": "업로드 시작",
+        "routeUniqueWarning": "고유 경로 별칭 (선택 사항)"
     },
     "gallery": {
         "title": "갤러리",
@@ -115,6 +130,11 @@
         "downloadStarted": "다운로드가 시작되었습니다",
         "previous": "이전",
         "next": "다음",
+        "loadingDetails": "세부 정보 로딩 중...",
+        "detailLoadFailed": "세부 정보 로드 실패",
+        "updated": "업데이트됨",
+        "routes": "경로 매핑",
+        "urls": "액세스 URL",
         "uploadedByToken": "API 토큰으로 업로드"
     },
     "tags": {

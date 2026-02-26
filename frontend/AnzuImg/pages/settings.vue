@@ -1,5 +1,8 @@
 <template>
   <h1 class="mb-6 text-3xl font-bold text-center">{{ t("settings.title") }}</h1>
+
+  <Dashboard />
+
   <!-- 修改密码 -->
   <div class="mb-12 max-w-3xl mx-auto">
     <h2 class="mb-4 text-xl font-semibold">
@@ -319,10 +322,36 @@
               >
                 {{ t("settings.apiTokens.cleanupButton") }}
               </AnzuButton>
-              <AnzuButton variant="text" @click="() => loadTokenLogs()">
+            </div>
+          </div>
+
+          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <AnzuInput
+              v-model="tokenLogFilters.search"
+              :placeholder="t('common.actions.search')"
+              @keyup.enter="loadTokenLogs(1)"
+            />
+            <AnzuComboBox
+              v-model="tokenLogFilters.type"
+              :items="tokenLogTypeOptions"
+              :placeholder="t('settings.apiTokens.tokenTypePlaceholder')"
+              @update:modelValue="loadTokenLogs(1)"
+            />
+            <AnzuInput
+              v-model="tokenLogFilters.startDate"
+              type="date"
+              @change="loadTokenLogs(1)"
+            />
+            <AnzuInput
+              v-model="tokenLogFilters.endDate"
+              type="date"
+              @change="loadTokenLogs(1)"
+            />
+          </div>
+          <div class="mb-2 flex justify-end">
+             <AnzuButton variant="text" @click="() => loadTokenLogs(1)">
                 {{ t("settings.apiTokens.refreshLogs") }}
               </AnzuButton>
-            </div>
           </div>
 
           <div v-if="loadingTokenLogs" class="flex justify-center py-6">
@@ -419,7 +448,33 @@
                 {{ t("settings.securityLogs.description") }}
               </p>
             </div>
-            <AnzuButton variant="text" @click="() => loadSecurityLogs()">
+          </div>
+          
+          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <AnzuInput
+              v-model="securityLogFilters.search"
+              :placeholder="t('common.actions.search')"
+              @keyup.enter="loadSecurityLogs(1)"
+            />
+            <AnzuComboBox
+              v-model="securityLogFilters.type"
+              :items="securityLogTypeOptions"
+              :placeholder="t('settings.apiTokens.tokenTypePlaceholder')"
+              @update:modelValue="loadSecurityLogs(1)"
+            />
+            <AnzuInput
+              v-model="securityLogFilters.startDate"
+              type="date"
+              @change="loadSecurityLogs(1)"
+            />
+            <AnzuInput
+              v-model="securityLogFilters.endDate"
+              type="date"
+              @change="loadSecurityLogs(1)"
+            />
+          </div>
+          <div class="mb-2 flex justify-end">
+            <AnzuButton variant="text" @click="() => loadSecurityLogs(1)">
               {{ t("settings.securityLogs.refresh") }}
             </AnzuButton>
           </div>
@@ -599,6 +654,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
+import Dashboard from "~/components/Dashboard.vue";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
@@ -761,14 +817,53 @@ const copyToken = () => {
   });
 };
 
+const tokenLogFilters = ref({
+  search: "",
+  startDate: "",
+  endDate: "",
+  type: "",
+});
+
+const securityLogFilters = ref({
+  search: "",
+  startDate: "",
+  endDate: "",
+  type: "",
+});
+
+const tokenLogTypeOptions = computed(() => [
+  { value: "", label: t("common.labels.all") },
+  { value: "token_create", label: t("settings.apiTokens.logActions.tokenCreate") },
+  { value: "token_delete", label: t("settings.apiTokens.logActions.tokenDelete") },
+  { value: "image_upload", label: t("settings.apiTokens.logActions.imageUpload") },
+  { value: "image_list", label: t("settings.apiTokens.logActions.imageList") },
+]);
+
+const securityLogTypeOptions = computed(() => [
+  { value: "", label: t("common.labels.all") },
+  { value: "login_success", label: t("settings.securityLogs.actions.loginSuccess") },
+  { value: "login_failed", label: t("settings.securityLogs.actions.loginFailed") },
+  { value: "logout", label: t("settings.securityLogs.actions.logout") },
+  { value: "password_changed", label: t("settings.securityLogs.actions.passwordChanged") },
+  // Add more as needed
+]);
+
 const loadTokenLogs = async (page = tokenLogsPage.value) => {
   loadingTokenLogs.value = true;
-  const res = await listAPITokenLogs(page, tokenLogsPageSize);
+  const res = await listAPITokenLogs(
+    page,
+    tokenLogsPageSize,
+    tokenLogFilters.value.search,
+    tokenLogFilters.value.startDate,
+    tokenLogFilters.value.endDate,
+    tokenLogFilters.value.type
+  );
   tokenLogs.value = res.data;
   tokenLogsPage.value = res.page;
   tokenLogsTotal.value = res.total;
   loadingTokenLogs.value = false;
 };
+
 
 const handleTokenLogsPageChange = async (page: number) => {
   if (
@@ -848,7 +943,15 @@ const getTokenLogActionLabel = (action: string) => {
 
 const loadSecurityLogs = async (page = securityLogsPage.value) => {
   loadingSecurityLogs.value = true;
-  const res = await listSecurityLogs(page, securityLogsPageSize, false);
+  const res = await listSecurityLogs(
+    page,
+    securityLogsPageSize,
+    false,
+    securityLogFilters.value.search,
+    securityLogFilters.value.startDate,
+    securityLogFilters.value.endDate,
+    securityLogFilters.value.type
+  );
   securityLogs.value = res.data;
   securityLogsPage.value = res.page;
   securityLogsTotal.value = res.total;

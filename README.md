@@ -52,6 +52,11 @@ ANZUIMG_CLOUD_USE_SSL=true
 ANZUIMG_ALLOWED_ORIGINS=http://localhost:9200
 # 信任代理网段，用于获取真实 IP，逗号分隔
 ANZUIMG_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+# 客户端 IP 读取头顺序，按顺序尝试，按顺序尝试，在 ANZUIMG_TRUSTED_PROXIES 配置有效值时生效
+ANZUIMG_CLIENT_IP_HEADERS=X-Forwarded-For,X-Real-IP
+# XFF 解析策略：trusted（按受信任代理链推导）/ rightmost（取最右有效 IP）
+ANZUIMG_CLIENT_IP_XFF_STRATEGY=trusted
+# 兼容 APP_TRUSTED_PROXIES / APP_CLIENT_IP_HEADERS / APP_CLIENT_IP_XFF_STRATEGY（APP_* 优先）
 # 初始化设置 Token，留空则不校验，首次部署建议设置
 ANZUIMG_SETUP_TOKEN=
 # Cookie SameSite 策略，Lax Strict None，默认 Lax
@@ -97,7 +102,11 @@ docker compose -f deploy/docker-compose.yml up -d
 >
 > 首次运行，前端将引导进行初始化密码，如果没有配置 `ANZUIMG_SETUP_TOKEN`，后端将只接受本地路径访问进行初始化
 >
-> 如果使用了CDN服务，请关闭严格IP模式，否则无法正常访问控制服务
+> 请根据自己的网络环境配置如何获取请求来源IP地址，否则可能获取到 Docker 网关地址
+> 
+> 举个例子，如果配置的CDN服务，那么需要根据CDN文档来读取对应响应头，比如EdgeOne的是EO-Connecting-IP、Cloudflare的是CF-Connecting-IP；如果使用了多层代理，需要根据外层行为选择合适的响应头与解析行为
+>
+> 如果使用了CDN服务，请关闭严格IP模式，否则会因为IP变动无法正常访问控制服务
 >
 > 务必正确配置CORS
 >

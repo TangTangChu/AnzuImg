@@ -1,17 +1,27 @@
 package http
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/clientip"
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/handler"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
-func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
+func NewRouter(cfg *config.Config, db *gorm.DB) (*gin.Engine, error) {
 	r := gin.Default()
+
+	resolver, err := clientip.NewResolver(cfg.TrustedProxies, cfg.ClientIPHeaders, cfg.ClientIPXFFStrategy)
+	if err != nil {
+		return nil, fmt.Errorf("init client ip resolver failed: %w", err)
+	}
+
+	r.Use(middleware.ClientIPMiddleware(resolver))
 	r.Use(middleware.RequestID())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(func(c *gin.Context) {
@@ -29,7 +39,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	registerAuthRoutes(r, cfg, authH, apiTokenH)
 	registerAPIRoutes(r, cfg, healthH, imageH, authH)
 
-	return r
+	return r, nil
 }
 
 func registerHealthRoutes(r *gin.Engine, h *handler.HealthHandler) {
@@ -107,6 +117,7 @@ func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHand
 		api.GET("/routes", middleware.RequireTokenType(model.TokenTypeFull), ih.ListRoutes)
 		api.DELETE("/routes/:route", middleware.RequireTokenType(model.TokenTypeFull), ih.DeleteRoute)
 		api.POST("/routes/:route/delete", middleware.RequireTokenType(model.TokenTypeFull), ih.DeleteRoute)
+		api.GET("/stats", middleware.RequireTokenType(model.TokenTypeFull), ih.GetStats)
 
 		api.OPTIONS("/ping", func(c *gin.Context) { c.Status(204) })
 		api.OPTIONS("/images", func(c *gin.Context) { c.Status(204) })

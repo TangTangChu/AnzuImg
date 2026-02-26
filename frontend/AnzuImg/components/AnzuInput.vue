@@ -16,7 +16,7 @@
                         'pl-10': $slots.prefix,
                         'pr-10': $slots.suffix
                     },
-                ]" @input="handleInput" @blur="$emit('blur', $event)" @focus="$emit('focus', $event)" />
+                ]" @input="handleInput" @change="handleChange" @blur="$emit('blur', $event)" @focus="$emit('focus', $event)" />
             <div v-if="$slots.prefix"
                 class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-(--md-sys-color-on-surface-variant)">
                 <slot name="prefix" />
@@ -64,6 +64,7 @@ const emit = defineEmits<{
     (e: "update:modelValue", value: string | number): void;
     (e: "blur", event: FocusEvent): void;
     (e: "focus", event: FocusEvent): void;
+    (e: "change", event: Event): void;
 }>();
 
 const localError = ref(props.error);
@@ -87,6 +88,10 @@ const handleInput = (event: Event) => {
         }
     }
     emit("update:modelValue", value);
+};
+
+const handleChange = (event: Event) => {
+    emit("change", event);
 };
 </script>
 

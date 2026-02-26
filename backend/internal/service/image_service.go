@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -469,4 +470,43 @@ func (s *ImageService) DB() *gorm.DB {
 
 func (s *ImageService) Config() *config.Config {
 	return s.cfg
+}
+
+// GetStats 获取系统统计信息
+func (s *ImageService) GetStats() (*model.SystemStats, error) {
+	var stats model.SystemStats
+	var totalSize *int64 // 使用指针来处理 NULL 值
+
+	// 统计图片总数
+	if err := s.db.Model(&model.Image{}).Count(&stats.TotalImages).Error; err != nil {
+		return nil, err
+	}
+
+	// 统计总大小
+	if err := s.db.Model(&model.Image{}).Select("SUM(size)").Scan(&totalSize).Error; err != nil {
+		return nil, err
+	}
+
+	if totalSize != nil {
+		stats.TotalSize = *totalSize
+	} else {
+		stats.TotalSize = 0
+	}
+
+	// 统计过去24小时登录失败次数
+	yesterday := time.Now().Add(-24 * time.Hour)
+	if err := s.db.Model(&model.LoginAttempt{}).
+		Where("created_at > ? AND success = ?", yesterday, false).
+		Count(&stats.LoginFailures24h).Error; err != nil {
+		return nil, err
+	}
+
+	// 统计过去24小时安全事件数
+	if err := s.db.Model(&model.SecurityEventLog{}).
+		Where("created_at > ?", yesterday).
+		Count(&stats.SecurityEvents24h).Error; err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }

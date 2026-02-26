@@ -16,6 +16,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/clientip"
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
@@ -168,22 +169,18 @@ func (s *PasskeyService) FinishRegistration(req *http.Request, sessionID string)
 
 	// 收集环境信息
 	userAgent := req.UserAgent()
-	ipAddress := "unknown"
-	if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-		if net.ParseIP(host) != nil {
-			ipAddress = host
-		}
-	} else if net.ParseIP(req.RemoteAddr) != nil {
-		ipAddress = req.RemoteAddr
-	}
-	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		ips := strings.Split(forwardedFor, ",")
-		if len(ips) > 0 {
-			candidate := strings.TrimSpace(ips[0])
-			if net.ParseIP(candidate) != nil {
-				ipAddress = candidate
+	ipAddress := clientip.FromRequest(req)
+	if ipAddress == "" {
+		if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+			if net.ParseIP(host) != nil {
+				ipAddress = host
 			}
+		} else if net.ParseIP(req.RemoteAddr) != nil {
+			ipAddress = req.RemoteAddr
 		}
+	}
+	if ipAddress == "" {
+		ipAddress = "unknown"
 	}
 	deviceName := parseDeviceName(userAgent)
 	newCred := model.FromWebAuthnCredential(*credential, userAgent, ipAddress, deviceName)

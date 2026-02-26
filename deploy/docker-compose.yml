@@ -64,6 +64,10 @@ services:
 
       # 可信代理（宿主机 Nginx / 本机 / 常见内网网段）
       ANZUIMG_TRUSTED_PROXIES: ${ANZUIMG_TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      # 客户端 IP 读取头顺序，按顺序尝试
+      ANZUIMG_CLIENT_IP_HEADERS: ${ANZUIMG_CLIENT_IP_HEADERS:-X-Forwarded-For,X-Real-IP}
+      # XFF 解析策略：trusted / rightmost
+      ANZUIMG_CLIENT_IP_XFF_STRATEGY: ${ANZUIMG_CLIENT_IP_XFF_STRATEGY:-trusted}
 
       # 上传限制
       ANZUIMG_MAX_UPLOAD_MB: ${ANZUIMG_MAX_UPLOAD_MB:-110}

@@ -36,6 +36,7 @@
             "passwordNumber": "密码必须包含至少一个数字"
         },
         "labels": {
+            "all": "全部",
             "files": "文件",
             "description": "描述",
             "tags": "标签",
@@ -76,6 +77,15 @@
         "upload": "上传",
         "routes": "路由管理",
         "settings": "设置"
+    },
+    "dashboard": {
+        "totalImages": "图片总数",
+        "totalSize": "存储占用",
+        "loginFailures24h": "登录失败 (24h)",
+        "securityEvents24h": "安全事件 (24h)",
+        "riskDisposition": "风险处置",
+        "situationalAwareness": "态势感知",
+        "safeSystem": "无异常记录"
     },
     "auth": {
         "registerPasskey": "注册 Passkey"

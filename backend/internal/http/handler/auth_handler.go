@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
@@ -105,7 +106,7 @@ func (h *AuthHandler) Setup(c *gin.Context) {
 	}
 	// 如果没有设置 token，则仅允许本机初始化
 	if h.cfg.SetupToken == "" {
-		ip := c.ClientIP()
+		ip := middleware.ClientIP(c)
 		if ip != "127.0.0.1" && ip != "::1" {
 			response.WriteErrorCode(c, http.StatusForbidden, "setup_localhost_only", "setup is only allowed from localhost")
 			return
@@ -122,10 +123,12 @@ func (h *AuthHandler) Setup(c *gin.Context) {
 	}
 
 	if err := h.userService.SetupAdmin(req.Password); err != nil {
+		h.recordSecurityEvent(c, "error", "setup_failed", "failed to set initial password")
 		response.WriteErrorCode(c, http.StatusInternalServerError, "setup_password_failed", "failed to set password")
 		return
 	}
 
+	h.recordSecurityEvent(c, "info", "setup_success", "system initialized successfully")
 	c.JSON(http.StatusOK, gin.H{"message": "system initialized successfully"})
 }
 
@@ -136,7 +139,7 @@ func (h *AuthHandler) AuthWithPassword(c *gin.Context) {
 		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_login_request", "invalid request")
 		return
 	}
-	clientIP := c.ClientIP()
+	clientIP := middleware.ClientIP(c)
 	if clientIP == "" {
 		clientIP = "unknown"
 	}
@@ -157,15 +160,20 @@ func (h *AuthHandler) AuthWithPassword(c *gin.Context) {
 	}
 
 	// 验证密码
+	userAgent := c.Request.UserAgent()
+	if len(userAgent) > 50 {
+		userAgent = userAgent[:50] + "..."
+	}
+
 	if !h.userService.VerifyPassword(req.Password) {
 		model.RecordLoginAttempt(h.db, clientIP, "admin", false)
-		h.recordSecurityEvent(c, "warning", "login_failed", "failed login attempt")
+		h.recordSecurityEvent(c, "warning", "login_failed", "failed login attempt (UA: "+userAgent+")")
 		h.recordBruteforceAlertIfNeeded(c, clientIP)
 		response.WriteErrorCode(c, http.StatusUnauthorized, "invalid_credentials", "invalid password or system not initialized")
 		return
 	}
 	model.RecordLoginAttempt(h.db, clientIP, "admin", true)
-	h.recordSecurityEvent(c, "info", "login_success", "successful login")
+	h.recordSecurityEvent(c, "info", "login_success", "successful login (UA: "+userAgent+")")
 
 	token, session, err := h.sessionService.CreateSession(c)
 	if err != nil {
@@ -289,8 +297,13 @@ func (h *AuthHandler) LoginPasskeyFinish(c *gin.Context) {
 		return
 	}
 
+	userAgent := c.Request.UserAgent()
+	if len(userAgent) > 50 {
+		userAgent = userAgent[:50] + "..."
+	}
+
 	if err := h.passkeyService.FinishLogin(c.Request, sessionID); err != nil {
-		h.recordSecurityEvent(c, "warning", "passkey_login_failed", "failed passkey login attempt")
+		h.recordSecurityEvent(c, "warning", "passkey_login_failed", "failed passkey login attempt (UA: "+userAgent+")")
 		response.WriteErrorCode(c, http.StatusUnauthorized, "passkey_login_failed", "invalid passkey login response")
 		return
 	}
@@ -302,7 +315,7 @@ func (h *AuthHandler) LoginPasskeyFinish(c *gin.Context) {
 	}
 
 	h.sessionService.SetSessionCookie(c, token)
-	h.recordSecurityEvent(c, "info", "passkey_login_success", "successful passkey login")
+	h.recordSecurityEvent(c, "info", "passkey_login_success", "successful passkey login (UA: "+userAgent+")")
 
 	c.JSON(http.StatusOK, AuthResponse{
 		Token:      token,
@@ -430,6 +443,11 @@ func (h *AuthHandler) ListSecurityLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	failedOnly, _ := strconv.ParseBool(c.DefaultQuery("failed_only", "true"))
 
+	search := c.DefaultQuery("search", "")
+	startDate := c.DefaultQuery("start_date", "")
+	endDate := c.DefaultQuery("end_date", "")
+	actionType := c.DefaultQuery("type", "")
+
 	if page < 1 {
 		page = 1
 	}
@@ -440,6 +458,32 @@ func (h *AuthHandler) ListSecurityLogs(c *gin.Context) {
 	query := h.db.Model(&model.SecurityEventLog{})
 	if failedOnly {
 		query = query.Where("level = ? OR level = ?", "warning", "error")
+	}
+
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("action LIKE ? OR message LIKE ? OR path LIKE ? OR ip_address LIKE ? OR username LIKE ?", like, like, like, like, like)
+	}
+
+	if startDate != "" {
+		if t, err := time.Parse(time.RFC3339, startDate); err == nil {
+			query = query.Where("created_at >= ?", t)
+		} else if t, err := time.Parse("2006-01-02", startDate); err == nil {
+			query = query.Where("created_at >= ?", t)
+		}
+	}
+
+	if endDate != "" {
+		if t, err := time.Parse(time.RFC3339, endDate); err == nil {
+			query = query.Where("created_at <= ?", t)
+		} else if t, err := time.Parse("2006-01-02", endDate); err == nil {
+			t = t.Add(24 * time.Hour).Add(-1 * time.Second)
+			query = query.Where("created_at <= ?", t)
+		}
+	}
+
+	if actionType != "" {
+		query = query.Where("action = ?", actionType)
 	}
 
 	var total int64
@@ -479,7 +523,7 @@ func (h *AuthHandler) ListSecurityLogs(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) recordSecurityEvent(c *gin.Context, level, action, message string) {
+func (h *AuthHandler) recordSecurityEventWithUser(c *gin.Context, level, action, message, username string) {
 	log := &model.SecurityEventLog{
 		Category:  "auth",
 		Level:     level,
@@ -487,8 +531,8 @@ func (h *AuthHandler) recordSecurityEvent(c *gin.Context, level, action, message
 		Message:   message,
 		Method:    c.Request.Method,
 		Path:      c.Request.URL.Path,
-		IPAddress: c.ClientIP(),
-		Username:  "admin",
+		IPAddress: middleware.ClientIP(c),
+		Username:  username,
 		CreatedAt: time.Now(),
 	}
 	if err := h.db.Create(log).Error; err != nil {
@@ -496,11 +540,15 @@ func (h *AuthHandler) recordSecurityEvent(c *gin.Context, level, action, message
 	}
 }
 
+func (h *AuthHandler) recordSecurityEvent(c *gin.Context, level, action, message string) {
+	h.recordSecurityEventWithUser(c, level, action, message, "admin")
+}
+
 func (h *AuthHandler) recordSecurityEventWithDedup(c *gin.Context, level, action, message string, dedupWindow time.Duration) {
 	cutoff := time.Now().Add(-dedupWindow)
 	var exists int64
 	err := h.db.Model(&model.SecurityEventLog{}).
-		Where("action = ? AND ip_address = ? AND created_at > ?", action, c.ClientIP(), cutoff).
+		Where("action = ? AND ip_address = ? AND created_at > ?", action, middleware.ClientIP(c), cutoff).
 		Count(&exists).Error
 	if err != nil {
 		h.log.Warnf("failed to check security event dedup: %v", err)
