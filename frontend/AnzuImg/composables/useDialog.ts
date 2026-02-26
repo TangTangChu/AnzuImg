@@ -14,6 +14,34 @@ interface DialogInstance extends Dialog {
     reject?: (reason?: any) => void;
 }
 
+export const enum DialogDismissCode {
+    CLOSED = "dialog_closed",
+    ALL_CLOSED = "all_dialogs_closed",
+}
+
+export class DialogDismissedError extends Error {
+    code: DialogDismissCode;
+
+    constructor(code: DialogDismissCode) {
+        super(code === DialogDismissCode.ALL_CLOSED ? "All dialogs closed" : "Dialog closed");
+        this.name = "DialogDismissedError";
+        this.code = code;
+    }
+}
+
+export const isDialogDismissedError = (error: unknown): boolean => {
+    if (error instanceof DialogDismissedError) {
+        return true;
+    }
+
+    if (!error || typeof error !== "object") {
+        return false;
+    }
+
+    const code = (error as { code?: unknown }).code;
+    return code === DialogDismissCode.CLOSED || code === DialogDismissCode.ALL_CLOSED;
+};
+
 const dialogs = ref<DialogInstance[]>([]);
 
 export const useDialog = () => {
@@ -83,11 +111,11 @@ export const useDialog = () => {
 
         const dialog = dialogs.value[index];
         if (!dialog) return;
-        
+
         if (result !== undefined && dialog.resolve) {
             dialog.resolve(result);
         } else if (dialog.reject) {
-            dialog.reject(new Error("Dialog closed"));
+            dialog.reject(new DialogDismissedError(DialogDismissCode.CLOSED));
         }
 
         dialogs.value.splice(index, 1);
@@ -96,7 +124,7 @@ export const useDialog = () => {
     const closeAll = () => {
         dialogs.value.forEach((dialog) => {
             if (dialog.reject) {
-                dialog.reject(new Error("All dialogs closed"));
+                dialog.reject(new DialogDismissedError(DialogDismissCode.ALL_CLOSED));
             }
         });
         dialogs.value = [];

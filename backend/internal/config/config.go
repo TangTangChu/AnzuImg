@@ -7,21 +7,27 @@ import (
 )
 
 type Config struct {
-	ServerAddr string
-	DBHost     string
-	DBPort     int
-	DBUser     string
-	DBPass     string
-	DBName     string
-	DBSSL      string
+	ServerAddr         string
+	ShutdownTimeoutSec int
+	DBHost             string
+	DBPort             int
+	DBUser             string
+	DBPass             string
+	DBName             string
+	DBSSL              string
 
 	StorageBase string
 	StorageType string // "local" 或 "cloud"
 
+	// API前缀
+	APIPrefix string
+
 	// CORS配置
-	AllowedOrigins []string
-	TrustedProxies []string
-	SetupToken     string
+	AllowedOrigins      []string
+	TrustedProxies      []string
+	ClientIPHeaders     []string
+	ClientIPXFFStrategy string
+	SetupToken          string
 
 	// 上传限制（单位：字节）
 	MaxUploadBytes     int64
@@ -50,6 +56,42 @@ type Config struct {
 func getEnv(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return def
+}
+
+func splitCSV(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return []string{}
+	}
+	items := strings.Split(value, ",")
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+	return result
+}
+
+func getEnvList(def []string, keys ...string) []string {
+	for _, key := range keys {
+		if value, ok := os.LookupEnv(key); ok {
+			return splitCSV(value)
+		}
+	}
+	result := make([]string, len(def))
+	copy(result, def)
+	return result
+}
+
+func getEnvStringWithFallback(def string, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := os.LookupEnv(key); ok {
+			return strings.TrimSpace(value)
+		}
 	}
 	return def
 }
@@ -89,6 +131,19 @@ func getEnvInt64MB(key string, defMB int64) int64 {
 	return mb * 1024 * 1024
 }
 
+func normalizeAPIPrefix(prefix string) string {
+	trimmed := strings.TrimSpace(prefix)
+	if trimmed == "" || trimmed == "/" {
+		return ""
+	}
+	// 确保以 / 开头，移除尾部 /
+	if !strings.HasPrefix(trimmed, "/") {
+		trimmed = "/" + trimmed
+	}
+	trimmed = strings.TrimRight(trimmed, "/")
+	return trimmed
+}
+
 func Load() *Config {
 	// 解析允许的Origins
 	allowedOrigins := []string{"http://localhost:9200"}
@@ -99,16 +154,25 @@ func Load() *Config {
 		}
 	}
 
-	trustedProxies := []string{"127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
-	if proxiesEnv := os.Getenv("ANZUIMG_TRUSTED_PROXIES"); proxiesEnv != "" {
-		trustedProxies = strings.Split(proxiesEnv, ",")
-		for i := range trustedProxies {
-			trustedProxies[i] = strings.TrimSpace(trustedProxies[i])
-		}
-	}
+	trustedProxies := getEnvList(
+		[]string{"127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"},
+		"APP_TRUSTED_PROXIES",
+		"ANZUIMG_TRUSTED_PROXIES",
+	)
+	clientIPHeaders := getEnvList(
+		[]string{"X-Forwarded-For", "X-Real-IP"},
+		"APP_CLIENT_IP_HEADERS",
+		"ANZUIMG_CLIENT_IP_HEADERS",
+	)
+	clientIPXFFStrategy := getEnvStringWithFallback(
+		"trusted",
+		"APP_CLIENT_IP_XFF_STRATEGY",
+		"ANZUIMG_CLIENT_IP_XFF_STRATEGY",
+	)
 
 	return &Config{
-		ServerAddr: getEnv("ANZUIMG_SERVER_ADDR", ":8080"),
+		ServerAddr:         getEnv("ANZUIMG_SERVER_ADDR", ":8080"),
+		ShutdownTimeoutSec: getEnvInt("ANZUIMG_SHUTDOWN_TIMEOUT_SEC", 10),
 
 		DBHost: getEnv("ANZUIMG_DB_HOST", "localhost"),
 		DBPort: getEnvInt("ANZUIMG_DB_PORT", 5432),
@@ -120,10 +184,15 @@ func Load() *Config {
 		StorageBase: getEnv("ANZUIMG_STORAGE_BASE", "./data/images"),
 		StorageType: getEnv("ANZUIMG_STORAGE_TYPE", "local"),
 
+		// API前缀
+		APIPrefix: normalizeAPIPrefix(getEnv("ANZUIMG_API_PREFIX", "")),
+
 		// CORS配置
-		AllowedOrigins: allowedOrigins,
-		TrustedProxies: trustedProxies,
-		SetupToken:     getEnv("ANZUIMG_SETUP_TOKEN", ""),
+		AllowedOrigins:      allowedOrigins,
+		TrustedProxies:      trustedProxies,
+		ClientIPHeaders:     clientIPHeaders,
+		ClientIPXFFStrategy: clientIPXFFStrategy,
+		SetupToken:          getEnv("ANZUIMG_SETUP_TOKEN", ""),
 
 		MaxUploadBytes:     getEnvInt64MB("ANZUIMG_MAX_UPLOAD_MB", 110),
 		MaxUploadFileBytes: getEnvInt64MB("ANZUIMG_MAX_UPLOAD_FILE_MB", 60),

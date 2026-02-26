@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/clientip"
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
@@ -23,16 +25,26 @@ func NewSessionService(db *gorm.DB) *SessionService {
 	return &SessionService{db: db}
 }
 
+func requestClientIP(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	if ip := clientip.FromRequest(c.Request); ip != "" {
+		return ip
+	}
+	return c.ClientIP()
+}
+
 // CreateSession 创建新会话，添加会话固定攻击防护
 func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, error) {
-	clientIP := c.ClientIP()
+	clientIP := requestClientIP(c)
 	if clientIP == "" {
 		clientIP = "unknown"
 	}
 
 	userAgent := c.Request.UserAgent()
 	if err := model.RevokeAllUserSessions(s.db, model.DefaultUserID); err != nil {
-
+		return "", nil, err
 	}
 
 	token, session, err := model.CreateSession(s.db, model.DefaultUserID, clientIP, userAgent)
@@ -63,7 +75,7 @@ func (s *SessionService) ValidateSession(c *gin.Context) (*model.Session, error)
 		}
 	}
 	if strictIP {
-		clientIP := c.ClientIP()
+		clientIP := requestClientIP(c)
 		if clientIP != "" && clientIP != "unknown" && session.IPAddress != "" && session.IPAddress != "unknown" {
 			if clientIP != session.IPAddress {
 				// IP地址不匹配，撤销会话并返回错误
@@ -215,7 +227,7 @@ func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
 		}
 		token := s.extractToken(c)
 		if token != "" {
-			clientIP := c.ClientIP()
+			clientIP := requestClientIP(c)
 			if clientIP == "" {
 				clientIP = "unknown"
 			}
@@ -229,8 +241,6 @@ func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid or expired session/token",
-		})
+		response.AbortErrorCode(c, http.StatusUnauthorized, "session_or_token_invalid", "invalid or expired session/token")
 	}
 }

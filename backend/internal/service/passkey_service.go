@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,6 +16,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/clientip"
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
@@ -29,6 +32,8 @@ type sessionItem struct {
 	data      webauthn.SessionData
 	expiresAt time.Time
 }
+
+var ErrCredentialNotFound = errors.New("credential not found")
 
 func NewPasskeyService(cfg *config.Config, db *gorm.DB) (*PasskeyService, error) {
 	wconfig := &webauthn.Config{
@@ -48,28 +53,22 @@ func NewPasskeyService(cfg *config.Config, db *gorm.DB) (*PasskeyService, error)
 		webAuthn: w,
 	}
 
-	// 启动定期清理过期会话的任务
-	go s.cleanupSessions()
-
 	return s, nil
 }
 
-func (s *PasskeyService) cleanupSessions() {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		s.sessionStore.Range(func(key, value interface{}) bool {
-			item := value.(sessionItem)
-			if now.After(item.expiresAt) {
-				s.sessionStore.Delete(key)
-			}
-			return true
-		})
-	}
+func (s *PasskeyService) cleanupExpiredSessions(now time.Time) {
+	s.sessionStore.Range(func(key, value interface{}) bool {
+		item := value.(sessionItem)
+		if now.After(item.expiresAt) {
+			s.sessionStore.Delete(key)
+		}
+		return true
+	})
 }
 
 func (s *PasskeyService) storeSession(data webauthn.SessionData) (string, error) {
+	s.cleanupExpiredSessions(time.Now())
+
 	// 生成随机 Session ID
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -86,6 +85,8 @@ func (s *PasskeyService) storeSession(data webauthn.SessionData) (string, error)
 }
 
 func (s *PasskeyService) GetSession(sessionID string) (*webauthn.SessionData, error) {
+	s.cleanupExpiredSessions(time.Now())
+
 	value, ok := s.sessionStore.Load(sessionID)
 	if !ok {
 		return nil, fmt.Errorf("session not found or expired")
@@ -168,12 +169,18 @@ func (s *PasskeyService) FinishRegistration(req *http.Request, sessionID string)
 
 	// 收集环境信息
 	userAgent := req.UserAgent()
-	ipAddress := req.RemoteAddr
-	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		ips := strings.Split(forwardedFor, ",")
-		if len(ips) > 0 {
-			ipAddress = strings.TrimSpace(ips[0])
+	ipAddress := clientip.FromRequest(req)
+	if ipAddress == "" {
+		if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+			if net.ParseIP(host) != nil {
+				ipAddress = host
+			}
+		} else if net.ParseIP(req.RemoteAddr) != nil {
+			ipAddress = req.RemoteAddr
 		}
+	}
+	if ipAddress == "" {
+		ipAddress = "unknown"
 	}
 	deviceName := parseDeviceName(userAgent)
 	newCred := model.FromWebAuthnCredential(*credential, userAgent, ipAddress, deviceName)
@@ -266,7 +273,7 @@ func (s *PasskeyService) DeleteCredential(credentialID string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("credential not found")
+		return ErrCredentialNotFound
 	}
 
 	return nil
@@ -293,7 +300,6 @@ func parseDeviceName(userAgent string) string {
 		return "Unknown Device"
 	}
 
-
 	switch {
 	case strings.Contains(userAgent, "Chrome"):
 		return "Chrome Browser"
@@ -306,7 +312,6 @@ func parseDeviceName(userAgent string) string {
 	case strings.Contains(userAgent, "Opera"):
 		return "Opera Browser"
 	}
-
 
 	switch {
 	case strings.Contains(userAgent, "Windows"):

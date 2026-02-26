@@ -14,6 +14,8 @@ type UserService struct {
 	db *gorm.DB
 }
 
+var ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
+
 func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
@@ -96,7 +98,7 @@ func (s *UserService) VerifyPassword(password string) bool {
 // ChangePassword 修改密码
 func (s *UserService) ChangePassword(currentPassword, newPassword string) error {
 	if !s.VerifyPassword(currentPassword) {
-		return errors.New("current password is incorrect")
+		return ErrCurrentPasswordIncorrect
 	}
 
 	if err := s.ValidatePasswordComplexity(newPassword); err != nil {

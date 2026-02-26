@@ -25,13 +25,25 @@ const (
 func IsIPLocked(db *gorm.DB, ipAddress string) (bool, time.Time) {
 	var count int64
 	lockoutTime := time.Now().Add(-time.Duration(LockoutDuration) * time.Minute)
-	
+
 	db.Model(&LoginAttempt{}).
 		Where("ip_address = ? AND success = ? AND created_at > ?",
 			ipAddress, false, lockoutTime).
 		Count(&count)
-	unlockTime := time.Now().Add(time.Duration(LockoutDuration) * time.Minute)
-	return count >= MaxLoginAttempts, unlockTime
+
+	if count < MaxLoginAttempts {
+		return false, time.Time{}
+	}
+
+	var latest LoginAttempt
+	if err := db.Model(&LoginAttempt{}).
+		Where("ip_address = ? AND success = ? AND created_at > ?", ipAddress, false, lockoutTime).
+		Order("created_at DESC").
+		First(&latest).Error; err == nil {
+		return true, latest.CreatedAt.Add(time.Duration(LockoutDuration) * time.Minute)
+	}
+
+	return true, time.Now().Add(time.Duration(LockoutDuration) * time.Minute)
 }
 
 // RecordLoginAttempt 记录登录尝试
@@ -42,7 +54,7 @@ func RecordLoginAttempt(db *gorm.DB, ipAddress, username string, success bool) e
 		Success:   success,
 		CreatedAt: time.Now(),
 	}
-	
+
 	return db.Create(attempt).Error
 }
 

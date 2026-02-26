@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,17 +9,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
+	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
+	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 	"github.com/TangTangChu/AnzuImg/backend/internal/service"
 )
 
 type APITokenHandler struct {
+	db  *gorm.DB
 	svc *service.APITokenService
+	log *logger.Logger
 }
 
 func NewAPITokenHandler(db *gorm.DB) *APITokenHandler {
 	return &APITokenHandler{
+		db:  db,
 		svc: service.NewAPITokenService(db),
+		log: logger.Register("api-token-handler"),
 	}
 }
 
@@ -35,17 +43,20 @@ type CleanupLogsRequest struct {
 func (h *APITokenHandler) Create(c *gin.Context) {
 	var req CreateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_request", "invalid request")
 		return
 	}
 
 	rawToken, token, err := h.svc.CreateToken(req.Name, req.IPAllowlist, req.TokenType)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if err.Error() == "invalid token type" {
+		message := "failed to create token"
+		if errors.Is(err, service.ErrInvalidTokenType) {
 			status = http.StatusBadRequest
+			message = "invalid token type"
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.recordSecurityEvent(c, "warning", "token_create_failed", message)
+		response.WriteError(c, status, message)
 		return
 	}
 
@@ -56,9 +67,10 @@ func (h *APITokenHandler) Create(c *gin.Context) {
 		Action:    "token_create",
 		Method:    c.Request.Method,
 		Path:      c.Request.URL.Path,
-		IPAddress: c.ClientIP(),
+		IPAddress: middleware.ClientIP(c),
 		UserAgent: c.Request.UserAgent(),
 	})
+	h.recordSecurityEvent(c, "info", "token_create_success", "api token created")
 
 	c.JSON(http.StatusOK, gin.H{
 		"token":     token,
@@ -69,7 +81,7 @@ func (h *APITokenHandler) Create(c *gin.Context) {
 func (h *APITokenHandler) List(c *gin.Context) {
 	tokens, err := h.svc.ListTokens()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "list_tokens_failed", "failed to list tokens")
 		return
 	}
 	c.JSON(http.StatusOK, tokens)
@@ -79,7 +91,7 @@ func (h *APITokenHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_id", "invalid id")
 		return
 	}
 
@@ -90,7 +102,8 @@ func (h *APITokenHandler) deleteTokenByID(c *gin.Context, id uint) {
 	token, _ := h.svc.GetTokenByID(id)
 
 	if err := h.svc.DeleteToken(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.recordSecurityEvent(c, "warning", "token_delete_failed", "failed to delete token")
+		response.WriteErrorCode(c, http.StatusInternalServerError, "delete_token_failed", "failed to delete token")
 		return
 	}
 
@@ -102,10 +115,11 @@ func (h *APITokenHandler) deleteTokenByID(c *gin.Context, id uint) {
 			Action:    "token_delete",
 			Method:    c.Request.Method,
 			Path:      c.Request.URL.Path,
-			IPAddress: c.ClientIP(),
+			IPAddress: middleware.ClientIP(c),
 			UserAgent: c.Request.UserAgent(),
 		})
 	}
+	h.recordSecurityEvent(c, "info", "token_delete_success", "api token deleted")
 
 	c.Status(http.StatusNoContent)
 }
@@ -114,9 +128,14 @@ func (h *APITokenHandler) ListLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	logs, total, err := h.svc.ListLogs(page, pageSize)
+	search := c.DefaultQuery("search", "")
+	startDate := c.DefaultQuery("start_date", "")
+	endDate := c.DefaultQuery("end_date", "")
+	actionType := c.DefaultQuery("type", "")
+
+	logs, total, err := h.svc.ListLogs(page, pageSize, search, startDate, endDate, actionType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.WriteErrorCode(c, http.StatusInternalServerError, "list_token_logs_failed", "failed to list token logs")
 		return
 	}
 
@@ -129,30 +148,56 @@ func (h *APITokenHandler) ListLogs(c *gin.Context) {
 }
 
 func (h *APITokenHandler) CleanupLogs(c *gin.Context) {
-	days, err := strconv.Atoi(c.DefaultQuery("days", "0"))
+	days := 0
+	if q := c.Query("days"); q != "" {
+		qDays, err := strconv.Atoi(q)
+		if err != nil {
+			response.WriteErrorCode(c, http.StatusBadRequest, "invalid_days", "invalid days")
+			return
+		}
+		days = qDays
+	}
+
 	if days <= 0 {
 		var req CleanupLogsRequest
 		if err := c.ShouldBindJSON(&req); err == nil {
 			days = req.Days
 		}
 	}
-	if err != nil {
-		days = 0
-	}
-	if err != nil || days <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid days"})
+
+	if days <= 0 {
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_days", "invalid days")
 		return
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -days)
 	deleted, err := h.svc.CleanupLogsBefore(cutoff)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.recordSecurityEvent(c, "warning", "token_logs_cleanup_failed", "failed to cleanup token logs")
+		response.WriteErrorCode(c, http.StatusInternalServerError, "cleanup_token_logs_failed", "failed to cleanup token logs")
 		return
 	}
+	h.recordSecurityEvent(c, "info", "token_logs_cleanup", "token logs cleanup executed")
 
 	c.JSON(http.StatusOK, gin.H{
 		"deleted": deleted,
 		"cutoff":  cutoff,
 	})
+}
+
+func (h *APITokenHandler) recordSecurityEvent(c *gin.Context, level, action, message string) {
+	event := &model.SecurityEventLog{
+		Category:  "auth",
+		Level:     level,
+		Action:    action,
+		Message:   message,
+		Method:    c.Request.Method,
+		Path:      c.Request.URL.Path,
+		IPAddress: middleware.ClientIP(c),
+		Username:  "admin",
+		CreatedAt: time.Now(),
+	}
+	if err := h.db.Create(event).Error; err != nil {
+		h.log.Warnf("failed to record token security event: %v", err)
+	}
 }

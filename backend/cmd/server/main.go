@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
 	"time"
 
@@ -15,6 +21,10 @@ import (
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
+
+func quotePostgresIdentifier(v string) string {
+	return `"` + strings.ReplaceAll(v, `"`, `""`) + `"`
+}
 
 func ensureDatabase(cfg *config.Config, log *logger.Logger) error {
 	adminDSN := fmt.Sprintf(
@@ -36,7 +46,8 @@ func ensureDatabase(cfg *config.Config, log *logger.Logger) error {
 
 	if count == 0 {
 		log.Infof("database %s not found, creating...", cfg.DBName)
-		if err := adminDB.Exec("CREATE DATABASE " + cfg.DBName).Error; err != nil {
+		createDBSQL := fmt.Sprintf("CREATE DATABASE %s", quotePostgresIdentifier(cfg.DBName))
+		if err := adminDB.Exec(createDBSQL).Error; err != nil {
 			return fmt.Errorf("create database failed: %w", err)
 		}
 		log.Infof("database %s created", cfg.DBName)
@@ -156,6 +167,28 @@ CREATE INDEX IF NOT EXISTS idx_login_attempts_username_created ON login_attempts
 			return fmt.Errorf("create login_attempts table failed: %w", err)
 		}
 
+		createSecurityEventLogsTable := `
+CREATE TABLE IF NOT EXISTS security_event_logs (
+	id         BIGSERIAL PRIMARY KEY,
+	category   VARCHAR(32) NOT NULL,
+	level      VARCHAR(16) NOT NULL,
+	action     VARCHAR(64) NOT NULL,
+	message    VARCHAR(255) NOT NULL,
+	method     VARCHAR(16),
+	path       VARCHAR(512),
+	ip_address VARCHAR(45),
+	username   VARCHAR(100),
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_security_event_logs_created_at ON security_event_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_security_event_logs_action ON security_event_logs(action);
+CREATE INDEX IF NOT EXISTS idx_security_event_logs_ip_created ON security_event_logs(ip_address, created_at);
+CREATE INDEX IF NOT EXISTS idx_security_event_logs_user_created ON security_event_logs(username, created_at);
+`
+		if err := tx.Exec(createSecurityEventLogsTable).Error; err != nil {
+			return fmt.Errorf("create security_event_logs table failed: %w", err)
+		}
+
 		createSessionsTable := `
 CREATE TABLE IF NOT EXISTS sessions (
     id         BIGSERIAL PRIMARY KEY,
@@ -222,7 +255,7 @@ CREATE INDEX IF NOT EXISTS idx_api_token_logs_created_at ON api_token_logs(creat
 			return fmt.Errorf("create api_token_logs table failed: %w", err)
 		}
 
-		log.Infof("ensured images, image_routes, users, passkey_credentials, system_configs, login_attempts, sessions, api_tokens and api_token_logs tables exist")
+		log.Infof("ensured images, image_routes, users, passkey_credentials, system_configs, login_attempts, security_event_logs, sessions, api_tokens and api_token_logs tables exist")
 		return nil
 	})
 }
@@ -250,28 +283,76 @@ func main() {
 		log.Fatalf("ensure tables failed: %v", err)
 	}
 
-	go func() {
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	defer cleanupCancel()
+
+	go func(ctx context.Context) {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
-		for range ticker.C {
-			if err := model.CleanExpiredSessions(db); err != nil {
-				log.Errorf("clean expired sessions failed: %v", err)
-			}
-			if err := model.CleanOldLoginAttempts(db); err != nil {
-				log.Errorf("clean old login attempts failed: %v", err)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Infof("session cleanup worker stopped")
+				return
+			case <-ticker.C:
+				if err := model.CleanExpiredSessions(db); err != nil {
+					log.Errorf("clean expired sessions failed: %v", err)
+				}
+				if err := model.CleanOldLoginAttempts(db); err != nil {
+					log.Errorf("clean old login attempts failed: %v", err)
+				}
 			}
 		}
-	}()
+	}(cleanupCtx)
 
 	gin.SetMode(gin.ReleaseMode)
-	r := httpserver.NewRouter(cfg, db)
+	r, err := httpserver.NewRouter(cfg, db)
+	if err != nil {
+		log.Fatalf("init router failed: %v", err)
+	}
 
 	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
 		log.Fatalf("set trusted proxies failed: %v", err)
 	}
 
+	httpServer := &http.Server{
+		Addr:    cfg.ServerAddr,
+		Handler: r,
+	}
+
+	serverErrCh := make(chan error, 1)
+	go func() {
+		serverErrCh <- httpServer.ListenAndServe()
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
 	log.Infof("AnzuImg backend listening on %s", cfg.ServerAddr)
-	if err := r.Run(cfg.ServerAddr); err != nil {
-		log.Fatalf("server run failed: %v", err)
+
+	select {
+	case err := <-serverErrCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server run failed: %v", err)
+		}
+	case sig := <-sigCh:
+		log.Infof("received shutdown signal: %s", sig.String())
+		cleanupCancel()
+
+		shutdownTimeoutSec := cfg.ShutdownTimeoutSec
+		if shutdownTimeoutSec <= 0 {
+			shutdownTimeoutSec = 10
+		}
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeoutSec)*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Errorf("server graceful shutdown failed: %v", err)
+			if closeErr := httpServer.Close(); closeErr != nil {
+				log.Errorf("server force close failed: %v", closeErr)
+			}
+		}
 	}
 }

@@ -1,9 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
 
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:9211';
-const apiPrefixRaw = process.env.API_PREFIX ?? '/kotori';
-const appBaseUrlRaw = process.env.APP_BASE_URL || '/';
+const backendUrl = process.env.ANZUIMG_FRONTEND_BACKEND_URL || 'http://backend:8080';
+const apiPrefixRaw = process.env.ANZUIMG_FRONTEND_API_PREFIX ?? '';
+const appBaseUrlRaw = process.env.ANZUIMG_FRONTEND_APP_BASE_URL || '/';
 
 const normalizeBaseUrl = (base: string): string => {
   const trimmed = (base || '').trim();
@@ -22,6 +22,12 @@ const normalizePrefix = (prefix: string): string => {
 
 const apiPrefix = normalizePrefix(apiPrefixRaw);
 const appBaseURL = normalizeBaseUrl(appBaseUrlRaw);
+const withApiPrefix = (path: string): string => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return apiPrefix ? `${apiPrefix}${normalizedPath}` : normalizedPath;
+};
+
+const backendApiBase = backendUrl.replace(/\/+$/, '');
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -44,15 +50,35 @@ export default defineNuxtConfig({
     defaultLocale: 'zh',
   },
   routeRules: {
-    [`${apiPrefix}/api/**`]: { proxy: `${backendUrl}/api/**` },
-    [`${apiPrefix}/health`]: { proxy: `${backendUrl}/health` },
-    '/health': { proxy: `${backendUrl}/health` },
-    '/i/**': { proxy: `${backendUrl}/i/**` },
+    [`${withApiPrefix('/api/**')}`]: { proxy: `${backendApiBase}/api/**` },
+    [`${withApiPrefix('/health')}`]: { proxy: `${backendApiBase}/health` },
+    '/health': { proxy: `${backendApiBase}/health` },
+    '/i/**': { proxy: `${backendApiBase}/i/**` },
+  },
+  nitro: {
+    devProxy: {
+      [`${withApiPrefix('/api')}`]: {
+        target: `${backendApiBase}/api`,
+        changeOrigin: true,
+      },
+      [`${withApiPrefix('/health')}`]: {
+        target: `${backendApiBase}/health`,
+        changeOrigin: true,
+      },
+      '/health': {
+        target: `${backendApiBase}/health`,
+        changeOrigin: true,
+      },
+      '/i': {
+        target: `${backendApiBase}/i`,
+        changeOrigin: true,
+      },
+    },
   },
   runtimeConfig: {
     public: {
       apiPrefix,
-      apiUseAbsoluteUrl: true,
+      apiUseAbsoluteUrl: false,
     },
   },
   app: {

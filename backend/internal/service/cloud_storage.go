@@ -45,8 +45,9 @@ func NewCloudStorage(cfg *appconfig.Config, log *logger.Logger) (*CloudStorage, 
 		region = "auto"
 	}
 	if endpoint == "" {
-		endpoint = "https://r2.cloudflarestorage.com"
+		endpoint = "r2.cloudflarestorage.com"
 	}
+	endpoint = normalizeEndpointHost(endpoint)
 
 	log.Infof("Initializing cloud storage: bucket=%s, region=%s, endpoint=%s",
 		bucket, region, endpoint)
@@ -144,10 +145,18 @@ func (s *CloudStorage) GetAbsPath(ctx context.Context, relPath string) (string, 
 		if !s.cfg.CloudUseSSL {
 			scheme = "http"
 		}
-		return fmt.Sprintf("%s://%s/%s", scheme, s.cfg.CloudEndpoint, relPath), nil
+		endpoint := normalizeEndpointHost(s.cfg.CloudEndpoint)
+		return fmt.Sprintf("%s://%s/%s", scheme, endpoint, relPath), nil
 	}
 
 	return fmt.Sprintf("https://%s.r2.dev/%s", s.bucket, relPath), nil
+}
+
+func normalizeEndpointHost(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	return strings.TrimSuffix(endpoint, "/")
 }
 
 // Delete 删除云端文件
@@ -191,35 +200,6 @@ func (s *CloudStorage) Exists(ctx context.Context, relPath string) (bool, error)
 // Type 返回存储类型
 func (s *CloudStorage) Type() string {
 	return "cloud"
-}
-
-// CloudStorageConfig 云端存储配置
-type CloudStorageConfig struct {
-	Endpoint  string
-	Bucket    string
-	Region    string
-	AccessKey string
-	SecretKey string
-	UseSSL    bool
-}
-
-// parseCloudStorageConfig 从环境变量解析云端存储配置
-func parseCloudStorageConfig(cfg *appconfig.Config) *CloudStorageConfig {
-	return &CloudStorageConfig{
-		Endpoint:  cfg.CloudEndpoint,
-		Bucket:    cfg.CloudBucket,
-		Region:    cfg.CloudRegion,
-		AccessKey: cfg.CloudAccessKey,
-		SecretKey: cfg.CloudSecretKey,
-		UseSSL:    cfg.CloudUseSSL,
-	}
-}
-
-// getCloudStorageKey 生成云端存储的key
-func getCloudStorageKey(hash string) string {
-	key := strings.TrimPrefix(hash[:2], "/")
-	key = strings.TrimSuffix(key, "/")
-	return fmt.Sprintf("%s/%s", key, hash)
 }
 
 // EnsureBucketExists 确保存储桶存在

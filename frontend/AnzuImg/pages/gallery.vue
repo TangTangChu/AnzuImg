@@ -4,9 +4,15 @@
   </h1>
 
   <div class="mx-auto mb-8 w-full max-w-4xl">
-    <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] md:items-end">
+    <div
+      class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] md:items-end"
+    >
       <div>
-        <AnzuInput v-model="searchQuery" :placeholder="t('common.actions.search')" @keydown.enter="handleSearch">
+        <AnzuInput
+          v-model="searchQuery"
+          :placeholder="t('common.actions.search')"
+          @keydown.enter="handleSearch"
+        >
           <template #prefix>
             <MagnifyingGlassIcon class="h-5 w-5" />
           </template>
@@ -15,9 +21,17 @@
 
       <div>
         <div class="flex items-center gap-2">
-          <AnzuComboBox v-model="selectedTag" :items="tagItems" :placeholder="t('tags.filterPlaceholder')"
-            @change="handleTagChange" />
-          <AnzuButton class="shrink-0 whitespace-nowrap" :disabled="!selectedTag" @click="clearTagFilter">
+          <AnzuComboBox
+            v-model="selectedTag"
+            :items="tagItems"
+            :placeholder="t('tags.filterPlaceholder')"
+            @change="handleTagChange"
+          />
+          <AnzuButton
+            class="shrink-0 whitespace-nowrap"
+            :disabled="!selectedTag"
+            @click="clearTagFilter"
+          >
             {{ t("tags.clearFilter") }}
           </AnzuButton>
         </div>
@@ -32,26 +46,46 @@
   <div v-else-if="error" class="p-4 text-center">
     <AnzuAlert type="error">{{ error.message }}</AnzuAlert>
   </div>
-  <div v-else-if="!images?.data?.length" class="p-8 text-center text-(--md-sys-color-on-surface-variant)">
+  <div
+    v-else-if="!images?.data?.length"
+    class="p-8 text-center text-(--md-sys-color-on-surface-variant)"
+  >
     {{ t("gallery.noImages") }}
   </div>
   <div v-else>
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-      <div v-for="(img, index) in images.data" :key="img.hash"
+    <div
+      class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+    >
+      <div
+        v-for="(img, index) in images.data"
+        :key="img.hash"
         class="group relative overflow-hidden rounded-xl bg-(--md-sys-color-surface-container) cursor-pointer"
-        @click="openImageModal(img, index)">
-        <img :src="`/i/${img.hash}/thumbnail`" :alt="img.file_name"
+        @click="openImageModal(img, index)"
+      >
+        <img
+          :src="`/i/${img.hash}/thumbnail`"
+          :alt="img.file_name"
           class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy" />
+          loading="lazy"
+        />
         <div
-          class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        >
           <div class="flex items-center justify-end gap-2">
-            <AnzuButton variant="filled" class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-              @click.stop="copyLink(img.hash)" :title="t('common.actions.copyLink')">
+            <AnzuButton
+              variant="filled"
+              class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
+              @click.stop="copyLink(img.hash)"
+              :title="t('common.actions.copyLink')"
+            >
               <LinkIcon class="h-5 w-5" />
             </AnzuButton>
-            <AnzuButton variant="tonal" class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-              @click.stop="deleteImage(img.hash)" :title="t('common.actions.delete')">
+            <AnzuButton
+              variant="tonal"
+              class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
+              @click.stop="deleteImage(img.hash)"
+              :title="t('common.actions.delete')"
+            >
               <TrashIcon class="h-5 w-5" />
             </AnzuButton>
           </div>
@@ -59,14 +93,29 @@
       </div>
     </div>
     <div class="mt-8 flex justify-center">
-      <AnzuPagination :current-page="currentPage" :total-pages="totalPages" base-url="/gallery" />
+      <AnzuPagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        base-url="/gallery"
+      />
     </div>
   </div>
 
-  <ImageModal :image="currentImage" :visible="modalVisible" :current-index="currentImageIndex"
-    :total-images="images?.data?.length || 0" :has-previous="hasPreviousImage" :has-next="hasNextImage"
-    @update:visible="modalVisible = $event" @close="closeModal" @previous="showPreviousImage" @next="showNextImage"
-    @copy-link="copyImageUrl" @download="downloadImage" @delete="deleteImage" />
+  <ImageModal
+    :image="currentImage"
+    :visible="modalVisible"
+    :current-index="currentImageIndex"
+    :total-images="images?.data?.length || 0"
+    :has-previous="hasPreviousImage"
+    :has-next="hasNextImage"
+    @update:visible="modalVisible = $event"
+    @close="closeModal"
+    @previous="showPreviousImage"
+    @next="showNextImage"
+    @copy-link="copyImageUrl"
+    @download="downloadImage"
+    @delete="deleteImage"
+  />
 </template>
 
 <script setup lang="ts">
@@ -80,8 +129,9 @@ import AnzuPagination from "~/components/AnzuPagination.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import { useNotification } from "~/composables/useNotification";
-import { useDialog } from "~/composables/useDialog";
+import { useDialog, isDialogDismissedError } from "~/composables/useDialog";
 import { useApi } from "~/composables/useApi";
+import { parseApiError } from "~/utils/api-error";
 import { NotificationType } from "~/types/notification";
 import { DialogVariant } from "~/types/dialog";
 import type { Image, ImageListResponse, TagListResponse } from "~/types/image";
@@ -307,12 +357,12 @@ const deleteImage = async (hash: string) => {
       closeModal();
     }
   } catch (e: any) {
-    if (e.message === "Dialog closed" || e.message === "All dialogs closed") {
+    if (isDialogDismissedError(e)) {
       return;
     }
-    const errorMsg = e.data?.error || t("common.actions.deleteFailed");
+    const parsed = parseApiError(e, t("common.actions.deleteFailed"));
     notify({
-      message: errorMsg,
+      message: parsed.displayMessage,
       type: NotificationType.ERROR,
     });
   }

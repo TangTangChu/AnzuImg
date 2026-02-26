@@ -5,20 +5,44 @@
         {{ t("login.title") }}
       </h1>
 
-      <form @submit.prevent="handleLogin" class="flex flex-col gap-4" autocomplete="on">
-        <input type="text" name="username" autocomplete="username" value="anzuimg" style="display: none;" />
-        <AnzuInput v-model="password" type="password" :label="t('common.labels.password')" placeholder="Enter password"
-          name="password" autocomplete="current-password" />
+      <form
+        @submit.prevent="handleLogin"
+        class="flex flex-col gap-4"
+        autocomplete="on"
+      >
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          value="anzuimg"
+          style="display: none"
+        />
+        <AnzuInput
+          v-model="password"
+          type="password"
+          :label="t('common.labels.password')"
+          placeholder="Enter password"
+          name="password"
+          autocomplete="current-password"
+        />
 
-        <AnzuButton type="submit" :status="loading ? 'loading' : 'default'" class="w-full">
+        <AnzuButton
+          type="submit"
+          :status="loading ? 'loading' : 'default'"
+          class="w-full"
+        >
           {{ t("common.actions.login") }}
         </AnzuButton>
       </form>
 
       <AnzuDivider>OR</AnzuDivider>
 
-      <AnzuButton variant="outlined" class="w-full" :status="loading ? 'loading' : 'default'"
-        @click="handlePasskeyLogin">
+      <AnzuButton
+        variant="outlined"
+        class="w-full"
+        :status="loading ? 'loading' : 'default'"
+        @click="handlePasskeyLogin"
+      >
         {{ t("login.passkeyButton") }}
       </AnzuButton>
     </div>
@@ -36,7 +60,7 @@ import { NotificationType } from "~/types/notification";
 const { t } = useI18n();
 const password = ref("");
 const loading = ref(false);
-const { login, loginWithPasskey } = useAuth();
+const { login, loginWithPasskey, getLastApiErrorDisplay } = useAuth();
 const router = useRouter();
 const { notify } = useNotification();
 
@@ -53,7 +77,7 @@ const handleLogin = async () => {
     router.push("/gallery");
   } else {
     notify({
-      message: "Login failed. Check your Password.",
+      message: getLastApiErrorDisplay("Login failed. Check your Password."),
       type: NotificationType.ERROR,
     });
   }
@@ -72,7 +96,7 @@ const handlePasskeyLogin = async () => {
     router.push("/gallery");
   } else {
     notify({
-      message: "Passkey login failed.",
+      message: getLastApiErrorDisplay("Passkey login failed."),
       type: NotificationType.ERROR,
     });
   }

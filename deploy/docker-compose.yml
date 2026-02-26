@@ -30,6 +30,8 @@ services:
         condition: service_healthy
     environment:
       ANZUIMG_SERVER_ADDR: ":8080"
+      ANZUIMG_SHUTDOWN_TIMEOUT_SEC: ${ANZUIMG_SHUTDOWN_TIMEOUT_SEC:-10}
+      ANZUIMG_API_PREFIX: ${ANZUIMG_API_PREFIX:-}
 
       ANZUIMG_DB_HOST: db
       ANZUIMG_DB_PORT: "5432"
@@ -62,6 +64,10 @@ services:
 
       # 可信代理（宿主机 Nginx / 本机 / 常见内网网段）
       ANZUIMG_TRUSTED_PROXIES: ${ANZUIMG_TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      # 客户端 IP 读取头顺序，按顺序尝试
+      ANZUIMG_CLIENT_IP_HEADERS: ${ANZUIMG_CLIENT_IP_HEADERS:-X-Forwarded-For,X-Real-IP}
+      # XFF 解析策略：trusted / rightmost
+      ANZUIMG_CLIENT_IP_XFF_STRATEGY: ${ANZUIMG_CLIENT_IP_XFF_STRATEGY:-trusted}
 
       # 上传限制
       ANZUIMG_MAX_UPLOAD_MB: ${ANZUIMG_MAX_UPLOAD_MB:-110}
@@ -82,17 +88,17 @@ services:
       context: ..
       dockerfile: frontend/Dockerfile
       args:
-        BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
-        APP_BASE_URL: ${APP_BASE_URL:-/}
-        API_PREFIX: ${API_PREFIX:-/kotori}
+        ANZUIMG_FRONTEND_BACKEND_URL: ${ANZUIMG_FRONTEND_BACKEND_URL:-http://backend:8080}
+        ANZUIMG_FRONTEND_APP_BASE_URL: ${ANZUIMG_FRONTEND_APP_BASE_URL:-/}
+        ANZUIMG_FRONTEND_API_PREFIX: ${ANZUIMG_FRONTEND_API_PREFIX:-/kotori}
     container_name: anzuimg-frontend
     restart: always
     environment:
       # Nuxt服务端请求后端 (容器间通信)
-      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      ANZUIMG_FRONTEND_BACKEND_URL: ${ANZUIMG_FRONTEND_BACKEND_URL:-http://backend:8080}
       # 子路径部署与 API 前缀（反向代理场景）
-      APP_BASE_URL: ${APP_BASE_URL:-/}
-      API_PREFIX: ${API_PREFIX:-/kotori}
+      ANZUIMG_FRONTEND_APP_BASE_URL: ${ANZUIMG_FRONTEND_APP_BASE_URL:-/}
+      ANZUIMG_FRONTEND_API_PREFIX: ${ANZUIMG_FRONTEND_API_PREFIX:-/kotori}
     ports:
       - "127.0.0.1:9200:3000"
 

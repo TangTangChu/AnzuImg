@@ -188,29 +188,3 @@ func ConvertImage(reader io.Reader, targetFormat string, quality int, effort int
 
 	return buf, mimeType, nil
 }
-
-func mapLoaderToMime(loader string) string {
-	loader = strings.ToLower(loader)
-	if strings.Contains(loader, "jpeg") {
-		return "image/jpeg"
-	}
-	if strings.Contains(loader, "png") {
-		return "image/png"
-	}
-	if strings.Contains(loader, "webp") {
-		return "image/webp"
-	}
-	if strings.Contains(loader, "gif") {
-		return "image/gif"
-	}
-	if strings.Contains(loader, "heif") {
-		return "image/avif"
-	}
-	if strings.Contains(loader, "svg") {
-		return "image/svg+xml"
-	}
-	if strings.Contains(loader, "jxl") {
-		return "image/jxl"
-	}
-	return "application/octet-stream"
-}
