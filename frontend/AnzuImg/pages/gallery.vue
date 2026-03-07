@@ -68,6 +68,18 @@
           class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
+        <span
+          v-if="isVideoMedia(img)"
+          class="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white"
+        >
+          VIDEO
+        </span>
+        <span
+          v-if="isVideoMedia(img) && getDurationText(img)"
+          class="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white"
+        >
+          {{ getDurationText(img) }}
+        </span>
         <div
           class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
         >
@@ -268,6 +280,22 @@ const closeModal = () => {
   currentImage.value = null;
 };
 
+const getMimeType = (img: Image) => img.mime_type || img.mime || "";
+
+const isVideoMedia = (img: Image) => getMimeType(img).startsWith("video/");
+
+const getDurationText = (img: Image) => {
+  const total = img.duration_seconds || 0;
+  if (total <= 0) return "";
+  const min = Math.floor(total / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = Math.floor(total % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${min}:${sec}`;
+};
+
 const showPreviousImage = () => {
   if (hasPreviousImage.value && images.value?.data) {
     currentImageIndex.value--;
@@ -315,7 +343,7 @@ const downloadImage = () => {
     a.click();
     document.body.removeChild(a);
     notify({
-      message: t("common.actions.deleteStarted"),
+      message: t("gallery.downloadStarted"),
       type: NotificationType.SUCCESS,
     });
   }

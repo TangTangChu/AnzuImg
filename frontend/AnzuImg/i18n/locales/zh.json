@@ -79,7 +79,7 @@
         "settings": "设置"
     },
     "dashboard": {
-        "totalImages": "图片总数",
+        "totalImages": "媒体总数",
         "totalSize": "存储占用",
         "loginFailures24h": "登录失败 (24h)",
         "securityEvents24h": "安全事件 (24h)",
@@ -114,8 +114,8 @@
         "success": "登录成功"
     },
     "upload": {
-        "title": "上传图片",
-        "dragDrop": "拖拽图片到这里",
+        "title": "上传媒体",
+        "dragDrop": "拖拽媒体到这里",
         "orSelect": "或者选择文件",
         "success": "上传成功",
         "route": "映射路由",
@@ -126,7 +126,8 @@
         "quality": "质量 (1-100)",
         "effort": "压缩努力程度 (0-9)",
         "submit": "开始上传",
-        "routeUniqueWarning": "唯一路由别名（可选）"
+        "routeUniqueWarning": "唯一路由别名（可选）",
+        "videoConvertDisabled": "视频文件不支持格式转换"
     },
     "gallery": {
         "title": "图片库",
@@ -229,11 +230,11 @@
             "cleanupFailed": "清理失败",
             "logToken": "令牌",
             "logIP": "IP",
-            "logImage": "图像",
+            "logImage": "媒体",
             "logActions": {
                 "tokenCreate": "令牌已创建",
                 "tokenDelete": "令牌已删除",
-                "imageUpload": "上传图片",
+                "imageUpload": "上传媒体",
                 "imageList": "检索列表"
             }
         },

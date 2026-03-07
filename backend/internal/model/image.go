@@ -15,6 +15,11 @@ type Image struct {
 	Path                string         `gorm:"column:storage_path;size:512" json:"path"`
 	Width               int            `json:"width"`
 	Height              int            `json:"height"`
+	DurationSeconds     int            `gorm:"column:duration_seconds" json:"duration_seconds"`
+	VideoCodec          string         `gorm:"column:video_codec;size:64" json:"video_codec"`
+	VideoBitrate        int64          `gorm:"column:video_bitrate" json:"video_bitrate"`
+	AudioCodec          string         `gorm:"column:audio_codec;size:64" json:"audio_codec"`
+	AudioBitrate        int64          `gorm:"column:audio_bitrate" json:"audio_bitrate"`
 	Description         string         `json:"description"`
 	Tags                datatypes.JSON `gorm:"type:jsonb" json:"tags"`
 	UploadedByTokenID   *uint          `gorm:"column:uploaded_by_token_id" json:"uploaded_by_token_id"`

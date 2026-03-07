@@ -16,7 +16,7 @@
         ref="fileInput"
         class="hidden"
         @change="handleFileSelect"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
       />
 
@@ -75,7 +75,19 @@
               ]"
               @click="selectFile(index)"
             >
-              <img :src="item.previewUrl" class="w-full h-full object-cover" />
+              <img
+                v-if="!isVideoFile(item.file)"
+                :src="item.previewUrl"
+                class="w-full h-full object-cover"
+              />
+              <video
+                v-else
+                :src="item.previewUrl"
+                class="w-full h-full object-cover"
+                muted
+                playsinline
+                preload="metadata"
+              ></video>
 
               <div
                 class="absolute inset-0 flex items-center justify-center bg-black/40"
@@ -126,7 +138,7 @@
                 ref="addInput"
                 class="hidden"
                 @change="handleAddFile"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
               />
               <svg
@@ -157,9 +169,18 @@
               class="h-16 w-16 rounded overflow-hidden shrink-0 border border-(--md-sys-color-outline-variant)"
             >
               <img
+                v-if="!isVideoFile(selectedFile.file)"
                 :src="selectedFile.previewUrl"
                 class="w-full h-full object-contain"
               />
+              <video
+                v-else
+                :src="selectedFile.previewUrl"
+                class="w-full h-full object-contain"
+                controls
+                playsinline
+                preload="metadata"
+              ></video>
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-bold truncate text-(--md-sys-color-on-surface)">
@@ -268,7 +289,7 @@
           v-else
           class="flex-1 flex items-center justify-center text-(--md-sys-color-on-surface-variant)"
         >
-          Select an image to edit details
+          Select a media file to edit details
         </div>
         <div class="p-4 border-t border-(--md-sys-color-outline-variant)">
           <div
@@ -278,8 +299,15 @@
               <AnzuCheckbox
                 v-model="enableConvert"
                 :label="t('upload.convert') + ' (All)'"
+                :disabled="hasVideoFile"
               />
             </div>
+            <p
+              v-if="hasVideoFile"
+              class="mb-2 text-xs text-(--md-sys-color-on-surface-variant)"
+            >
+              {{ t("upload.videoConvertDisabled") }}
+            </p>
             <div
               v-if="enableConvert"
               class="grid grid-cols-3 gap-2 text-sm animate-fade-in-up"
@@ -325,7 +353,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { useAuth } from "~/composables/useAuth";
 import { formatFileSize } from "~/utils/format";
 import AnzuButton from "~/components/AnzuButton.vue";
@@ -406,6 +434,18 @@ const addSelectedTag = () => {
 
 const totalSize = computed(() => {
   return files.value.reduce((acc, item) => acc + item.file.size, 0);
+});
+
+const isVideoFile = (file: File) => file.type.startsWith("video/");
+
+const hasVideoFile = computed(() =>
+  files.value.some((item) => isVideoFile(item.file)),
+);
+
+watch(hasVideoFile, (value) => {
+  if (value) {
+    enableConvert.value = false;
+  }
 });
 
 onUnmounted(() => {
@@ -495,7 +535,7 @@ const startUpload = async () => {
   formData.append("metadata", JSON.stringify(metadata));
 
   // Global settings
-  if (enableConvert.value) {
+  if (enableConvert.value && !hasVideoFile.value) {
     formData.append("convert", "true");
     formData.append("target_format", targetFormat.value);
     if (quality.value) formData.append("quality", quality.value);

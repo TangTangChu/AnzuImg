@@ -78,7 +78,7 @@
         "settings": "Settings"
     },
     "dashboard": {
-        "totalImages": "Total Images",
+        "totalImages": "Total Media",
         "totalSize": "Storage Usage",
         "loginFailures24h": "Login Failures (24h)",
         "securityEvents24h": "Security Events (24h)",
@@ -113,8 +113,8 @@
         "success": "Login successful"
     },
     "upload": {
-        "title": "Upload Image",
-        "dragDrop": "Drag & drop image here",
+        "title": "Upload Media",
+        "dragDrop": "Drag & drop media here",
         "orSelect": "or select file",
         "success": "Upload successful",
         "route": "Route Path",
@@ -125,7 +125,8 @@
         "quality": "Quality (1-100)",
         "effort": "Compression Effort (0-9)",
         "submit": "Start upload",
-        "routeUniqueWarning": "Unique route alias (optional)"
+        "routeUniqueWarning": "Unique route alias (optional)",
+        "videoConvertDisabled": "Video files do not support format conversion."
     },
     "gallery": {
         "title": "Gallery",
@@ -228,12 +229,12 @@
             "cleanupFailed": "Cleanup failed",
             "logToken": "Token",
             "logIP": "IP",
-            "logImage": "Image",
+            "logImage": "Media",
             "logActions": {
                 "tokenCreate": "Token created",
                 "tokenDelete": "Token deleted",
-                "imageUpload": "Image uploaded",
-                "imageList": "Image list"
+                "imageUpload": "Media uploaded",
+                "imageList": "Media list"
             }
         },
         "securityLogs": {
