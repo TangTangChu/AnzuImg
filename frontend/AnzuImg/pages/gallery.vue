@@ -3,11 +3,11 @@
     {{ t("gallery.title") }}
   </h1>
 
-  <div class="mx-auto mb-8 w-full max-w-4xl">
+  <div class="mx-auto mb-8 w-full max-w-6xl px-2 md:px-4">
     <div
-      class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)] md:items-end"
+      class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 md:mb-8"
     >
-      <div>
+      <div class="w-full md:w-auto md:flex-1">
         <AnzuInput
           v-model="searchQuery"
           :placeholder="t('common.actions.search')"
@@ -19,7 +19,7 @@
         </AnzuInput>
       </div>
 
-      <div>
+      <div class="w-full md:w-auto shrink-0">
         <div class="flex items-center gap-2">
           <AnzuComboBox
             v-model="selectedTag"
@@ -37,70 +37,81 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div v-if="pending" class="flex justify-center p-8">
-    <AnzuProgressRing status="loading" />
-  </div>
+    <div v-if="pending" class="flex justify-center p-8">
+      <AnzuProgressRing status="loading" />
+    </div>
 
-  <div v-else-if="error" class="p-4 text-center">
-    <AnzuAlert type="error">{{ error.message }}</AnzuAlert>
-  </div>
-  <div
-    v-else-if="!images?.data?.length"
-    class="p-8 text-center text-(--md-sys-color-on-surface-variant)"
-  >
-    {{ t("gallery.noImages") }}
-  </div>
-  <div v-else>
+    <div v-else-if="error" class="p-4 text-center">
+      <AnzuAlert type="error">{{ error.message }}</AnzuAlert>
+    </div>
     <div
-      class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+      v-else-if="!images?.data?.length"
+      class="p-8 text-center text-(--md-sys-color-on-surface-variant)"
     >
+      {{ t("gallery.noImages") }}
+    </div>
+    <div v-else>
       <div
-        v-for="(img, index) in images.data"
-        :key="img.hash"
-        class="group relative overflow-hidden rounded-xl bg-(--md-sys-color-surface-container) cursor-pointer"
-        @click="openImageModal(img, index)"
+        class="columns-2 gap-2 space-y-2 md:columns-auto md:space-y-0 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4"
       >
-        <img
-          :src="`/i/${img.hash}/thumbnail`"
-          :alt="img.file_name"
-          class="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
         <div
-          class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          v-for="(img, index) in images.data"
+          :key="img.hash"
+          class="group relative overflow-hidden rounded-xl bg-(--md-sys-color-surface-container) cursor-pointer break-inside-avoid mb-2 md:mb-0 md:aspect-square"
+          @click="openImageModal(img, index)"
         >
-          <div class="flex items-center justify-end gap-2">
-            <AnzuButton
-              variant="filled"
-              class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-              @click.stop="copyLink(img.hash)"
-              :title="t('common.actions.copyLink')"
-            >
-              <LinkIcon class="h-5 w-5" />
-            </AnzuButton>
-            <AnzuButton
-              variant="tonal"
-              class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-              @click.stop="deleteImage(img.hash)"
-              :title="t('common.actions.delete')"
-            >
-              <TrashIcon class="h-5 w-5" />
-            </AnzuButton>
+          <img
+            :src="`/i/${img.hash}/thumbnail`"
+            :alt="img.file_name"
+            class="w-full object-cover transition-transform duration-300 group-hover:scale-105 md:h-full"
+            loading="lazy"
+          />
+          <span
+            v-if="isVideoMedia(img)"
+            class="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white"
+          >
+            VIDEO
+          </span>
+          <span
+            v-if="isVideoMedia(img) && getDurationText(img)"
+            class="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white"
+          >
+            {{ getDurationText(img) }}
+          </span>
+          <div
+            class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          >
+            <div class="flex items-center justify-end gap-2">
+              <AnzuButton
+                variant="filled"
+                class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
+                @click.stop="copyLink(img.hash)"
+                :title="t('common.actions.copyLink')"
+              >
+                <LinkIcon class="h-5 w-5" />
+              </AnzuButton>
+              <AnzuButton
+                variant="tonal"
+                class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
+                @click.stop="deleteImage(img.hash)"
+                :title="t('common.actions.delete')"
+              >
+                <TrashIcon class="h-5 w-5" />
+              </AnzuButton>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="mt-8 flex justify-center">
-      <AnzuPagination
-        :current-page="currentPage"
-        :total-pages="totalPages"
-        base-url="/gallery"
-      />
+      <div class="mt-8 flex justify-center">
+        <AnzuPagination
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          base-url="/gallery"
+        />
+      </div>
     </div>
   </div>
-
   <ImageModal
     :image="currentImage"
     :visible="modalVisible"
@@ -268,6 +279,22 @@ const closeModal = () => {
   currentImage.value = null;
 };
 
+const getMimeType = (img: Image) => img.mime_type || img.mime || "";
+
+const isVideoMedia = (img: Image) => getMimeType(img).startsWith("video/");
+
+const getDurationText = (img: Image) => {
+  const total = img.duration_seconds || 0;
+  if (total <= 0) return "";
+  const min = Math.floor(total / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = Math.floor(total % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${min}:${sec}`;
+};
+
 const showPreviousImage = () => {
   if (hasPreviousImage.value && images.value?.data) {
     currentImageIndex.value--;
@@ -315,7 +342,7 @@ const downloadImage = () => {
     a.click();
     document.body.removeChild(a);
     notify({
-      message: t("common.actions.deleteStarted"),
+      message: t("gallery.downloadStarted"),
       type: NotificationType.SUCCESS,
     });
   }

@@ -75,7 +75,7 @@
         "settings": "설정"
     },
     "dashboard": {
-        "totalImages": "총 이미지",
+        "totalImages": "총 미디어",
         "totalSize": "저장소 사용량",
         "loginFailures24h": "로그인 실패 (24h)",
         "securityEvents24h": "보안 이벤트 (24h)",
@@ -110,8 +110,8 @@
         "success": "로그인 성공"
     },
     "upload": {
-        "title": "이미지 업로드",
-        "dragDrop": "이미지를 여기로 드래그 & 드롭",
+        "title": "미디어 업로드",
+        "dragDrop": "미디어를 여기로 드래그 & 드롭",
         "orSelect": "또는 파일 선택",
         "success": "업로드 성공",
         "route": "경로 매핑",
@@ -122,7 +122,8 @@
         "quality": "품질 (1-100)",
         "effort": "압축 강도 (0-9)",
         "submit": "업로드 시작",
-        "routeUniqueWarning": "고유 경로 별칭 (선택 사항)"
+        "routeUniqueWarning": "고유 경로 별칭 (선택 사항)",
+        "videoConvertDisabled": "동영상 파일은 형식 변환을 지원하지 않습니다"
     },
     "gallery": {
         "title": "갤러리",
@@ -225,12 +226,12 @@
             "cleanupFailed": "정리에 실패했습니다",
             "logToken": "토큰",
             "logIP": "IP",
-            "logImage": "이미지",
+            "logImage": "미디어",
             "logActions": {
                 "tokenCreate": "토큰 생성",
                 "tokenDelete": "토큰 삭제",
-                "imageUpload": "이미지 업로드",
-                "imageList": "이미지 목록"
+                "imageUpload": "미디어 업로드",
+                "imageList": "미디어 목록"
             }
         },
         "securityLogs": {

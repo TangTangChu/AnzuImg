@@ -19,7 +19,7 @@
           @wheel="handleWheel"
         >
           <img
-            v-if="displayImage"
+            v-if="displayImage && !isVideoMedia"
             :src="`/i/${displayImage.hash}`"
             :alt="displayImage.file_name"
             ref="imageElement"
@@ -32,6 +32,16 @@
             @click.stop
             @load="handleImageLoad"
           />
+          <video
+            v-else-if="displayImage"
+            :src="`/i/${displayImage.hash}`"
+            class="max-h-full max-w-full object-contain"
+            controls
+            playsinline
+            preload="metadata"
+            @loadeddata="handleMediaLoad"
+            @click.stop
+          ></video>
           <div
             v-if="!imageLoaded"
             class="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -94,6 +104,32 @@
                   <div class="flex items-center gap-1.5">
                     <PhotoIcon class="h-4 w-4" />
                     <span>{{ mimeType }}</span>
+                  </div>
+                  <div v-if="isVideoMedia" class="flex items-center gap-1.5">
+                    <ClockIcon class="h-4 w-4" />
+                    <span>{{ mediaDurationText }}</span>
+                  </div>
+                  <div v-if="isVideoMedia" class="flex items-center gap-1.5">
+                    <span class="font-medium">V:</span>
+                    <span>{{ videoCodecText }}</span>
+                  </div>
+                  <div v-if="isVideoMedia" class="flex items-center gap-1.5">
+                    <span class="font-medium">VB:</span>
+                    <span>{{ videoBitrateText }}</span>
+                  </div>
+                  <div
+                    v-if="isVideoMedia && audioCodecText !== '-'"
+                    class="flex items-center gap-1.5"
+                  >
+                    <span class="font-medium">A:</span>
+                    <span>{{ audioCodecText }}</span>
+                  </div>
+                  <div
+                    v-if="isVideoMedia && audioBitrateText !== '-'"
+                    class="flex items-center gap-1.5"
+                  >
+                    <span class="font-medium">AB:</span>
+                    <span>{{ audioBitrateText }}</span>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <CalendarIcon class="h-4 w-4" />
@@ -288,6 +324,7 @@ import {
   DocumentIcon,
   ArrowsPointingOutIcon,
   CalendarIcon,
+  ClockIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   LinkIcon,
@@ -366,6 +403,7 @@ watch(
 );
 
 const handleWheel = (e: WheelEvent) => {
+  if (isVideoMedia.value) return;
   e.preventDefault();
   const delta = e.deltaY > 0 ? 0.9 : 1.1;
   const newScale = Math.max(0.1, Math.min(scale.value * delta, 10));
@@ -374,6 +412,7 @@ const handleWheel = (e: WheelEvent) => {
 };
 
 const startDrag = (e: MouseEvent) => {
+  if (isVideoMedia.value) return;
   isDragging.value = true;
   lastMousePosition.value = { x: e.clientX, y: e.clientY };
 };
@@ -398,6 +437,10 @@ const stopDrag = () => {
 const handleImageLoad = () => {
   imageLoaded.value = true;
   resetZoom();
+};
+
+const handleMediaLoad = () => {
+  imageLoaded.value = true;
 };
 
 const startEdit = () => {
@@ -479,9 +522,47 @@ const hasRoutes = computed(() => {
 
 const mimeType = computed(() => {
   return (
-    detailedImage.value?.mime_type || detailedImage.value?.mime || "Unknown"
+    detailedImage.value?.mime_type ||
+    detailedImage.value?.mime ||
+    props.image?.mime_type ||
+    props.image?.mime ||
+    "Unknown"
   );
 });
+
+const isVideoMedia = computed(() => mimeType.value.startsWith("video/"));
+
+const mediaDurationText = computed(() => {
+  const total = displayImage.value?.duration_seconds || 0;
+  if (total <= 0) return "--:--";
+  const min = Math.floor(total / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = Math.floor(total % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${min}:${sec}`;
+});
+
+const formatBitrate = (bitrate?: number) => {
+  if (!bitrate || bitrate <= 0) return "-";
+  if (bitrate >= 1_000_000) {
+    return `${(bitrate / 1_000_000).toFixed(2)} Mbps`;
+  }
+  if (bitrate >= 1_000) {
+    return `${(bitrate / 1_000).toFixed(0)} kbps`;
+  }
+  return `${bitrate} bps`;
+};
+
+const videoCodecText = computed(() => displayImage.value?.video_codec || "-");
+const videoBitrateText = computed(() =>
+  formatBitrate(displayImage.value?.video_bitrate),
+);
+const audioCodecText = computed(() => displayImage.value?.audio_codec || "-");
+const audioBitrateText = computed(() =>
+  formatBitrate(displayImage.value?.audio_bitrate),
+);
 
 const handleClose = () => {
   emit("update:visible", false);

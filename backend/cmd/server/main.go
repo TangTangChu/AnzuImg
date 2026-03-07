@@ -71,6 +71,11 @@ CREATE TABLE IF NOT EXISTS images (
     storage_path  VARCHAR(512) NOT NULL,
     width         INTEGER,
     height        INTEGER,
+	duration_seconds INTEGER NOT NULL DEFAULT 0,
+	video_codec   VARCHAR(64),
+	video_bitrate BIGINT       NOT NULL DEFAULT 0,
+	audio_codec   VARCHAR(64),
+	audio_bitrate BIGINT       NOT NULL DEFAULT 0,
     description   TEXT,
     tags          JSONB,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -88,6 +93,11 @@ CREATE INDEX IF NOT EXISTS idx_images_tags ON images USING GIN(tags);
 ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_id BIGINT;
 ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_name VARCHAR(255);
 ALTER TABLE images ADD COLUMN IF NOT EXISTS uploaded_by_token_type VARCHAR(32);
+ALTER TABLE images ADD COLUMN IF NOT EXISTS duration_seconds INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS video_codec VARCHAR(64);
+ALTER TABLE images ADD COLUMN IF NOT EXISTS video_bitrate BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE images ADD COLUMN IF NOT EXISTS audio_codec VARCHAR(64);
+ALTER TABLE images ADD COLUMN IF NOT EXISTS audio_bitrate BIGINT NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_images_uploaded_by_token_id ON images(uploaded_by_token_id);
 `
 		if err := tx.Exec(alterImagesTable).Error; err != nil {

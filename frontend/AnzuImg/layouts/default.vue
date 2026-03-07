@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-(--md-sys-color-surface-container-lowest) text-(--md-sys-color-on-background) transition-colors duration-300">
     <AnzuNavBar />
-    <main class="container mx-auto p-4 pt-24 md:p-6 md:pt-28">
+    <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-24 md:pb-6 md:pt-28">
       <slot />
     </main>
     <AnzuNotification ref="notificationRef" />

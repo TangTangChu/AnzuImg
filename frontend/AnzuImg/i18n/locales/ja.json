@@ -74,7 +74,7 @@
         "settings": "設定"
     },
     "dashboard": {
-        "totalImages": "画像総数",
+        "totalImages": "メディア総数",
         "totalSize": "ストレージ使用量",
         "loginFailures24h": "ログイン失敗 (24h)",
         "securityEvents24h": "セキュリティイベント (24h)",
@@ -109,8 +109,8 @@
         "success": "ログイン成功"
     },
     "upload": {
-        "title": "画像アップロード",
-        "dragDrop": "画像をここにドラッグ＆ドロップ",
+        "title": "メディアアップロード",
+        "dragDrop": "メディアをここにドラッグ＆ドロップ",
         "orSelect": "またはファイルを選択",
         "success": "アップロード成功",
         "route": "ルートパス設定",
@@ -121,7 +121,8 @@
         "quality": "画質 (1-100)",
         "effort": "圧縮強度 (0-9)",
         "submit": "アップロード開始",
-        "routeUniqueWarning": "一意のルートエイリアス（オプション）"
+        "routeUniqueWarning": "一意のルートエイリアス（オプション）",
+        "videoConvertDisabled": "動画ファイルは形式変換をサポートしていません"
     },
     "gallery": {
         "title": "ギャラリー",
@@ -224,12 +225,12 @@
             "cleanupFailed": "削除に失敗しました",
             "logToken": "トークン",
             "logIP": "IP",
-            "logImage": "画像",
+            "logImage": "メディア",
             "logActions": {
                 "tokenCreate": "トークン作成",
                 "tokenDelete": "トークン削除",
-                "imageUpload": "画像アップロード",
-                "imageList": "画像一覧"
+                "imageUpload": "メディアアップロード",
+                "imageList": "メディア一覧"
             }
         },
         "securityLogs": {

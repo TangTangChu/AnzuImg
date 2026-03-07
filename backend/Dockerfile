@@ -34,6 +34,7 @@ RUN apk update && apk add --no-cache \
     vips-tools \
     libheif \
     libwebp \
+    ffmpeg \
     ca-certificates \
     tzdata \
     libjxl \

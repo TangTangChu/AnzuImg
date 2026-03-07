@@ -16,7 +16,7 @@
         ref="fileInput"
         class="hidden"
         @change="handleFileSelect"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
       />
 
@@ -44,9 +44,28 @@
       v-else
       class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 animate-fade-in-up"
     >
+      <!-- Left Panel: File Grid -->
       <div
-        class="lg:w-1/2 flex flex-col min-h-125 lg:h-150 rounded-xl overflow-hidden border border-(--md-sys-color-outline-variant)"
+        class="lg:w-1/2 flex flex-col min-h-125 lg:h-150 rounded-xl overflow-hidden border border-(--md-sys-color-outline-variant) relative transition-colors"
+        :class="[
+          isDragging
+            ? 'border-dashed border-(--md-sys-color-primary) bg-(--md-sys-color-primary)/5'
+            : '',
+        ]"
+        @dragenter.prevent="isDragging = true"
+        @dragleave.prevent="isDragging = false"
+        @dragover.prevent
+        @drop.prevent="handleDrop"
       >
+        <div
+          v-if="isDragging"
+          class="absolute inset-0 z-50 flex items-center justify-center bg-(--md-sys-color-surface)/80 pointer-events-none"
+        >
+          <p class="text-xl font-medium text-(--md-sys-color-primary)">
+            {{ t("upload.dragDrop") }}
+          </p>
+        </div>
+
         <div
           class="p-4 border-b border-(--md-sys-color-outline-variant) flex justify-between items-center"
         >
@@ -62,61 +81,14 @@
 
         <div class="flex-1 overflow-y-auto p-4">
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            <div
+            <FileGridItem
               v-for="(item, index) in files"
               :key="index"
-              class="relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all group"
-              :class="[
-                selectedIndex === index
-                  ? 'border-(--md-sys-color-primary) ring-2 ring-(--md-sys-color-primary/20)'
-                  : 'border-transparent hover:border-(--md-sys-color-outline)',
-                item.status === 'error' ? 'border-red-500!' : '',
-                item.status === 'success' ? 'border-green-500!' : '',
-              ]"
-              @click="selectFile(index)"
-            >
-              <img :src="item.previewUrl" class="w-full h-full object-cover" />
-
-              <div
-                class="absolute inset-0 flex items-center justify-center bg-black/40"
-                v-if="item.status !== 'pending'"
-              >
-                <div v-if="item.status === 'success'" class="text-green-400">
-                  <svg
-                    class="w-8 h-8"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <div v-if="item.status === 'error'" class="text-red-400">
-                  <svg
-                    class="w-8 h-8"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div
-                class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                :class="{ 'opacity-100': selectedIndex === index }"
-              ></div>
-            </div>
+              :item="item"
+              :index="index"
+              :is-selected="selectedIndex === index"
+              @select="selectFile"
+            />
             <div
               class="relative aspect-square rounded-lg border-2 border-dashed border-(--md-sys-color-outline-variant) flex items-center justify-center cursor-pointer hover:bg-(--md-sys-color-surface-container) hover:border-(--md-sys-color-primary) transition-colors"
               @click="triggerAddInput"
@@ -126,7 +98,7 @@
                 ref="addInput"
                 class="hidden"
                 @change="handleAddFile"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
               />
               <svg
@@ -149,220 +121,41 @@
       <div
         class="lg:w-1/2 flex flex-col h-auto lg:h-150 rounded-xl border border-(--md-sys-color-outline-variant) overflow-hidden"
       >
-        <div v-if="selectedFile" class="flex-1 flex flex-col min-h-0">
-          <div
-            class="p-4 border-b border-(--md-sys-color-outline-variant) flex gap-4 items-center"
-          >
-            <div
-              class="h-16 w-16 rounded overflow-hidden shrink-0 border border-(--md-sys-color-outline-variant)"
-            >
-              <img
-                :src="selectedFile.previewUrl"
-                class="w-full h-full object-contain"
-              />
-            </div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-bold truncate text-(--md-sys-color-on-surface)">
-                {{ selectedFile.file.name }}
-              </h3>
-              <p class="text-xs text-(--md-sys-color-on-surface-variant)">
-                {{ formatFileSize(selectedFile.file.size) }} ·
-                {{ selectedFile.file.type }}
-              </p>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto p-6 space-y-4">
-            <AnzuInput
-              v-model="selectedFile.customName"
-              :label="t('upload.customFileName')"
-              :placeholder="t('upload.customFileNamePlaceholder')"
-            />
-
-            <AnzuInput
-              v-model="selectedFile.description"
-              :label="t('common.labels.description')"
-            />
-
-            <div class="flex items-center gap-2">
-              <AnzuComboBox
-                v-model="selectedTagOption"
-                :items="tagItems"
-                :placeholder="t('tags.selectPlaceholder')"
-                :aria-label="t('tags.selectLabel')"
-                @change="handleTagPick"
-              />
-              <AnzuButton
-                class="shrink-0 whitespace-nowrap"
-                variant="tonal"
-                :disabled="!selectedTagOption"
-                @click="addSelectedTag"
-              >
-                {{ t("tags.add") }}
-              </AnzuButton>
-            </div>
-
-            <AnzuTags
-              v-model="selectedFile.tags"
-              :label="t('common.labels.tags')"
-              :max-tags="10"
-            />
-
-            <AnzuTags
-              v-model="selectedFile.routes"
-              :label="t('upload.route')"
-              :max-tags="5"
-            />
-          </div>
-
-          <div
-            v-if="selectedFile.status === 'success'"
-            class="p-4 border-t border-(--md-sys-color-outline-variant) bg-(--md-sys-color-primary-container)/40 text-(--md-sys-color-on-primary-container)"
-          >
-            <p class="font-bold text-sm flex items-center gap-2">
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              {{ t("upload.success") }}
-            </p>
-            <a
-              :href="selectedFile.resultUrl"
-              target="_blank"
-              class="text-xs underline break-all mt-1 block"
-              >{{ selectedFile.resultUrl }}</a
-            >
-          </div>
-          <div
-            v-if="selectedFile.status === 'error'"
-            class="p-4 bg-red-500/10 border-t border-red-500/20 text-red-600"
-          >
-            <p class="font-bold text-sm flex items-center gap-2">
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              Upload Failed
-            </p>
-            <p class="text-xs mt-1">{{ selectedFile.error }}</p>
-          </div>
-        </div>
-        <div
-          v-else
-          class="flex-1 flex items-center justify-center text-(--md-sys-color-on-surface-variant)"
-        >
-          Select an image to edit details
-        </div>
-        <div class="p-4 border-t border-(--md-sys-color-outline-variant)">
-          <div
-            class="mb-4 p-3 rounded-lg border border-(--md-sys-color-outline-variant)"
-          >
-            <div class="flex items-center gap-2 mb-2">
-              <AnzuCheckbox
-                v-model="enableConvert"
-                :label="t('upload.convert') + ' (All)'"
-              />
-            </div>
-            <div
-              v-if="enableConvert"
-              class="grid grid-cols-3 gap-2 text-sm animate-fade-in-up"
-            >
-              <div>
-                <label
-                  class="text-xs text-(--md-sys-color-on-surface-variant) block mb-1"
-                  >Format</label
-                >
-                <AnzuComboBox
-                  v-model="targetFormat"
-                  :items="['webp', 'avif']"
-                />
-              </div>
-              <div>
-                <label
-                  class="text-xs text-(--md-sys-color-on-surface-variant) block mb-1"
-                  >{{ t("upload.quality") }}</label
-                >
-                <AnzuInput v-model="quality" type="number" placeholder="80" />
-              </div>
-              <div>
-                <label
-                  class="text-xs text-(--md-sys-color-on-surface-variant) block mb-1"
-                  >{{ t("upload.effort") }}</label
-                >
-                <AnzuInput v-model="effort" type="number" placeholder="4" />
-              </div>
-            </div>
-          </div>
-          <AnzuButton
-            @click="startUpload"
-            :status="uploading ? 'loading' : 'default'"
-            class="w-full"
-            :disabled="uploading || files.length === 0"
-          >
-            {{ t("upload.submit") }} ({{ files.length }})
-          </AnzuButton>
-        </div>
+        <FileEditor
+          :selected-file="selectedFile"
+          :tag-list="tagList?.data ?? []"
+          v-model:enable-convert="enableConvert"
+          v-model:target-format="targetFormat"
+          v-model:quality="quality"
+          v-model:effort="effort"
+          :has-video-file="hasVideoFile"
+          :uploading="uploading"
+          :has-files="files.length > 0"
+          :total-files="files.length"
+          @upload="startUpload"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { useAuth } from "~/composables/useAuth";
 import { formatFileSize } from "~/utils/format";
 import AnzuButton from "~/components/AnzuButton.vue";
-import AnzuInput from "~/components/AnzuInput.vue";
-import AnzuTags from "~/components/AnzuTags.vue";
-import AnzuCheckbox from "~/components/AnzuCheckbox.vue";
-import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import { useNotification } from "~/composables/useNotification";
 import { NotificationType } from "~/types/notification";
 import { parseApiError } from "~/utils/api-error";
 import type { TagListResponse } from "~/types/image";
+import type { UploadFileItem, UploadResultItem } from "~/types/upload";
+import FileGridItem from "~/components/upload/FileGridItem.vue";
+import FileEditor from "~/components/upload/FileEditor.vue";
 
 const { t } = useI18n();
 useAuth();
 const { notify } = useNotification();
 const { apiUrl } = useApi();
-
-interface UploadFileItem {
-  file: File;
-  previewUrl: string;
-  description: string;
-  tags: string[];
-  routes: string[];
-  customName: string;
-  status: "pending" | "success" | "error";
-  error?: string;
-  resultUrl?: string;
-}
-
-interface UploadResultItem {
-  client_index?: number;
-  success: boolean;
-  file_name?: string;
-  url?: string;
-  code?: string;
-  message?: string;
-}
 
 const isDragging = ref(false);
 const uploading = ref(false);
@@ -376,36 +169,29 @@ const targetFormat = ref("webp");
 const quality = ref("");
 const effort = ref("");
 
-const selectedTagOption = ref<string | null>(null);
 const { data: tagList } = await useFetch<TagListResponse>(
-  apiUrl("/api/v1/tags"),
-);
-const tagItems = computed(() =>
-  (tagList.value?.data ?? []).map((item) => ({
-    value: item.tag,
-    label: `${item.tag} (${item.count})`,
-  })),
+  apiUrl("/api/v1/tags")
 );
 
 const selectedFile = computed(() => {
   if (files.value.length === 0) return null;
-  return files.value[selectedIndex.value];
+  return files.value[selectedIndex.value] || null;
 });
-
-const handleTagPick = (value: string | number | null) => {
-  selectedTagOption.value = value ? String(value) : null;
-};
-
-const addSelectedTag = () => {
-  if (!selectedFile.value || !selectedTagOption.value) return;
-  if (!selectedFile.value.tags.includes(selectedTagOption.value)) {
-    selectedFile.value.tags.push(selectedTagOption.value);
-  }
-  selectedTagOption.value = null;
-};
 
 const totalSize = computed(() => {
   return files.value.reduce((acc, item) => acc + item.file.size, 0);
+});
+
+const isVideoFile = (file: File) => file.type.startsWith("video/");
+
+const hasVideoFile = computed(() =>
+  files.value.some((item) => isVideoFile(item.file))
+);
+
+watch(hasVideoFile, (value) => {
+  if (value) {
+    enableConvert.value = false;
+  }
 });
 
 onUnmounted(() => {
@@ -434,8 +220,8 @@ const processFiles = (newFiles: FileList | null) => {
 
   const startIndex = files.value.length;
   files.value = [...files.value, ...newItems];
-  if (newItems.length > 0) {
-    selectedIndex.value = startIndex;
+  if (newItems.length > 0 && startIndex === 0) {
+    selectedIndex.value = 0;
   }
 };
 
@@ -495,7 +281,7 @@ const startUpload = async () => {
   formData.append("metadata", JSON.stringify(metadata));
 
   // Global settings
-  if (enableConvert.value) {
+  if (enableConvert.value && !hasVideoFile.value) {
     formData.append("convert", "true");
     formData.append("target_format", targetFormat.value);
     if (quality.value) formData.append("quality", quality.value);
@@ -550,7 +336,7 @@ const startUpload = async () => {
           try {
             targetItem.resultUrl = new URL(
               rawUrl,
-              window.location.origin,
+              window.location.origin
             ).toString();
           } catch {
             targetItem.resultUrl = rawUrl || `${window.location.origin}/`;

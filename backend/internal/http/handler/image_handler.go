@@ -24,6 +24,46 @@ type ImageHandler struct {
 	svc *service.ImageService
 }
 
+var allowedUploadMIMETypes = map[string]struct{}{
+	"image/jpeg":               {},
+	"image/jpg":                {},
+	"image/png":                {},
+	"image/gif":                {},
+	"image/webp":               {},
+	"image/svg+xml":            {},
+	"image/bmp":                {},
+	"image/tiff":               {},
+	"image/x-icon":             {},
+	"image/vnd.microsoft.icon": {},
+	"image/avif":               {},
+	"image/jxl":                {},
+	"image/heic":               {},
+	"image/heif":               {},
+	"video/mp4":                {},
+	"video/webm":               {},
+	"video/ogg":                {},
+	"video/quicktime":          {},
+	"video/x-matroska":         {},
+}
+
+func detectUploadMIMEAndDimensions(buf []byte) (mimeType string, width, height int) {
+	mimeType, width, height, err := service.InspectImage(bytes.NewReader(buf))
+	if err == nil {
+		return mimeType, width, height
+	}
+
+	detected := http.DetectContentType(buf)
+	if idx := strings.Index(detected, ";"); idx >= 0 {
+		detected = strings.TrimSpace(detected[:idx])
+	}
+
+	if detected == "application/octet-stream" && len(buf) > 0 {
+		return "application/octet-stream", 0, 0
+	}
+
+	return detected, 0, 0
+}
+
 func NewImageHandler(cfg *config.Config, db *gorm.DB) *ImageHandler {
 	return &ImageHandler{
 		svc: service.NewImageService(cfg, db),
@@ -172,32 +212,9 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			continue
 		}
 
-		// MIME类型验证
-		allowedMIMETypes := map[string]struct{}{
-			"image/jpeg":               {},
-			"image/jpg":                {},
-			"image/png":                {},
-			"image/gif":                {},
-			"image/webp":               {},
-			"image/svg+xml":            {},
-			"image/bmp":                {},
-			"image/tiff":               {},
-			"image/x-icon":             {},
-			"image/vnd.microsoft.icon": {},
-			"image/avif":               {},
-			"image/jxl":                {},
-			"image/heic":               {},
-			"image/heif":               {},
-		}
+		mimeType, width, height := detectUploadMIMEAndDimensions(buf)
 
-		mimeType, width, height, err := service.InspectImage(bytes.NewReader(buf))
-		if err != nil {
-			mimeType = "application/octet-stream"
-			width = 0
-			height = 0
-		}
-
-		if _, allowed := allowedMIMETypes[mimeType]; !allowed {
+		if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
 			appendUploadError(clientIndex, fileHeader.Filename, "unsupported_file_type", "unsupported file type: "+mimeType)
 			continue
 		}
@@ -249,7 +266,8 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			uploadedByTokenType = uploaderToken.NormalizedType()
 		}
 
-		res, err := h.svc.Upload(c.Request.Context(), buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convert, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
+		convertCurrent := convert && service.IsImageFile(mimeType)
+		res, err := h.svc.Upload(c.Request.Context(), buf, finalFileName, currentRoutes, currentDesc, currentTags, mimeType, width, height, convertCurrent, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
 		if err != nil {
 			appendUploadError(clientIndex, fileHeader.Filename, "upload_failed", "upload failed")
 			continue
@@ -271,23 +289,28 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		results = append(results, gin.H{
-			"client_index": clientIndex,
-			"hash":         res.Image.Hash,
-			"file_name":    res.Image.FileName,
-			"size":         res.Image.Size,
-			"mime":         res.Image.MimeType,
-			"path":         res.Image.Path,
-			"width":        res.Image.Width,
-			"height":       res.Image.Height,
-			"description":  res.Image.Description,
-			"tags":         res.Image.Tags,
-			"created_at":   res.Image.CreatedAt,
-			"updated_at":   res.Image.UpdatedAt,
-			"reused":       res.Reused,
-			"url":          res.HashURL,
-			"route":        res.Route,
-			"route_url":    res.RouteURL,
-			"success":      true,
+			"client_index":     clientIndex,
+			"hash":             res.Image.Hash,
+			"file_name":        res.Image.FileName,
+			"size":             res.Image.Size,
+			"mime":             res.Image.MimeType,
+			"path":             res.Image.Path,
+			"width":            res.Image.Width,
+			"height":           res.Image.Height,
+			"duration_seconds": res.Image.DurationSeconds,
+			"video_codec":      res.Image.VideoCodec,
+			"video_bitrate":    res.Image.VideoBitrate,
+			"audio_codec":      res.Image.AudioCodec,
+			"audio_bitrate":    res.Image.AudioBitrate,
+			"description":      res.Image.Description,
+			"tags":             res.Image.Tags,
+			"created_at":       res.Image.CreatedAt,
+			"updated_at":       res.Image.UpdatedAt,
+			"reused":           res.Reused,
+			"url":              res.HashURL,
+			"route":            res.Route,
+			"route_url":        res.RouteURL,
+			"success":          true,
 		})
 	}
 
@@ -544,6 +567,11 @@ func (h *ImageHandler) GetInfo(c *gin.Context) {
 		"size":                   img.Size,
 		"width":                  img.Width,
 		"height":                 img.Height,
+		"duration_seconds":       img.DurationSeconds,
+		"video_codec":            img.VideoCodec,
+		"video_bitrate":          img.VideoBitrate,
+		"audio_codec":            img.AudioCodec,
+		"audio_bitrate":          img.AudioBitrate,
 		"description":            img.Description,
 		"tags":                   img.Tags,
 		"uploaded_by_token_id":   img.UploadedByTokenID,

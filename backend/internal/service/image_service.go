@@ -69,8 +69,8 @@ type UploadResult struct {
 // width, height 参数：调用者提供的图片尺寸，如果是图片的话
 func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int, uploadedByTokenID *uint, uploadedByTokenName string, uploadedByTokenType string) (*UploadResult, error) {
 	// 如果需要转换
-	if convert {
-		newBuf, newMime, err := ConvertImage(bytes.NewReader(buf), targetFormat, quality, effort)
+	if convert && IsImageFile(mimeType) {
+		newBuf, newMime, err := ConvertImage(buf, mimeType, targetFormat, quality, effort)
 		if err != nil {
 			return nil, fmt.Errorf("convert image failed: %w", err)
 		}
@@ -88,6 +88,29 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		if w, h, err := DetectImageDimensions(buf); err == nil {
 			width = w
 			height = h
+		}
+	}
+
+	durationSeconds := 0
+	videoCodec := ""
+	videoBitrate := int64(0)
+	audioCodec := ""
+	audioBitrate := int64(0)
+	if IsVideoFile(mimeType) {
+		if info, err := ProbeVideoInfo(ctx, buf); err == nil {
+			if width <= 0 {
+				width = info.Width
+			}
+			if height <= 0 {
+				height = info.Height
+			}
+			durationSeconds = info.DurationSeconds
+			videoCodec = info.VideoCodec
+			videoBitrate = info.VideoBitrate
+			audioCodec = info.AudioCodec
+			audioBitrate = info.AudioBitrate
+		} else {
+			s.log.Warnf("Failed to probe video metadata: %v", err)
 		}
 	}
 
@@ -150,6 +173,15 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		} else {
 			s.log.Warnf("Failed to generate thumbnail: %v", err)
 		}
+	} else if IsVideoFile(mimeType) {
+		if thumbData, err := GenerateVideoThumbnail(ctx, buf, 800, 800); err == nil {
+			_, _, err := s.storage.Save(ctx, hashStr+"_thumb.jpg", thumbData, "image/jpeg")
+			if err != nil {
+				s.log.Warnf("Failed to save video thumbnail: %v", err)
+			}
+		} else {
+			s.log.Warnf("Failed to generate video thumbnail: %v", err)
+		}
 	}
 
 	img := model.Image{
@@ -160,6 +192,11 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		Path:                relPath,
 		Width:               width,
 		Height:              height,
+		DurationSeconds:     durationSeconds,
+		VideoCodec:          videoCodec,
+		VideoBitrate:        videoBitrate,
+		AudioCodec:          audioCodec,
+		AudioBitrate:        audioBitrate,
 		Description:         description,
 		Tags:                tagsJSON,
 		UploadedByTokenID:   uploadedByTokenID,

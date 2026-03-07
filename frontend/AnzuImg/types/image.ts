@@ -4,10 +4,17 @@ export interface Image {
     size?: number;
     width?: number;
     height?: number;
+    duration_seconds?: number;
+    video_codec?: string;
+    video_bitrate?: number;
+    audio_codec?: string;
+    audio_bitrate?: number;
     created_at?: string;
     tags?: string[];
     description?: string;
+    mime_type?: string;
     mime?: string;
+    media_type?: 'image' | 'video';
     uploaded_by_token_id?: number | null;
     uploaded_by_token_name?: string;
     uploaded_by_token_type?: string;

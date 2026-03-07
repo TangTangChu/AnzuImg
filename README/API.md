@@ -1,29 +1,18 @@
 ## 认证
 
-系统支持 Web 会话（Session）和 API 令牌（API Token）两种认证凭证。凭证可通过以下任意方式传递，优先级从上到下：
-
-1. **Cookie**: `anzuimg_session=<token>` (主要用于 Web 端)
-2. **HTTP Header**: `Authorization: Bearer <token>` (推荐用于 API)
-3. **HTTP Header**: `X-Session-Token: <token>`
+系统支持两类认证凭证，分别是 Web 会话和 API 令牌。请求到达后会按固定顺序读取凭证，先读取 Cookie 中的 `anzuimg_session`，再读取 `Authorization: Bearer <token>`，最后读取 `X-Session-Token`。
 
 ## 基础路径
 
-- **图片资源**: `/i`
-- **API 接口**: `/api/v1`
+公开媒体资源通过 `/i` 提供，管理接口统一位于 `/api/v1`。
 
-> [!TIP]
-> 如果你通过 Nginx 做了“API 前缀分流”（例如对外暴露 `/kotori/`，内部转发到后端根路径），那么**对外访问路径**应当在所有 API 前加上该前缀：
->
-> - 内部后端实际路径：`/api/v1/...`
-> - 对外暴露路径示例：`/kotori/api/v1/...`
->
-> 图片直链 `/i/...` 通常不建议加前缀，便于公开引用
+如果你通过 Nginx 做了 API 前缀分流，例如外部使用 `/kotori/` 转发到后端根路径，那么对外接口应写成 `/kotori/api/v1/...`。媒体直链通常仍保持 `/i/...`，这样更方便外部引用。
 
 ---
 
 ## 错误响应
 
-后端错误响应已统一为以下结构：
+后端错误响应统一使用同一结构。
 
 ```json
 {
@@ -33,53 +22,37 @@
 }
 ```
 
-- `code`: 稳定错误码，建议前端按该字段做逻辑分支
-- `message`: 人类可读错误信息
-- `request_id`: 请求追踪 ID，同时会通过响应头 `X-Request-ID` 返回
-
-前端对接建议：
-
-- 优先读取 `message` 展示给用户
-- 业务分支优先使用 `code`
+`code` 用于稳定分支判断，`message` 用于用户可读提示，`request_id` 用于排查链路问题。响应头中也会返回 `X-Request-ID`。
 
 ---
 
-## 1. 图片资源
+## 1. 资源访问接口
 
-用于公开访问已上传的图片资源。
+这一组接口用于访问已经上传的媒体文件。媒体既包含图片，也包含视频。
 
-### 获取图片
+### 获取原始媒体
 
 `GET /i/:hash`
 
-获取指定 Hash 的原图。
-
-- **参数**:
-  - `hash` (path): 图片的唯一 Hash 值。
+该接口按哈希返回原始文件内容。
 
 ### 获取缩略图
 
 `GET /i/:hash/thumbnail`
 
-获取指定 Hash 图片的缩略图。
+该接口返回媒体缩略图。对于图片，返回图片缩略图。对于视频，返回上传后生成的视频封面图。
 
-- **参数**:
-  - `hash` (path): 图片的唯一 Hash 值。
-
-### 通过自定义路由获取图片
+### 通过路由别名访问媒体
 
 `GET /i/r/:route`
 
-通过预设的自定义路由别名访问图片。
-
-- **参数**:
-  - `route` (path): 自定义路由别名。
+该接口通过预设路由别名访问对应媒体。
 
 ---
 
 ## 2. 管理接口
 
-除认证接口外的所有管理接口均需要通过身份验证。
+除初始化、登录等认证入口外，其余管理接口都需要身份验证。
 
 ### 2.1 系统健康
 
@@ -87,182 +60,186 @@
 
 `GET /health`
 
-- **响应**: `200 OK` (无响应体)
+该接口用于基础健康检查，成功时返回 `200 OK` 且无响应体。
 
-#### Ping (Auth Required)
+#### 认证链路检查
 
 `GET /api/v1/ping`
 
-- **响应**: `200 OK` (无响应体)
+该接口用于校验认证链路是否可用，成功时返回 `200 OK` 且无响应体。
 
 ### 2.2 认证管理
 
-Base URL: `/api/v1/auth`
-
-> [!NOTE]
-> `/api/v1/auth` 下需要登录态的管理接口（如改密、Passkey 管理、Token 管理）仅接受 **Session** 认证，不接受 API Token。
+认证管理接口基路径为 `/api/v1/auth`。需要特别说明的是，`/api/v1/auth` 下需要登录态的管理操作仅接受 Session，不接受 API Token。
 
 #### 检查初始化状态
 
 `GET /api/v1/auth/status`
 
-检查系统是否已完成初始化（是否存在管理员账号）。
+该接口用于判断系统是否已完成初始化。
 
-- **响应**:
-  ```json
-  {
-    "initialized": true
-  }
-  ```
+```json
+{
+  "initialized": true
+}
+```
 
 #### 系统初始化
 
 `POST /api/v1/auth/setup`
 
-设置管理员初始密码。仅在 `initialized: false` 时可用。
+该接口用于首次设置管理员密码，仅在未初始化时可调用。如果服务端配置了 `ANZUIMG_SETUP_TOKEN`，请求体应携带 `setup_token`，并且兼容 `X-Setup-Token` 请求头。
 
-> [!NOTE]
-> 若服务端设置了 `ANZUIMG_SETUP_TOKEN`，则此接口需要提供 `setup_token`。
->
-> - 推荐：请求体携带 `setup_token` 字段
-> - 兼容：请求头 `X-Setup-Token: <token>`
+```json
+{
+  "password": "your_password",
+  "setup_token": "optional_setup_token"
+}
+```
 
-- **请求**:
-  ```json
-  {
-    "password": "your_password", // min 8 chars
-    "setup_token": "optional_setup_token"
-  }
-  ```
-- **响应**:
+成功后返回：
 
-  ```json
-
-  ```
-
-#### 标签列表
-
-`GET /api/v1/tags`
-
-- **Query 参数**:
-  - `limit`: 返回数量上限 (默认 200，最大 1000)。
-
-- **响应**:
-
-  ```json
-  {
-    "data": [
-      { "tag": "cat", "count": 12 },
-      { "tag": "sunset", "count": 5 }
-    ]
-  }
-  ```
-
-  {
+```json
+{
   "message": "system initialized successfully"
-  }
-
-  ```
-
-  ```
+}
+```
 
 #### 密码登录
 
 `POST /api/v1/auth/login`
 
-- **请求**:
-  ```json
-  {
-    "password": "your_password"
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "token": "session_token_string",
-    "expires_at": "2024-01-01T00:00:00Z",
-    "auth_method": "password"
-  }
-  ```
+```json
+{
+  "password": "your_password"
+}
+```
+
+成功后返回：
+
+```json
+{
+  "token": "session_token_string",
+  "expires_at": "2024-01-01T00:00:00Z",
+  "auth_method": "password"
+}
+```
 
 #### 验证会话
 
 `GET /api/v1/auth/validate`
 
-验证当前 Token 是否有效。
+该接口用于验证当前凭证是否有效，并返回认证类型与会话时间信息。
 
-- **响应**:
-  ```json
-  {
-    "valid": true,
-    "auth_method": "session", // or "api_token"
-    "expires_at": "...",
-    "created_at": "...",
-    "last_used": "..."
-  }
-  ```
+```json
+{
+  "valid": true,
+  "auth_method": "session",
+  "expires_at": "...",
+  "created_at": "...",
+  "last_used": "..."
+}
+```
 
 #### 修改密码
 
 `POST /api/v1/auth/change-password`
 
-- **请求**:
-  ```json
-  {
-    "current_password": "old_password",
-    "new_password": "new_password"
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "message": "password changed successfully"
-  }
-  ```
+```json
+{
+  "current_password": "old_password",
+  "new_password": "new_password"
+}
+```
 
-#### Passkey (WebAuthn) 相关
+成功后返回：
 
-- `GET /api/v1/auth/passkey/login/begin`: 开始 Passkey 登录流程。
-- `POST /api/v1/auth/passkey/login/finish`: 完成 Passkey 登录流程。
-- `GET /api/v1/auth/passkey/register/begin`: 开始 Passkey 注册（需登录）。
-- `POST /api/v1/auth/passkey/register/finish`: 完成 Passkey 注册（需登录）。
-- `GET /api/v1/auth/passkeys`: 列出已注册的 Passkey。
-- `DELETE /api/v1/auth/passkeys/:credential_id`: 删除指定 Passkey。
-  - 兼容方式：`POST /api/v1/auth/passkeys/:credential_id/delete`
+```json
+{
+  "message": "password changed successfully"
+}
+```
+
+#### Passkey 接口
+
+##### 登录开始
+
+`GET /api/v1/auth/passkey/login/begin`
+
+该接口用于发起 Passkey 登录挑战，前端拿到挑战参数后应调用浏览器 WebAuthn 能力继续流程。
+
+##### 登录完成
+
+`POST /api/v1/auth/passkey/login/finish`
+
+该接口用于提交浏览器返回的签名结果，服务端验证通过后会建立登录态。
+
+##### 注册开始
+
+`GET /api/v1/auth/passkey/register/begin`
+
+该接口用于获取 Passkey 注册参数，通常在已登录状态下调用。
+
+##### 注册完成
+
+`POST /api/v1/auth/passkey/register/finish`
+
+该接口用于提交注册凭证并完成设备绑定。
+
+##### 列出 Passkey
+
+`GET /api/v1/auth/passkeys`
+
+该接口用于获取当前账号已注册的 Passkey 设备列表。
+
+##### 删除 Passkey
+
+`DELETE /api/v1/auth/passkeys/:credential_id`
+
+该接口用于删除指定 Passkey。
+
+兼容删除接口：
+
+`POST /api/v1/auth/passkeys/:credential_id/delete`
 
 #### API Token 管理
 
-#### 创建 Token
+##### 创建 Token
 
 `POST /api/v1/auth/tokens`
 
-- **请求**:
-  ```json
-  {
-    "name": "Token Description",
-    "token_type": "full", // full | upload | list (默认 full)
-    "ip_allowlist": ["192.168.1.1/32", "10.0.0.0/8"] // 可选
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "token": "raw_token_string", // 仅显示一次
-    "raw_token": "raw_token_string"
-  }
-  ```
+该接口用于创建 API Token。请求体包含 `name`、可选 `token_type` 和可选 `ip_allowlist`。`token_type` 支持 `full`、`upload`、`list`，默认值为 `full`。
 
-#### 获取 Token 列表
+```json
+{
+  "name": "Token Description",
+  "token_type": "full",
+  "ip_allowlist": ["192.168.1.1/32", "10.0.0.0/8"]
+}
+```
+
+成功后返回一次性可见的原始令牌：
+
+```json
+{
+  "token": "raw_token_string",
+  "raw_token": "raw_token_string"
+}
+```
+
+##### 获取 Token 列表
 
 `GET /api/v1/auth/tokens`
 
-- **响应**: `[APIToken Object]` 列表
+该接口用于获取当前账号下的 Token 列表。
 
-#### 删除 Token
+##### 删除 Token
 
 `DELETE /api/v1/auth/tokens/:id`
 
-兼容方式：
+该接口用于删除指定 Token。
+
+兼容删除接口：
 
 `POST /api/v1/auth/tokens/:id/delete`
 
@@ -270,219 +247,209 @@ Base URL: `/api/v1/auth`
 
 `GET /api/v1/auth/tokens/logs`
 
-- **Query 参数**:
-  - `page`: 页码 (默认 1)
-  - `page_size`: 每页数量 (默认 20)
+该接口支持分页查询，常用参数为 `page` 和 `page_size`。
 
-- **响应**:
-  ```json
-  {
-    "data": [APITokenLog Object],
-    "total": 100,
-    "page": 1,
-    "size": 50
-  }
-  ```
+```json
+{
+  "data": [APITokenLog Object],
+  "total": 100,
+  "page": 1,
+  "size": 50
+}
+```
+
+`DELETE /api/v1/auth/tokens/logs`
+
+该接口用于清理 Token 日志。请求需要提供 `days`，表示清理多少天之前的记录。
+
+兼容清理接口：
+
+`POST /api/v1/auth/tokens/logs/cleanup`
+
+```json
+{
+  "deleted": 120,
+  "cutoff": "2026-02-03T00:00:00Z"
+}
+```
 
 #### 安全日志
 
 `GET /api/v1/auth/security/logs`
 
-用于查看安全与关键操作事件（登录/登出、密码修改、Passkey 注册/登录/删除、API Token 创建/删除、Token 日志清理等）。
+该接口用于查看近期安全事件和关键操作，支持按分页参数查询，并支持通过 `failed_only` 过滤失败登录。
 
-- **Query 参数**:
-  - `page`: 页码 (默认 1)
-  - `page_size`: 每页数量 (默认 20)
-  - `failed_only`: 是否仅返回失败登录 (默认 `true`)
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "category": "auth",
+      "level": "warning",
+      "action": "login_failed",
+      "message": "failed login attempt",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "ip_address": "127.0.0.1",
+      "username": "admin",
+      "created_at": "2026-02-20T12:34:56Z"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "size": 20
+}
+```
 
-- **响应**:
-  ```json
-  {
-    "data": [
-      {
-        "id": 1,
-        "category": "auth",
-        "level": "warning",
-        "action": "login_failed",
-        "message": "failed login attempt",
-        "method": "POST",
-        "path": "/api/v1/auth/login",
-        "ip_address": "127.0.0.1",
-        "username": "admin",
-        "created_at": "2026-02-20T12:34:56Z"
-      }
-    ],
-    "total": 42,
-    "page": 1,
-    "size": 20
-  }
-  ```
+### 2.3 媒体管理
 
-#### 清理 Token 日志
+媒体管理接口基路径为 `/api/v1/images`。虽然路径保留了历史命名，但实际对象已经是媒体，包含图片与视频。
 
-`DELETE /api/v1/auth/tokens/logs`
-
-兼容方式：
-
-`POST /api/v1/auth/tokens/logs/cleanup`
-
-- **Query 参数**:
-  - `days`: 清理 N 天前的日志 (必填)
-
-- **响应**:
-  ```json
-  {
-    "deleted": 120,
-    "cutoff": "2026-02-03T00:00:00Z"
-  }
-  ```
-
----
-
-### 2.3 图片管理
-
-Base URL: `/api/v1/images`
-
-#### 上传图片
+#### 上传媒体
 
 `POST /api/v1/images`
 
-支持多文件上传和元数据设置。
+该接口支持多文件上传，并支持全局元数据和按文件元数据两种写法。请求使用 `multipart/form-data`，核心字段是 `file`。你可以设置 `route`、`description`、`tags` 和 `custom_name` 作为全局默认值，也可以通过 `metadata` 为每个文件单独指定这些值。
 
-- **Content-Type**: `multipart/form-data`
-- **参数**:
-  - `file`: 文件数据 (支持多个)。
-  - `route`: 全局路由别名 (逗号分隔，可选)。
-  - `description`: 全局描述 (可选)。
-  - `tags`: 全局标签 (逗号分隔，可选)。
-  - `custom_name`: 全局自定义文件名 (可选)。
-  - `convert`: `true/false` (是否转换格式)。
-  - `target_format`: `jpeg/png/webp` (转换目标格式)。
-  - `quality`: `1-100` (压缩质量)。
-  - `effort`: `0-6` (编码努力程度)。
-  - `metadata`: JSON 字符串，用于为每个文件单独指定元数据。
-    ```json
-    [
-      {
-        "description": "desc1",
-        "tags": ["tag1"],
-        "routes": ["route1"],
-        "custom_name": "file1.png"
-      }
-    ]
-    ```
+转换参数仅对图片生效。`convert=true` 时可配合 `target_format`、`quality` 和 `effort` 进行格式转换。视频不会执行图片转换流程。
 
-- **响应**: 上传结果列表。
-  ```json
-  [
-    {
-      "success": true,
-      "hash": "...",
-      "file_name": "...",
-      "url": "http://...",
-      "path": "...",
-      "width": 100,
-      "height": 100,
-      ...
-    },
-    {
-      "success": false,
-      "file_name": "bad.txt",
-      "code": "unsupported_file_type",
-      "message": "unsupported file type: text/plain"
-    }
-  ]
-  ```
+`metadata` 结构如下：
 
-#### 图片列表
+```json
+[
+  {
+    "description": "desc1",
+    "tags": ["tag1"],
+    "routes": ["route1"],
+    "custom_name": "file1.png",
+    "client_index": 0
+  }
+]
+```
+
+响应是逐文件结果数组。成功项会返回哈希、尺寸、媒体类型信息与访问链接，失败项会返回稳定错误码和错误信息。
+
+```json
+[
+  {
+    "client_index": 0,
+    "success": true,
+    "hash": "...",
+    "file_name": "...",
+    "url": "http://...",
+    "path": "...",
+    "mime": "video/mp4",
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 37
+  },
+  {
+    "client_index": 1,
+    "success": false,
+    "file_name": "bad.txt",
+    "code": "unsupported_file_type",
+    "message": "unsupported file type: text/plain"
+  }
+]
+```
+
+#### 获取媒体列表
 
 `GET /api/v1/images`
 
-- **Query 参数**:
-  - `page`: 页码 (默认 1)。
-  - `page_size`: 每页数量 (默认 20)。
-  - `tag`: 按标签筛选。
-  - `file_name`: 按文件名模糊搜索。
+该接口支持分页、标签筛选和文件名模糊查询，常用参数为 `page`、`page_size`、`tag` 和 `file_name`。
 
-- **响应**:
-  ```json
-  {
-    "data": [Image Object],
-    "total": 100,
-    "page": 1,
-    "size": 20
-  }
-  ```
+```json
+{
+  "data": [Image Object],
+  "total": 100,
+  "page": 1,
+  "size": 20
+}
+```
 
-#### 获取图片详情
+#### 获取媒体详情
 
 `GET /api/v1/images/:hash/info`
 
-- **响应**:
-  ```json
-  {
-    "hash": "...",
-    "file_name": "...",
-    "mime_type": "...",
-    "size": 1024,
-    "width": 800,
-    "height": 600,
-    "description": "...",
-    "tags": ["tag1", "tag2"],
-    "uploaded_by_token_id": 12,
-    "uploaded_by_token_name": "Upload Token",
-    "uploaded_by_token_type": "upload",
-    "routes": ["route1", "route2"],
-    "created_at": "...",
-    "updated_at": "..."
-  }
-  ```
+详情包含通用文件信息、可选的图像尺寸与视频时长、描述标签、上传来源以及路由别名。
 
-#### 更新图片信息
+```json
+{
+  "hash": "...",
+  "file_name": "...",
+  "mime_type": "video/mp4",
+  "size": 1024,
+  "width": 800,
+  "height": 600,
+  "duration_seconds": 37,
+  "description": "...",
+  "tags": ["tag1", "tag2"],
+  "uploaded_by_token_id": 12,
+  "uploaded_by_token_name": "Upload Token",
+  "uploaded_by_token_type": "upload",
+  "routes": ["route1", "route2"],
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+#### 更新媒体信息
 
 `PATCH /api/v1/images/:hash`
 
-- **请求**:
-  ```json
-  {
-    "description": "New Description",
-    "tags": ["new", "tags"],
-    "file_name": "new_name.png",
-    "routes": ["route1", "route2"] // 会覆盖原有路由
-  }
-  ```
-- **响应**: 更新后的 Image 对象。
+该接口可更新描述、标签、文件名和路由。传入 `routes` 时会覆盖旧路由集合。
 
-#### 删除图片
+```json
+{
+  "description": "New Description",
+  "tags": ["new", "tags"],
+  "file_name": "new_name.png",
+  "routes": ["route1", "route2"]
+}
+```
+
+#### 删除媒体
 
 `DELETE /api/v1/images/:hash`
 
-兼容方式：
+该接口会删除原文件、关联缩略图和数据库记录。
+
+兼容删除接口：
 
 `POST /api/v1/images/:hash/delete`
 
-删除图片及其关联的缩略图和数据库记录。
+### 2.4 标签接口
 
----
+`GET /api/v1/tags`
 
-### 2.4 路由管理
+该接口返回标签与使用次数，支持 `limit` 参数。默认值为 200，最大值为 1000。
 
-Base URL: `/api/v1/routes`
+```json
+{
+  "data": [
+    { "tag": "cat", "count": 12 },
+    { "tag": "sunset", "count": 5 }
+  ]
+}
+```
 
-#### 获取所有路由
+### 2.5 路由管理
+
+路由管理接口基路径为 `/api/v1/routes`。
+
+#### 获取路由列表
 
 `GET /api/v1/routes`
 
-列出系统中所有注册的图片路由别名。
-
-- **响应**: `[ImageRoute Object]` 列表
+该接口用于分页查询系统中已注册的路由别名。
 
 #### 删除路由
 
 `DELETE /api/v1/routes/:route`
 
-兼容方式：
+该接口用于删除路由别名，不会删除对应媒体文件。
+
+兼容删除接口：
 
 `POST /api/v1/routes/:route/delete`
-
-仅删除路由别名，不删除对应图片。
