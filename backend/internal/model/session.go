@@ -10,19 +10,20 @@ import (
 )
 
 type Session struct {
-	ID        uint64    `gorm:"primaryKey"`
-	TokenHash string    `gorm:"size:128;not null;uniqueIndex"`
-	UserID    uint64    `gorm:"not null;index"`
-	IPAddress string    `gorm:"size:45"`
-	UserAgent string    `gorm:"type:text"`
-	CreatedAt time.Time `gorm:"not null"`
-	ExpiresAt time.Time `gorm:"not null;index"`
-	LastUsed  time.Time `gorm:"not null"`
+	ID        uint64     `gorm:"primaryKey"`
+	TokenHash string     `gorm:"size:128;not null;uniqueIndex"`
+	UserID    uint64     `gorm:"not null;index"`
+	IPAddress string     `gorm:"size:45"`
+	UserAgent string     `gorm:"type:text"`
+	CreatedAt time.Time  `gorm:"not null"`
+	ExpiresAt time.Time  `gorm:"not null;index"`
+	LastUsed  time.Time  `gorm:"not null"`
+	StepUpAt  *time.Time `gorm:"index:idx_sessions_step_up_at"`
 }
 
 const (
-	// 会话过期时间（小时）
-	SessionExpirationHours = 8
+	// 默认会话过期小时数；当调用方未提供 effective TTL 时回落用。
+	DefaultSessionExpirationHours = 8
 	// 令牌字节长度
 	TokenBytes = 32
 )
@@ -45,8 +46,11 @@ func HashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// CreateSession 创建新会话
-func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string) (string, *Session, error) {
+// CreateSession 创建新会话,TTL 来自 effective.SessionExpirationHours。
+func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string, expirationHours int) (string, *Session, error) {
+	if expirationHours <= 0 {
+		expirationHours = DefaultSessionExpirationHours
+	}
 	token, tokenHash, err := GenerateToken()
 	if err != nil {
 		return "", nil, err
@@ -59,7 +63,7 @@ func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string) (str
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
 		CreatedAt: now,
-		ExpiresAt: now.Add(time.Duration(SessionExpirationHours) * time.Hour),
+		ExpiresAt: now.Add(time.Duration(expirationHours) * time.Hour),
 		LastUsed:  now,
 	}
 
@@ -70,10 +74,14 @@ func CreateSession(db *gorm.DB, userID uint64, ipAddress, userAgent string) (str
 	return token, session, nil
 }
 
-// ValidateSession 验证会话令牌
-func ValidateSession(db *gorm.DB, token string) (*Session, error) {
+// ValidateSession 校验 token 并按 sliding window 续期。
+// expirationHours 用于决定续期阈值与新过期时间。
+func ValidateSession(db *gorm.DB, token string, expirationHours int) (*Session, error) {
 	if token == "" {
 		return nil, gorm.ErrRecordNotFound
+	}
+	if expirationHours <= 0 {
+		expirationHours = DefaultSessionExpirationHours
 	}
 
 	tokenHash := HashToken(token)
@@ -84,8 +92,8 @@ func ValidateSession(db *gorm.DB, token string) (*Session, error) {
 	}
 
 	session.LastUsed = time.Now()
-	if time.Until(session.ExpiresAt) < time.Duration(SessionExpirationHours/2)*time.Hour {
-		session.ExpiresAt = time.Now().Add(time.Duration(SessionExpirationHours) * time.Hour)
+	if time.Until(session.ExpiresAt) < time.Duration(expirationHours/2)*time.Hour {
+		session.ExpiresAt = time.Now().Add(time.Duration(expirationHours) * time.Hour)
 	}
 
 	if err := db.Save(&session).Error; err != nil {
@@ -93,6 +101,21 @@ func ValidateSession(db *gorm.DB, token string) (*Session, error) {
 	}
 
 	return &session, nil
+}
+
+// MarkSessionStepUp 把指定会话的 step_up_at 置为当前时间。
+func MarkSessionStepUp(db *gorm.DB, tokenHash string) error {
+	now := time.Now()
+	return db.Model(&Session{}).
+		Where("token_hash = ?", tokenHash).
+		Update("step_up_at", now).Error
+}
+
+// ClearSessionStepUp 把 step_up_at 清空,极少需要,如管理员强制再确认。
+func ClearSessionStepUp(db *gorm.DB, tokenHash string) error {
+	return db.Model(&Session{}).
+		Where("token_hash = ?", tokenHash).
+		Update("step_up_at", nil).Error
 }
 
 // RevokeSession 撤销会话

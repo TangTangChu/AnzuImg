@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/clientip"
+	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
@@ -18,11 +19,12 @@ const (
 )
 
 type SessionService struct {
-	db *gorm.DB
+	cfg *config.Config
+	db  *gorm.DB
 }
 
-func NewSessionService(db *gorm.DB) *SessionService {
-	return &SessionService{db: db}
+func NewSessionService(cfg *config.Config, db *gorm.DB) *SessionService {
+	return &SessionService{cfg: cfg, db: db}
 }
 
 func requestClientIP(c *gin.Context) string {
@@ -35,7 +37,17 @@ func requestClientIP(c *gin.Context) string {
 	return c.ClientIP()
 }
 
-// CreateSession 创建新会话，添加会话固定攻击防护
+func (s *SessionService) sessionTTL() int {
+	if s.cfg == nil {
+		return model.DefaultSessionExpirationHours
+	}
+	if h := s.cfg.Effective().SessionExpirationHours; h > 0 {
+		return h
+	}
+	return model.DefaultSessionExpirationHours
+}
+
+// CreateSession 创建新会话,登录前会先撤销同用户旧会话以防 session fixation。
 func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, error) {
 	clientIP := requestClientIP(c)
 	if clientIP == "" {
@@ -47,7 +59,7 @@ func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, 
 		return "", nil, err
 	}
 
-	token, session, err := model.CreateSession(s.db, model.DefaultUserID, clientIP, userAgent)
+	token, session, err := model.CreateSession(s.db, model.DefaultUserID, clientIP, userAgent, s.sessionTTL())
 	if err != nil {
 		return "", nil, err
 	}
@@ -55,30 +67,25 @@ func (s *SessionService) CreateSession(c *gin.Context) (string, *model.Session, 
 	return token, session, nil
 }
 
-// ValidateSession 验证会话令牌
 func (s *SessionService) ValidateSession(c *gin.Context) (*model.Session, error) {
 	token := s.extractToken(c)
 	if token == "" {
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	session, err := model.ValidateSession(s.db, token)
+	session, err := model.ValidateSession(s.db, token, s.sessionTTL())
 	if err != nil {
 		return nil, err
 	}
 
-	// 严格的IP地址验证
 	strictIP := false
-	if v, ok := c.Get("strict_session_ip"); ok {
-		if b, ok2 := v.(bool); ok2 {
-			strictIP = b
-		}
+	if s.cfg != nil {
+		strictIP = s.cfg.Effective().StrictSessionIP
 	}
 	if strictIP {
 		clientIP := requestClientIP(c)
 		if clientIP != "" && clientIP != "unknown" && session.IPAddress != "" && session.IPAddress != "unknown" {
 			if clientIP != session.IPAddress {
-				// IP地址不匹配，撤销会话并返回错误
 				_ = model.RevokeSession(s.db, model.HashToken(token))
 				return nil, gorm.ErrRecordNotFound
 			}
@@ -88,20 +95,16 @@ func (s *SessionService) ValidateSession(c *gin.Context) (*model.Session, error)
 	return session, nil
 }
 
-// extractToken 从请求中提取令牌
 func (s *SessionService) extractToken(c *gin.Context) string {
-	// 优先从Cookie获取
 	if cookie, err := c.Cookie(SessionCookieName); err == nil && cookie != "" {
 		return cookie
 	}
 
-	// 从Authorization Header获取
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		return authHeader[7:]
 	}
 
-	// 从自定义Header获取
 	if header := c.GetHeader(SessionHeaderName); header != "" {
 		return header
 	}
@@ -109,18 +112,18 @@ func (s *SessionService) extractToken(c *gin.Context) string {
 	return ""
 }
 
-// SetSessionCookie 设置会话Cookie
+// SetSessionCookie 写会话 Cookie,SameSite 与 TTL 来自 effective 快照。
 func (s *SessionService) SetSessionCookie(c *gin.Context, token string) {
 	secure := false
 	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
 		secure = true
 	}
 
-	maxAge := int(model.SessionExpirationHours * 60 * 60)
+	maxAge := s.sessionTTL() * 60 * 60
 	ss := "Lax"
-	if v, ok := c.Get("cookie_samesite"); ok {
-		if ssv, ok2 := v.(string); ok2 && ssv != "" {
-			ss = ssv
+	if s.cfg != nil {
+		if v := strings.TrimSpace(s.cfg.Effective().CookieSameSite); v != "" {
+			ss = v
 		}
 	}
 	ssLower := strings.ToLower(ss)
@@ -151,7 +154,6 @@ func (s *SessionService) SetSessionCookie(c *gin.Context, token string) {
 	http.SetCookie(c.Writer, cookie)
 }
 
-// ClearSessionCookie 清除会话Cookie
 func (s *SessionService) ClearSessionCookie(c *gin.Context) {
 	secure := false
 	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
@@ -159,9 +161,9 @@ func (s *SessionService) ClearSessionCookie(c *gin.Context) {
 	}
 
 	ss := "Lax"
-	if v, ok := c.Get("cookie_samesite"); ok {
-		if ssv, ok2 := v.(string); ok2 && ssv != "" {
-			ss = ssv
+	if s.cfg != nil {
+		if v := strings.TrimSpace(s.cfg.Effective().CookieSameSite); v != "" {
+			ss = v
 		}
 	}
 	ssLower := strings.ToLower(ss)
@@ -191,7 +193,6 @@ func (s *SessionService) ClearSessionCookie(c *gin.Context) {
 	http.SetCookie(c.Writer, cookie)
 }
 
-// RevokeCurrentSession 撤销当前会话
 func (s *SessionService) RevokeCurrentSession(c *gin.Context) error {
 	token := s.extractToken(c)
 	if token == "" {
@@ -202,17 +203,23 @@ func (s *SessionService) RevokeCurrentSession(c *gin.Context) error {
 	return model.RevokeSession(s.db, tokenHash)
 }
 
-// RevokeAllSessions 撤销所有会话
 func (s *SessionService) RevokeAllSessions() error {
 	return model.RevokeAllUserSessions(s.db, model.DefaultUserID)
 }
 
-// CleanExpiredSessions 清理过期会话
 func (s *SessionService) CleanExpiredSessions() error {
 	return model.CleanExpiredSessions(s.db)
 }
 
-// SessionMiddleware 会话中间件
+// MarkStepUp 把当前会话标记为已通过 step-up,记录在 sessions.step_up_at。
+func (s *SessionService) MarkStepUp(c *gin.Context) error {
+	token := s.extractToken(c)
+	if token == "" {
+		return gorm.ErrRecordNotFound
+	}
+	return model.MarkSessionStepUp(s.db, model.HashToken(token))
+}
+
 func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
 	apiTokenService := NewAPITokenService(s.db)
 

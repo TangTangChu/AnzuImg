@@ -72,7 +72,8 @@
         "gallery": "갤러리",
         "upload": "업로드",
         "login": "로그인",
-        "settings": "설정"
+        "settings": "설정",
+        "logs": "로그"
     },
     "dashboard": {
         "totalImages": "총 미디어",

@@ -78,8 +78,14 @@ services:
       ANZUIMG_COOKIE_SAMESITE: ${ANZUIMG_COOKIE_SAMESITE:-Lax}
 
       ANZUIMG_STRICT_SESSION_IP: ${ANZUIMG_STRICT_SESSION_IP:-false}
+
+      # 是否允许 Web 端修改运行时配置,关掉则系统配置区只读
+      ANZUIMG_ALLOW_WEB_CONFIG: ${ANZUIMG_ALLOW_WEB_CONFIG:-true}
+      # 应用日志文件输出目录
+      ANZUIMG_LOG_FILE_DIR: ${ANZUIMG_LOG_FILE_DIR:-/data/logs}
     volumes:
       - anzuimg-images:/data/images
+      - anzuimg-logs:/data/logs
     ports:
       - "127.0.0.1:9211:8080"
 
@@ -105,3 +111,4 @@ services:
 volumes:
   anzuimg-db-data:
   anzuimg-images:
+  anzuimg-logs:

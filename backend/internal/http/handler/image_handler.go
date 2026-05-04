@@ -81,8 +81,10 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 	maxTotal := int64(100 * 1024 * 1024)
 	if h.svc != nil {
-		if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadBytes > 0 {
-			maxTotal = cfg.MaxUploadBytes
+		if cfg := h.svc.Config(); cfg != nil {
+			if v := cfg.Effective().MaxUploadBytes; v > 0 {
+				maxTotal = v
+			}
 		}
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxTotal)
@@ -107,8 +109,10 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	// 文件数量限制
 	maxFiles := 20
 	if h.svc != nil {
-		if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadFiles > 0 {
-			maxFiles = cfg.MaxUploadFiles
+		if cfg := h.svc.Config(); cfg != nil {
+			if v := cfg.Effective().MaxUploadFiles; v > 0 {
+				maxFiles = v
+			}
 		}
 	}
 	if maxFiles > 0 && len(files) > maxFiles {
@@ -177,8 +181,10 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	for i, fileHeader := range files {
 		maxPerFile := int64(60 * 1024 * 1024)
 		if h.svc != nil {
-			if cfg := h.svc.Config(); cfg != nil && cfg.MaxUploadFileBytes > 0 {
-				maxPerFile = cfg.MaxUploadFileBytes
+			if cfg := h.svc.Config(); cfg != nil {
+				if v := cfg.Effective().MaxUploadFileBytes; v > 0 {
+					maxPerFile = v
+				}
 			}
 		}
 		clientIndex := i

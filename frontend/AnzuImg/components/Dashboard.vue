@@ -75,18 +75,18 @@
       <!-- 有风险 -->
       <div v-if="(stats?.login_failures_24h || 0) > 0" class="grid grid-cols-1 gap-4">
         <div
-          class="rounded-xl border border-(--md-sys-color-error) p-4 flex items-center gap-4 bg-(--md-sys-color-error-container) text-(--md-sys-color-on-error-container)"
+          class="rounded-xl border border-(--md-sys-color-outline-variant) p-4 flex items-center gap-4"
         >
           <div
-            class="rounded-full bg-(--md-sys-color-error) p-3 text-(--md-sys-color-on-error)"
+            class="rounded-full bg-(--md-sys-color-error-container) p-3 text-(--md-sys-color-on-error-container)"
           >
             <NoSymbolIcon class="w-6 h-6" />
           </div>
           <div>
-            <div class="text-2xl font-bold">
+            <div class="text-2xl font-bold text-(--md-sys-color-on-surface)">
               {{ stats?.login_failures_24h || 0 }}
             </div>
-            <div class="text-sm font-medium opacity-90">
+            <div class="text-sm text-(--md-sys-color-on-surface-variant)">
               {{ t("dashboard.loginFailures24h") }}
             </div>
           </div>

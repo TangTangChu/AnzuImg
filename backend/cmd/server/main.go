@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -20,6 +21,7 @@ import (
 	httpserver "github.com/TangTangChu/AnzuImg/backend/internal/http"
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
+	"github.com/TangTangChu/AnzuImg/backend/internal/service"
 )
 
 func quotePostgresIdentifier(v string) string {
@@ -213,6 +215,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS step_up_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_sessions_step_up_at ON sessions(step_up_at);
 `
 		if err := tx.Exec(createSessionsTable).Error; err != nil {
 			return fmt.Errorf("create sessions table failed: %w", err)
@@ -265,7 +269,25 @@ CREATE INDEX IF NOT EXISTS idx_api_token_logs_created_at ON api_token_logs(creat
 			return fmt.Errorf("create api_token_logs table failed: %w", err)
 		}
 
-		log.Infof("ensured images, image_routes, users, passkey_credentials, system_configs, login_attempts, security_event_logs, sessions, api_tokens and api_token_logs tables exist")
+		createAppLogsTable := `
+CREATE TABLE IF NOT EXISTS app_logs (
+	id         BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	level      VARCHAR(16) NOT NULL,
+	module     VARCHAR(64) NOT NULL,
+	message    TEXT NOT NULL,
+	request_id VARCHAR(64),
+	ip_address VARCHAR(45)
+);
+CREATE INDEX IF NOT EXISTS idx_app_logs_created_at ON app_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_app_logs_level_created ON app_logs(level, created_at);
+CREATE INDEX IF NOT EXISTS idx_app_logs_module_created ON app_logs(module, created_at);
+`
+		if err := tx.Exec(createAppLogsTable).Error; err != nil {
+			return fmt.Errorf("create app_logs table failed: %w", err)
+		}
+
+		log.Infof("ensured all required tables exist")
 		return nil
 	})
 }
@@ -293,30 +315,59 @@ func main() {
 		log.Fatalf("ensure tables failed: %v", err)
 	}
 
+	settings := service.NewSettingsService(cfg, db)
+	hub := service.NewLogStreamHub()
+	applyAppLogSinks(cfg, db, hub, log)
+	settings.OnReload(func(eff *config.Effective) {
+		applyAppLogSinks(cfg, db, hub, log)
+	})
+
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	defer cleanupCancel()
 
 	go func(ctx context.Context) {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
+		runCleanup := func() {
+			if err := model.CleanExpiredSessions(db); err != nil {
+				log.Errorf("clean expired sessions failed: %v", err)
+			}
+			if err := model.CleanOldLoginAttempts(db); err != nil {
+				log.Errorf("clean old login attempts failed: %v", err)
+			}
+			eff := cfg.Effective()
+			lq := service.NewLogQueryService(db)
+			if d := eff.AppLogRetentionDays; d > 0 {
+				if _, err := lq.CleanupAppLogs(d); err != nil {
+					log.Errorf("clean app logs failed: %v", err)
+				}
+			}
+			if d := eff.SecurityLogRetentionDays; d > 0 {
+				if _, err := lq.CleanupSecurityLogs(d); err != nil {
+					log.Errorf("clean security logs failed: %v", err)
+				}
+			}
+			if d := eff.TokenLogRetentionDays; d > 0 {
+				cutoff := time.Now().AddDate(0, 0, -d)
+				if _, err := service.NewAPITokenService(db).CleanupLogsBefore(cutoff); err != nil {
+					log.Errorf("clean token logs failed: %v", err)
+				}
+			}
+		}
+		runCleanup()
 		for {
 			select {
 			case <-ctx.Done():
-				log.Infof("session cleanup worker stopped")
+				log.Infof("cleanup worker stopped")
 				return
 			case <-ticker.C:
-				if err := model.CleanExpiredSessions(db); err != nil {
-					log.Errorf("clean expired sessions failed: %v", err)
-				}
-				if err := model.CleanOldLoginAttempts(db); err != nil {
-					log.Errorf("clean old login attempts failed: %v", err)
-				}
+				runCleanup()
 			}
 		}
 	}(cleanupCtx)
 
 	gin.SetMode(gin.ReleaseMode)
-	r, err := httpserver.NewRouter(cfg, db)
+	r, err := httpserver.NewRouter(cfg, db, settings, hub)
 	if err != nil {
 		log.Fatalf("init router failed: %v", err)
 	}
@@ -364,5 +415,63 @@ func main() {
 				log.Errorf("server force close failed: %v", closeErr)
 			}
 		}
+		logger.CloseAllGlobalSinks()
+	}
+}
+
+// applyAppLogSinks 根据当前 effective 配置同步 logger 的 stdout 级别、
+// 文件 sink 与 DB sink 状态,在启动与每次 reload 后调用,可重复进入。
+func applyAppLogSinks(cfg *config.Config, db *gorm.DB, hub *service.LogStreamHub, log *logger.Logger) {
+	eff := cfg.Effective()
+	logger.SetStdoutMinLevel(logger.ParseLevel(eff.AppLogStdoutLevel))
+
+	// File sink
+	if !eff.AppLogFileEnabled || logger.ParseLevel(eff.AppLogFileLevel) == logger.LevelOff {
+		if old := logger.RemoveGlobalSink("file"); old != nil {
+			_ = old.Close()
+		}
+	} else {
+		dir := strings.TrimSpace(cfg.LogFileDir)
+		if dir == "" {
+			dir = "./data/logs"
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			log.Warnf("create log dir failed: %v", err)
+		} else {
+			path := filepath.Join(dir, "anzuimg.log")
+			sink, err := logger.NewFileSink(logger.FileSinkOptions{
+				Name:       "file",
+				Path:       path,
+				MinLevel:   logger.ParseLevel(eff.AppLogFileLevel),
+				MaxSizeMB:  eff.AppLogFileMaxSizeMB,
+				MaxBackups: eff.AppLogFileMaxBackups,
+				MaxAgeDays: eff.AppLogFileMaxAgeDays,
+				Compress:   true,
+			})
+			if err != nil {
+				log.Warnf("create file sink failed: %v", err)
+			} else {
+				if old := logger.AddGlobalSink(sink); old != nil {
+					_ = old.Close()
+				}
+			}
+		}
+	}
+
+	// DB sink
+	dbLevel := logger.ParseLevel(eff.AppLogDBLevel)
+	if dbLevel == logger.LevelOff {
+		if old := logger.RemoveGlobalSink("db"); old != nil {
+			_ = old.Close()
+		}
+		return
+	}
+	sink := service.NewLogDBSink(db, hub, service.LogDBSinkOptions{
+		Name:       "db",
+		MinLevel:   dbLevel,
+		BufferSize: eff.AppLogDBBufferSize,
+	})
+	if old := logger.AddGlobalSink(sink); old != nil {
+		_ = old.Close()
 	}
 }

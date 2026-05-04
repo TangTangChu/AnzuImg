@@ -38,9 +38,10 @@ const (
 )
 
 type Logger struct {
-	module  string
-	out     io.Writer
-	bufPool *sync.Pool
+	module     string
+	out        io.Writer
+	bufPool    *sync.Pool
+	stdoutMin  Level
 }
 
 var (
@@ -48,6 +49,10 @@ var (
 
 	registryMu sync.RWMutex
 	registry   = make(map[string]*Logger)
+
+	// 默认 stdout 最小级别；可用 SetStdoutMinLevel 在运行时调整。
+	stdoutMinMu sync.RWMutex
+	stdoutMin   = LevelDebug
 )
 
 type Option func(*Logger)
@@ -56,6 +61,28 @@ func WithOutput(w io.Writer) Option {
 	return func(l *Logger) {
 		l.out = w
 	}
+}
+
+// WithStdoutMinLevel 让单个 Logger 的 stdout 输出有独立最小级别,默认跟随全局。
+func WithStdoutMinLevel(min Level) Option {
+	return func(l *Logger) {
+		l.stdoutMin = min
+	}
+}
+
+// SetStdoutMinLevel 设置全局 stdout 最小级别。
+// SettingsService 在 reload 时调用以热生效。
+func SetStdoutMinLevel(min Level) {
+	stdoutMinMu.Lock()
+	stdoutMin = min
+	stdoutMinMu.Unlock()
+}
+
+// GetStdoutMinLevel 返回当前全局 stdout 最小级别。
+func GetStdoutMinLevel() Level {
+	stdoutMinMu.RLock()
+	defer stdoutMinMu.RUnlock()
+	return stdoutMin
 }
 
 // New 创建一个带模块名的 logger
@@ -68,6 +95,7 @@ func New(module string, opts ...Option) *Logger {
 				return new(bytes.Buffer)
 			},
 		},
+		stdoutMin: -1, // -1 表示跟随全局
 	}
 
 	for _, opt := range opts {
@@ -98,6 +126,17 @@ func Get(module string) *Logger {
 	return registry[module]
 }
 
+// Modules 返回所有已注册模块名,前端"模块过滤"下拉框用。
+func Modules() []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	out := make([]string, 0, len(registry))
+	for name := range registry {
+		out = append(out, name)
+	}
+	return out
+}
+
 func Default() *Logger {
 	return defaultLogger
 }
@@ -119,6 +158,7 @@ func (l *Logger) Warn(v ...any)  { l.logPlain(LevelWarn, v...) }
 func (l *Logger) Error(v ...any) { l.logPlain(LevelError, v...) }
 func (l *Logger) Fatal(v ...any) {
 	l.logPlain(LevelFatal, v...)
+	CloseAllGlobalSinks()
 	os.Exit(1)
 }
 
@@ -128,6 +168,7 @@ func (l *Logger) Warnf(format string, args ...any)  { l.logf(LevelWarn, format, 
 func (l *Logger) Errorf(format string, args ...any) { l.logf(LevelError, format, args...) }
 func (l *Logger) Fatalf(format string, args ...any) {
 	l.logf(LevelFatal, format, args...)
+	CloseAllGlobalSinks()
 	os.Exit(1)
 }
 
@@ -141,19 +182,38 @@ func (l *Logger) logf(level Level, format string, args ...any) {
 	l.log(level, msg)
 }
 
-// 格式：时间(UTC) [模块] [类型] 输出文本
+// 格式: UTC 时间 [模块] [级别] 文本
 func (l *Logger) log(level Level, msg string) {
+	now := time.Now()
+	rec := Record{Time: now, Level: level, Module: l.module, Message: msg}
+
+	// stdout：带 ANSI 颜色
+	stdoutThreshold := l.stdoutMin
+	if stdoutThreshold < 0 {
+		stdoutThreshold = GetStdoutMinLevel()
+	}
+	if level >= stdoutThreshold && stdoutThreshold != LevelOff {
+		l.writeColored(rec)
+	}
+
+	// fan-out 到全局 sink: 文件、DB、SSE 等
+	for _, sink := range GlobalSinks() {
+		if level < sink.MinLevel() {
+			continue
+		}
+		sink.Write(rec)
+	}
+}
+
+func (l *Logger) writeColored(rec Record) {
 	buf := l.bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer l.bufPool.Put(buf)
 
-	now := time.Now().UTC()
-	ts := now.AppendFormat(nil, "2006-01-02 15:04:05.000")
+	ts := rec.Time.UTC().AppendFormat(nil, "2006-01-02 15:04:05.000")
 
 	prefixColor := colorWhite
-	levelName := levelNames[level]
-
-	switch level {
+	switch rec.Level {
 	case LevelDebug:
 		prefixColor = colorDebug
 	case LevelWarn:
@@ -168,15 +228,17 @@ func (l *Logger) log(level Level, msg string) {
 	buf.WriteString(prefixColor)
 	buf.Write(ts)
 	buf.WriteString(" [")
-	buf.WriteString(l.module)
+	buf.WriteString(rec.Module)
 	buf.WriteString("]")
 	buf.WriteString(colorReset)
 	buf.WriteByte(' ')
 	buf.WriteString(colorWhite)
 	buf.WriteByte('[')
-	buf.WriteString(levelName)
+	if int(rec.Level) >= 0 && int(rec.Level) < len(levelNames) {
+		buf.WriteString(levelNames[rec.Level])
+	}
 	buf.WriteString("] ")
-	buf.WriteString(msg)
+	buf.WriteString(rec.Message)
 	buf.WriteString(colorReset)
 	buf.WriteByte('\n')
 	_, _ = l.out.Write(buf.Bytes())

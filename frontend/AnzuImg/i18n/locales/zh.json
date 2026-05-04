@@ -76,6 +76,7 @@
         "gallery": "图库",
         "upload": "上传",
         "routes": "路由管理",
+        "logs": "日志",
         "settings": "设置"
     },
     "dashboard": {
@@ -88,7 +89,20 @@
         "safeSystem": "无异常记录"
     },
     "auth": {
-        "registerPasskey": "注册 Passkey"
+        "registerPasskey": "注册 Passkey",
+        "stepUp": {
+            "title": "二次确认",
+            "description": "此操作敏感,请重新输入密码或使用 Passkey 进行确认。",
+            "byPassword": "密码",
+            "byPasskey": "Passkey",
+            "passwordLabel": "密码",
+            "passwordPlaceholder": "请输入当前密码",
+            "passwordFailed": "密码错误",
+            "passkeyHint": "点击下方按钮使用已注册的 Passkey 完成确认。",
+            "usePasskey": "使用 Passkey 确认",
+            "passkeyFailed": "Passkey 确认失败",
+            "confirm": "确认"
+        }
     },
     "meta": {
         "fullName": "AnzuIMG"
@@ -271,6 +285,92 @@
                 "warning": "警告",
                 "error": "错误"
             }
+        },
+        "systemConfig": {
+            "title": "系统配置",
+            "description": "通过 Web 端调整运行时配置,改动写入数据库,覆盖 .env 默认值。",
+            "disabledNotice": "当前部署禁用了 Web 端配置修改,请通过 .env 或数据库调整。",
+            "overridden": "已被 DB 覆盖",
+            "save": "保存",
+            "discard": "撤销",
+            "resetOverridden": "重置覆盖项",
+            "saveSuccess": "配置已保存",
+            "saveFailed": "配置保存失败",
+            "resetConfirm": "将重置 {count} 项 DB 覆盖,使其回到 .env 默认。是否继续?",
+            "resetSuccess": "已重置覆盖配置",
+            "resetFailed": "重置失败",
+            "dirtyCount": "{count} 项待保存",
+            "groups": {
+                "uploads": "上传限制",
+                "session": "会话与令牌",
+                "login_security": "登录安全",
+                "password_policy": "密码策略",
+                "network": "网络与访问控制",
+                "logs": "日志策略",
+                "stepup": "二次确认"
+            },
+            "fields": {
+                "MAX_UPLOAD_MB": { "label": "单次请求最大体积(MB)", "hint": "整体 multipart 大小上限" },
+                "MAX_UPLOAD_FILE_MB": { "label": "单文件最大体积(MB)" },
+                "MAX_UPLOAD_FILES": { "label": "单次最大文件数" },
+                "COOKIE_SAMESITE": { "label": "Cookie SameSite", "hint": "Lax / Strict / None" },
+                "STRICT_SESSION_IP": { "label": "会话严格 IP 绑定" },
+                "SESSION_EXPIRATION_HOURS": { "label": "会话过期(小时)" },
+                "API_TOKEN_TTL_HOURS": { "label": "API Token TTL(小时)", "hint": "0 表示永不过期" },
+                "LOGIN_MAX_ATTEMPTS": { "label": "登录失败锁定阈值" },
+                "LOGIN_LOCKOUT_MINUTES": { "label": "锁定时长(分钟)" },
+                "BRUTEFORCE_ALERT_ATTEMPTS": { "label": "爆破告警阈值" },
+                "PASSWORD_MIN_LENGTH": { "label": "密码最短长度" },
+                "PASSWORD_REQUIRE_UPPER": { "label": "需要大写字母" },
+                "PASSWORD_REQUIRE_LOWER": { "label": "需要小写字母" },
+                "PASSWORD_REQUIRE_DIGIT": { "label": "需要数字" },
+                "PASSWORD_REQUIRE_SYMBOL": { "label": "需要符号" },
+                "ALLOWED_ORIGINS": { "label": "CORS 允许的 Origin" },
+                "IP_BLACKLIST": { "label": "IP 黑名单", "hint": "支持单 IP 与 CIDR" },
+                "ADMIN_IP_ALLOWLIST": { "label": "管理面板 IP 白名单", "hint": "为空表示不限制" },
+                "CSP_EXTRA": { "label": "CSP 追加片段" },
+                "SECURITY_LOG_RETENTION_DAYS": { "label": "安全日志保留天数" },
+                "TOKEN_LOG_RETENTION_DAYS": { "label": "Token 日志保留天数" },
+                "APP_LOG_RETENTION_DAYS": { "label": "应用日志保留天数" },
+                "APP_LOG_STDOUT_LEVEL": { "label": "Stdout 最低级别" },
+                "APP_LOG_DB_LEVEL": { "label": "DB sink 最低级别", "hint": "off 表示禁用" },
+                "APP_LOG_DB_BUFFER": { "label": "DB sink 缓冲大小" },
+                "APP_LOG_FILE_ENABLED": { "label": "启用文件日志" },
+                "APP_LOG_FILE_LEVEL": { "label": "文件 sink 最低级别" },
+                "APP_LOG_FILE_MAX_SIZE_MB": { "label": "单文件最大(MB)" },
+                "APP_LOG_FILE_MAX_BACKUPS": { "label": "保留备份数" },
+                "APP_LOG_FILE_MAX_AGE_DAYS": { "label": "保留天数" },
+                "STEP_UP_MAX_AGE_SEC": { "label": "二次确认有效秒数" }
+            }
+        }
+    },
+    "logs": {
+        "title": "日志",
+        "tabs": {
+            "app": "应用日志",
+            "security": "安全日志",
+            "token": "Token 日志"
+        },
+        "empty": "暂无日志",
+        "refresh": "刷新",
+        "exportCsv": "导出 CSV",
+        "exportJson": "导出 JSON",
+        "cleanup": "清理",
+        "cleanupTitle": "清理日志",
+        "cleanupConfirm": "将清理 {source} 中 {days} 天前的日志,是否继续?",
+        "cleanupPromptDays": "请输入保留天数,清理这之前的日志",
+        "cleanupInvalidDays": "请输入有效的天数",
+        "cleanupSuccess": "已清理 {count} 条日志",
+        "cleanupFailed": "清理失败",
+        "streamStart": "实时模式",
+        "streamStop": "停止实时",
+        "filters": {
+            "level": "级别",
+            "module": "模块",
+            "ip": "IP"
+        },
+        "levels": {
+            "all": "全部级别"
         }
     },
     "routes": {

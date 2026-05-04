@@ -75,6 +75,7 @@
         "gallery": "Gallery",
         "upload": "Upload",
         "routes": "Routes",
+        "logs": "Logs",
         "settings": "Settings"
     },
     "dashboard": {
@@ -87,7 +88,20 @@
         "safeSystem": "No anomalies found"
     },
     "auth": {
-        "registerPasskey": "Register Passkey"
+        "registerPasskey": "Register Passkey",
+        "stepUp": {
+            "title": "Step-up authentication",
+            "description": "This action is sensitive. Please confirm with your password or passkey.",
+            "byPassword": "Password",
+            "byPasskey": "Passkey",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "Enter current password",
+            "passwordFailed": "Incorrect password",
+            "passkeyHint": "Click below to confirm with a registered passkey.",
+            "usePasskey": "Confirm with passkey",
+            "passkeyFailed": "Passkey confirmation failed",
+            "confirm": "Confirm"
+        }
     },
     "meta": {
         "fullName": "AnzuIMG"
@@ -270,6 +284,92 @@
                 "warning": "Warning",
                 "error": "Error"
             }
+        },
+        "systemConfig": {
+            "title": "System configuration",
+            "description": "Adjust runtime config from the web. Changes go to the database and override .env defaults.",
+            "disabledNotice": "Web configuration is disabled in this deployment. Edit .env or the database instead.",
+            "overridden": "DB override",
+            "save": "Save",
+            "discard": "Discard",
+            "resetOverridden": "Reset overrides",
+            "saveSuccess": "Configuration saved",
+            "saveFailed": "Failed to save configuration",
+            "resetConfirm": "Reset {count} overridden item(s) back to .env defaults?",
+            "resetSuccess": "Overrides reset",
+            "resetFailed": "Reset failed",
+            "dirtyCount": "{count} pending",
+            "groups": {
+                "uploads": "Upload limits",
+                "session": "Session & tokens",
+                "login_security": "Login security",
+                "password_policy": "Password policy",
+                "network": "Network & access",
+                "logs": "Logs",
+                "stepup": "Step-up"
+            },
+            "fields": {
+                "MAX_UPLOAD_MB": { "label": "Max request size (MB)", "hint": "Total multipart size limit" },
+                "MAX_UPLOAD_FILE_MB": { "label": "Max file size (MB)" },
+                "MAX_UPLOAD_FILES": { "label": "Max files per request" },
+                "COOKIE_SAMESITE": { "label": "Cookie SameSite", "hint": "Lax / Strict / None" },
+                "STRICT_SESSION_IP": { "label": "Strict session IP binding" },
+                "SESSION_EXPIRATION_HOURS": { "label": "Session TTL (hours)" },
+                "API_TOKEN_TTL_HOURS": { "label": "API token TTL (hours)", "hint": "0 = never expires" },
+                "LOGIN_MAX_ATTEMPTS": { "label": "Login lockout threshold" },
+                "LOGIN_LOCKOUT_MINUTES": { "label": "Lockout duration (min)" },
+                "BRUTEFORCE_ALERT_ATTEMPTS": { "label": "Bruteforce alert threshold" },
+                "PASSWORD_MIN_LENGTH": { "label": "Password min length" },
+                "PASSWORD_REQUIRE_UPPER": { "label": "Require uppercase" },
+                "PASSWORD_REQUIRE_LOWER": { "label": "Require lowercase" },
+                "PASSWORD_REQUIRE_DIGIT": { "label": "Require digit" },
+                "PASSWORD_REQUIRE_SYMBOL": { "label": "Require symbol" },
+                "ALLOWED_ORIGINS": { "label": "CORS allowed origins" },
+                "IP_BLACKLIST": { "label": "IP blacklist", "hint": "IPs and CIDRs" },
+                "ADMIN_IP_ALLOWLIST": { "label": "Admin IP allowlist", "hint": "Empty = unrestricted" },
+                "CSP_EXTRA": { "label": "Extra CSP directives" },
+                "SECURITY_LOG_RETENTION_DAYS": { "label": "Security log retention (days)" },
+                "TOKEN_LOG_RETENTION_DAYS": { "label": "Token log retention (days)" },
+                "APP_LOG_RETENTION_DAYS": { "label": "App log retention (days)" },
+                "APP_LOG_STDOUT_LEVEL": { "label": "Stdout min level" },
+                "APP_LOG_DB_LEVEL": { "label": "DB sink min level", "hint": "off disables" },
+                "APP_LOG_DB_BUFFER": { "label": "DB sink buffer size" },
+                "APP_LOG_FILE_ENABLED": { "label": "Enable file logs" },
+                "APP_LOG_FILE_LEVEL": { "label": "File sink min level" },
+                "APP_LOG_FILE_MAX_SIZE_MB": { "label": "File max size (MB)" },
+                "APP_LOG_FILE_MAX_BACKUPS": { "label": "Max backups" },
+                "APP_LOG_FILE_MAX_AGE_DAYS": { "label": "Max age (days)" },
+                "STEP_UP_MAX_AGE_SEC": { "label": "Step-up validity (sec)" }
+            }
+        }
+    },
+    "logs": {
+        "title": "Logs",
+        "tabs": {
+            "app": "App logs",
+            "security": "Security logs",
+            "token": "Token logs"
+        },
+        "empty": "No logs found",
+        "refresh": "Refresh",
+        "exportCsv": "Export CSV",
+        "exportJson": "Export JSON",
+        "cleanup": "Cleanup",
+        "cleanupTitle": "Cleanup logs",
+        "cleanupConfirm": "Delete {source} logs older than {days} days?",
+        "cleanupPromptDays": "Enter retention days; logs older than this will be deleted",
+        "cleanupInvalidDays": "Please enter a valid number of days",
+        "cleanupSuccess": "Deleted {count} logs",
+        "cleanupFailed": "Cleanup failed",
+        "streamStart": "Live mode",
+        "streamStop": "Stop live",
+        "filters": {
+            "level": "Level",
+            "module": "Module",
+            "ip": "IP"
+        },
+        "levels": {
+            "all": "All levels"
         }
     },
     "routes": {

@@ -8,13 +8,18 @@ import (
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 )
 
-func CORS(allowedOrigins []string) gin.HandlerFunc {
+// CORS 接受一个返回当前允许 Origin 列表的回调，使其在每次请求时读取最新值。
+// 这样 Web 端修改 ALLOWED_ORIGINS 后无需重启即可生效。
+func CORS(originsFn func() []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// 验证Origin是否在白名单中
 		allowed := false
-		for _, allowedOrigin := range allowedOrigins {
+		var origins []string
+		if originsFn != nil {
+			origins = originsFn()
+		}
+		for _, allowedOrigin := range origins {
 			if origin == allowedOrigin {
 				allowed = true
 				break

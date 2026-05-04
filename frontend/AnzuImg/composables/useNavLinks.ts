@@ -2,7 +2,8 @@ import {
     PhotoIcon,
     CloudArrowUpIcon,
     Cog6ToothIcon,
-    MapIcon
+    MapIcon,
+    DocumentTextIcon
 } from "@heroicons/vue/24/outline";
 import type { FunctionalComponent, HTMLAttributes, VNodeProps } from 'vue'
 
@@ -41,6 +42,11 @@ export const useNavLinks = (): NavLink[] => {
             path: '/routes',
             label: 'nav.routes',
             icon: MapIcon
+        },
+        {
+            path: '/logs',
+            label: 'nav.logs',
+            icon: DocumentTextIcon
         },
         {
             path: '/settings',

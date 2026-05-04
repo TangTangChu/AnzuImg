@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -11,9 +12,10 @@ import (
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/handler"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
+	"github.com/TangTangChu/AnzuImg/backend/internal/service"
 )
 
-func NewRouter(cfg *config.Config, db *gorm.DB) (*gin.Engine, error) {
+func NewRouter(cfg *config.Config, db *gorm.DB, settings *service.SettingsService, hub *service.LogStreamHub) (*gin.Engine, error) {
 	r := gin.Default()
 
 	resolver, err := clientip.NewResolver(cfg.TrustedProxies, cfg.ClientIPHeaders, cfg.ClientIPXFFStrategy)
@@ -21,23 +23,30 @@ func NewRouter(cfg *config.Config, db *gorm.DB) (*gin.Engine, error) {
 		return nil, fmt.Errorf("init client ip resolver failed: %w", err)
 	}
 
+	originsFn := func() []string { return cfg.Effective().AllowedOrigins }
+	cspExtraFn := func() string { return cfg.Effective().CSPExtra }
+	blacklistFn := func() []string { return cfg.Effective().IPBlacklist }
+	adminAllowlistFn := func() []string { return cfg.Effective().AdminIPAllowlist }
+	stepUpAgeFn := func() time.Duration {
+		return time.Duration(cfg.Effective().StepUpMaxAgeSeconds) * time.Second
+	}
+
 	r.Use(middleware.ClientIPMiddleware(resolver))
+	r.Use(middleware.IPBlacklist(blacklistFn))
 	r.Use(middleware.RequestID())
-	r.Use(middleware.SecurityHeaders())
-	r.Use(func(c *gin.Context) {
-		c.Set("cookie_samesite", cfg.CookieSameSite)
-		c.Set("strict_session_ip", cfg.StrictSessionIP)
-		c.Next()
-	})
+	r.Use(middleware.SecurityHeaders(cspExtraFn))
+
 	healthH := handler.NewHealthHandler()
 	imageH := handler.NewImageHandler(cfg, db)
 	authH := handler.NewAuthHandler(cfg, db)
 	apiTokenH := handler.NewAPITokenHandler(db)
+	settingsH := handler.NewSettingsHandler(cfg, db, settings)
+	logH := handler.NewLogHandler(db, hub)
 
 	registerHealthRoutes(r, healthH)
 	registerPublicImageRoutes(r, imageH)
-	registerAuthRoutes(r, cfg, authH, apiTokenH)
-	registerAPIRoutes(r, cfg, healthH, imageH, authH)
+	registerAuthRoutes(r, cfg, authH, apiTokenH, settingsH, logH, originsFn, adminAllowlistFn, stepUpAgeFn)
+	registerAPIRoutes(r, cfg, healthH, imageH, authH, originsFn)
 
 	return r, nil
 }
@@ -57,9 +66,19 @@ func registerPublicImageRoutes(r *gin.Engine, h *handler.ImageHandler) {
 	}
 }
 
-func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandler, tokenH *handler.APITokenHandler) {
+func registerAuthRoutes(
+	r *gin.Engine,
+	cfg *config.Config,
+	h *handler.AuthHandler,
+	tokenH *handler.APITokenHandler,
+	settingsH *handler.SettingsHandler,
+	logH *handler.LogHandler,
+	originsFn func() []string,
+	adminAllowlistFn func() []string,
+	stepUpAgeFn func() time.Duration,
+) {
 	apiPrefix := cfg.APIPrefix + "/api/v1"
-	auth := r.Group(apiPrefix+"/auth", middleware.CORS(cfg.AllowedOrigins))
+	auth := r.Group(apiPrefix+"/auth", middleware.CORS(originsFn))
 	{
 		auth.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
 		auth.GET("/status", h.CheckInit)
@@ -68,43 +87,79 @@ func registerAuthRoutes(r *gin.Engine, cfg *config.Config, h *handler.AuthHandle
 		auth.POST("/logout", h.Logout)
 		auth.GET("/validate", h.ValidateSession)
 
-		// Passkey Login
 		auth.GET("/passkey/login/begin", h.LoginPasskeyBegin)
 		auth.POST("/passkey/login/finish", h.LoginPasskeyFinish)
 	}
 
-	// Protected auth routes
-	protectedAuth := auth.Group("", middleware.Session(h.DB()), middleware.RequireSession())
+	protectedAuth := auth.Group("", middleware.Session(cfg, h.DB()), middleware.RequireSession(), middleware.AdminIPAllowlist(adminAllowlistFn))
 	{
-		// Passkey Registration
 		protectedAuth.GET("/passkey/register/begin", h.RegisterPasskeyBegin)
 		protectedAuth.POST("/passkey/register/finish", h.RegisterPasskeyFinish)
 
-		// Passkey Management
 		protectedAuth.GET("/passkeys", h.ListPasskeys)
 		protectedAuth.GET("/passkeys/count", h.GetPasskeyCount)
 		protectedAuth.GET("/passkeys/check", h.CheckPasskeyExists)
-		protectedAuth.DELETE("/passkeys/:credential_id", h.DeletePasskey)
-		protectedAuth.POST("/passkeys/:credential_id/delete", h.DeletePasskey)
-
-		// Password Management
-		protectedAuth.POST("/change-password", h.ChangePassword)
 		protectedAuth.GET("/security/logs", h.ListSecurityLogs)
-
-		// API Token Management
-		protectedAuth.POST("/tokens", tokenH.Create)
 		protectedAuth.GET("/tokens", tokenH.List)
 		protectedAuth.GET("/tokens/logs", tokenH.ListLogs)
-		protectedAuth.DELETE("/tokens/logs", tokenH.CleanupLogs)
-		protectedAuth.POST("/tokens/logs/cleanup", tokenH.CleanupLogs)
-		protectedAuth.DELETE("/tokens/:id", tokenH.Delete)
-		protectedAuth.POST("/tokens/:id/delete", tokenH.Delete)
+
+		protectedAuth.POST("/step-up/password", h.StepUpWithPassword)
+		protectedAuth.GET("/step-up/passkey/begin", h.StepUpPasskeyBegin)
+		protectedAuth.POST("/step-up/passkey/finish", h.StepUpPasskeyFinish)
+	}
+
+	stepUp := middleware.RequireStepUp(stepUpAgeFn)
+	sensitiveAuth := auth.Group("",
+		middleware.Session(cfg, h.DB()),
+		middleware.RequireSession(),
+		middleware.AdminIPAllowlist(adminAllowlistFn),
+		stepUp,
+	)
+	{
+		sensitiveAuth.DELETE("/passkeys/:credential_id", h.DeletePasskey)
+		sensitiveAuth.POST("/passkeys/:credential_id/delete", h.DeletePasskey)
+		sensitiveAuth.POST("/change-password", h.ChangePassword)
+		sensitiveAuth.POST("/tokens", tokenH.Create)
+		sensitiveAuth.DELETE("/tokens/logs", tokenH.CleanupLogs)
+		sensitiveAuth.POST("/tokens/logs/cleanup", tokenH.CleanupLogs)
+		sensitiveAuth.DELETE("/tokens/:id", tokenH.Delete)
+		sensitiveAuth.POST("/tokens/:id/delete", tokenH.Delete)
+	}
+
+	settingsGrp := r.Group(apiPrefix+"/settings",
+		middleware.CORS(originsFn),
+		middleware.Session(cfg, h.DB()),
+		middleware.RequireSession(),
+		middleware.AdminIPAllowlist(adminAllowlistFn),
+	)
+	{
+		settingsGrp.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
+		settingsGrp.GET("", settingsH.Get)
+		settingsGrp.PATCH("", stepUp, settingsH.Patch)
+		settingsGrp.POST("/reset", stepUp, settingsH.Reset)
+	}
+
+	logsGrp := r.Group(apiPrefix+"/logs",
+		middleware.CORS(originsFn),
+		middleware.Session(cfg, h.DB()),
+		middleware.RequireSession(),
+		middleware.AdminIPAllowlist(adminAllowlistFn),
+	)
+	{
+		logsGrp.OPTIONS("/*path", func(c *gin.Context) { c.Status(204) })
+		logsGrp.GET("/app", logH.ListApp)
+		logsGrp.GET("/security", logH.ListSecurity)
+		logsGrp.GET("/token", logH.ListToken)
+		logsGrp.GET("/export", logH.Export)
+		logsGrp.GET("/stream", logH.Stream)
+		logsGrp.DELETE("/:source", stepUp, logH.Cleanup)
+		logsGrp.POST("/:source/cleanup", stepUp, logH.Cleanup)
 	}
 }
 
-func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler) {
+func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHandler, ih *handler.ImageHandler, ah *handler.AuthHandler, originsFn func() []string) {
 	apiPrefix := cfg.APIPrefix + "/api/v1"
-	api := r.Group(apiPrefix, middleware.CORS(cfg.AllowedOrigins), middleware.Session(ah.DB()))
+	api := r.Group(apiPrefix, middleware.CORS(originsFn), middleware.Session(cfg, ah.DB()))
 	{
 		api.GET("/ping", middleware.RequireTokenType(model.TokenTypeFull), hh.Ping)
 		api.POST("/images", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.Upload)

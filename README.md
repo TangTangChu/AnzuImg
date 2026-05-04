@@ -64,6 +64,12 @@ ANZUIMG_COOKIE_SAMESITE=Lax
 # 是否启用会话严格 IP 绑定，默认 false
 ANZUIMG_STRICT_SESSION_IP=false
 
+# 是否允许 Web 端修改运行时配置,默认 true
+# 关闭后 /settings 系统配置区变只读,仅可通过 .env 或数据库调整
+ANZUIMG_ALLOW_WEB_CONFIG=true
+# 应用日志文件输出目录,默认 /data/logs (容器内)
+ANZUIMG_LOG_FILE_DIR=/data/logs
+
 # Passkey WebAuthn 配置
 # Relying Party ID，通常为域名
 ANZUIMG_PASSKEY_RP_ID=localhost
@@ -187,3 +193,29 @@ docker compose -f deploy/docker-compose.yml up -d
 ### 设置页
 
 ![image4](README/image4.webp)
+
+### 日志页
+
+`/logs` 是独立的日志中心,提供:
+
+- 三个 Tab:**应用日志 app_logs / 安全日志 security_event_logs / Token 日志 api_token_logs**
+- 多字段过滤:级别、模块、IP、动作、时间范围、关键字
+- **实时模式**应用日志,基于 SSE 推送,边产生边滚动展示
+- 一键导出 CSV / JSON
+- 一键清理 N 天前日志,属敏感操作,需要二次确认
+
+应用日志通过 logger 的多 sink 同时输出到 stdout、文件轮转与 DB。文件路径由 `ANZUIMG_LOG_FILE_DIR` 决定,文件大小、保留备份与天数都可在系统配置页热改。
+
+### 系统配置与安全策略
+
+进入 `/settings` 底部"系统配置"区,可在 Web 端调整大部分运行期参数,改动到 `system_configs` 表覆盖 `.env` 默认值,**无需重启进程**。涵盖:
+
+- 上传限制、Cookie SameSite、严格 IP 绑定
+- 会话与 API Token 生存期
+- 登录失败锁定阈值与冷却时长、爆破告警阈值
+- 密码策略,最短长度与是否要求大小写、数字、符号
+- CORS 允许的 Origin、CSP 追加片段
+- **IP 黑名单**全局生效,与**管理面板 IP 白名单**仅敏感路由生效
+- 日志保留天数、级别、文件轮转、DB sink 缓冲
+
+敏感操作如改配置、删 Passkey、删 Token、改密码、清日志,受 **step-up 二次确认**保护:在 N 秒内首次执行会要求重输密码或使用 Passkey;窗口由 `STEP_UP_MAX_AGE_SEC` 控制,默认 120 秒。

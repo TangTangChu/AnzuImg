@@ -36,8 +36,8 @@ func NewAuthHandler(cfg *config.Config, db *gorm.DB) *AuthHandler {
 	return &AuthHandler{
 		cfg:            cfg,
 		db:             db,
-		userService:    service.NewUserService(db),
-		sessionService: service.NewSessionService(db),
+		userService:    service.NewUserService(cfg, db),
+		sessionService: service.NewSessionService(cfg, db),
 		passkeyService: passkeyService,
 		log:            log,
 	}
@@ -144,10 +144,11 @@ func (h *AuthHandler) AuthWithPassword(c *gin.Context) {
 		clientIP = "unknown"
 	}
 
-	// 检查IP是否被锁定
-	locked, unlockTime := model.IsIPLocked(h.db, clientIP)
+	eff := h.cfg.Effective()
+
+	locked, unlockTime := model.IsIPLocked(h.db, clientIP, eff.LoginMaxAttempts, eff.LoginLockoutMinutes)
 	if locked {
-		h.recordSecurityEventWithDedup(c, "warning", "login_rate_limited", "too many login attempts", time.Duration(model.LockoutDuration)*time.Minute)
+		h.recordSecurityEventWithDedup(c, "warning", "login_rate_limited", "too many login attempts", time.Duration(eff.LoginLockoutMinutes)*time.Minute)
 		requestID, _ := c.Get(response.CtxRequestIDKey)
 		requestIDStr, _ := requestID.(string)
 		c.JSON(http.StatusTooManyRequests, gin.H{
@@ -326,6 +327,71 @@ func (h *AuthHandler) LoginPasskeyFinish(c *gin.Context) {
 
 func (h *AuthHandler) DB() *gorm.DB {
 	return h.db
+}
+
+type StepUpPasswordRequest struct {
+	Password string `json:"password" binding:"required"`
+}
+
+// StepUpWithPassword 用密码做二次确认。当前会话必须存在;成功则写 sessions.step_up_at。
+func (h *AuthHandler) StepUpWithPassword(c *gin.Context) {
+	var req StepUpPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_request", "invalid request")
+		return
+	}
+	if !h.userService.VerifyPassword(req.Password) {
+		h.recordSecurityEvent(c, "warning", "step_up_failed", "step-up password incorrect")
+		response.WriteErrorCode(c, http.StatusUnauthorized, "invalid_credentials", "invalid password")
+		return
+	}
+	if err := h.sessionService.MarkStepUp(c); err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "step_up_persist_failed", "failed to record step-up")
+		return
+	}
+	h.recordSecurityEvent(c, "info", "step_up_password_success", "step-up by password")
+	c.JSON(http.StatusOK, gin.H{"ok": true, "method": "password"})
+}
+
+// StepUpPasskeyBegin 开启 Passkey 二次确认流程,复用 BeginLogin 仪式。
+func (h *AuthHandler) StepUpPasskeyBegin(c *gin.Context) {
+	if h.passkeyService == nil {
+		response.WriteErrorCode(c, http.StatusServiceUnavailable, "passkey_unavailable", "passkey service not available")
+		return
+	}
+	assertion, sessionID, err := h.passkeyService.BeginLogin()
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "passkey_login_begin_failed", "failed to begin passkey login")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"assertion": assertion, "session_id": sessionID})
+}
+
+// StepUpPasskeyFinish 完成 Passkey 二次确认,通过即写 step_up_at,不重建会话。
+func (h *AuthHandler) StepUpPasskeyFinish(c *gin.Context) {
+	if h.passkeyService == nil {
+		response.WriteErrorCode(c, http.StatusServiceUnavailable, "passkey_unavailable", "passkey service not available")
+		return
+	}
+	sessionID := c.GetHeader("X-Session-ID")
+	if sessionID == "" {
+		sessionID = c.GetHeader("X-Session-Data")
+	}
+	if sessionID == "" {
+		response.WriteErrorCode(c, http.StatusBadRequest, "passkey_session_id_required", "X-Session-ID header required")
+		return
+	}
+	if err := h.passkeyService.FinishLogin(c.Request, sessionID); err != nil {
+		h.recordSecurityEvent(c, "warning", "step_up_failed", "step-up passkey failed")
+		response.WriteErrorCode(c, http.StatusUnauthorized, "passkey_login_failed", "invalid passkey response")
+		return
+	}
+	if err := h.sessionService.MarkStepUp(c); err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "step_up_persist_failed", "failed to record step-up")
+		return
+	}
+	h.recordSecurityEvent(c, "info", "step_up_passkey_success", "step-up by passkey")
+	c.JSON(http.StatusOK, gin.H{"ok": true, "method": "passkey"})
 }
 
 // ListPasskeys 列出所有PassKey凭证
@@ -560,17 +626,18 @@ func (h *AuthHandler) recordSecurityEventWithDedup(c *gin.Context, level, action
 }
 
 func (h *AuthHandler) recordBruteforceAlertIfNeeded(c *gin.Context, clientIP string) {
-	windowStart := time.Now().Add(-time.Duration(model.LockoutDuration) * time.Minute)
-	var failedCount int64
-	err := h.db.Model(&model.LoginAttempt{}).
-		Where("ip_address = ? AND success = ? AND created_at > ?", clientIP, false, windowStart).
-		Count(&failedCount).Error
+	eff := h.cfg.Effective()
+	threshold := eff.BruteforceAlertAttempts
+	if threshold <= 0 {
+		threshold = eff.LoginMaxAttempts
+	}
+	failedCount, err := model.CountRecentFailedAttempts(h.db, clientIP, eff.LoginLockoutMinutes)
 	if err != nil {
 		h.log.Warnf("failed to count login attempts for alert: %v", err)
 		return
 	}
 
-	if failedCount < model.MaxLoginAttempts {
+	if failedCount < int64(threshold) {
 		return
 	}
 
@@ -579,6 +646,6 @@ func (h *AuthHandler) recordBruteforceAlertIfNeeded(c *gin.Context, clientIP str
 		"error",
 		"login_bruteforce_alert",
 		"high-frequency failed login attempts detected",
-		time.Duration(model.LockoutDuration)*time.Minute,
+		time.Duration(eff.LoginLockoutMinutes)*time.Minute,
 	)
 }

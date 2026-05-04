@@ -8,30 +8,27 @@ import (
 
 type LoginAttempt struct {
 	ID        uint64    `gorm:"primaryKey"`
-	IPAddress string    `gorm:"size:45;not null;index:idx_ip_created"` // IPv6最大长度45
+	IPAddress string    `gorm:"size:45;not null;index:idx_ip_created"`
 	Username  string    `gorm:"size:100;not null;index:idx_ip_created"`
 	Success   bool      `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null;index:idx_ip_created"`
 }
 
-const (
-	// 最大登录尝试次数
-	MaxLoginAttempts = 5
-	// 锁定时间（分钟）
-	LockoutDuration = 15
-)
-
-// IsIPLocked 检查IP地址是否被锁定
-func IsIPLocked(db *gorm.DB, ipAddress string) (bool, time.Time) {
+// IsIPLocked 检查 IP 在 max/lockoutMin 策略下是否被锁定。
+// 与旧版本相比，阈值与窗口都改为参数，由调用方从 effective 配置取。
+func IsIPLocked(db *gorm.DB, ipAddress string, maxAttempts int, lockoutMin int) (bool, time.Time) {
+	if maxAttempts <= 0 || lockoutMin <= 0 {
+		return false, time.Time{}
+	}
 	var count int64
-	lockoutTime := time.Now().Add(-time.Duration(LockoutDuration) * time.Minute)
+	lockoutTime := time.Now().Add(-time.Duration(lockoutMin) * time.Minute)
 
 	db.Model(&LoginAttempt{}).
 		Where("ip_address = ? AND success = ? AND created_at > ?",
 			ipAddress, false, lockoutTime).
 		Count(&count)
 
-	if count < MaxLoginAttempts {
+	if int(count) < maxAttempts {
 		return false, time.Time{}
 	}
 
@@ -40,10 +37,25 @@ func IsIPLocked(db *gorm.DB, ipAddress string) (bool, time.Time) {
 		Where("ip_address = ? AND success = ? AND created_at > ?", ipAddress, false, lockoutTime).
 		Order("created_at DESC").
 		First(&latest).Error; err == nil {
-		return true, latest.CreatedAt.Add(time.Duration(LockoutDuration) * time.Minute)
+		return true, latest.CreatedAt.Add(time.Duration(lockoutMin) * time.Minute)
 	}
 
-	return true, time.Now().Add(time.Duration(LockoutDuration) * time.Minute)
+	return true, time.Now().Add(time.Duration(lockoutMin) * time.Minute)
+}
+
+// CountRecentFailedAttempts 给暴力破解告警使用：返回 IP 在 windowMin 分钟内的失败次数。
+func CountRecentFailedAttempts(db *gorm.DB, ipAddress string, windowMin int) (int64, error) {
+	if windowMin <= 0 {
+		return 0, nil
+	}
+	windowStart := time.Now().Add(-time.Duration(windowMin) * time.Minute)
+	var count int64
+	if err := db.Model(&LoginAttempt{}).
+		Where("ip_address = ? AND success = ? AND created_at > ?", ipAddress, false, windowStart).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // RecordLoginAttempt 记录登录尝试
@@ -58,9 +70,9 @@ func RecordLoginAttempt(db *gorm.DB, ipAddress, username string, success bool) e
 	return db.Create(attempt).Error
 }
 
-// CleanOldLoginAttempts 清理旧的登录尝试记录
+// CleanOldLoginAttempts 清理旧的登录尝试记录。
+// 保留窗口与最严格的锁定窗口一致,最少保留 24 小时以便审计。
 func CleanOldLoginAttempts(db *gorm.DB) error {
-	// 保留最近24小时的记录
 	cutoffTime := time.Now().Add(-24 * time.Hour)
 	return db.Where("created_at < ?", cutoffTime).Delete(&LoginAttempt{}).Error
 }
