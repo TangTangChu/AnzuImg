@@ -27,12 +27,14 @@ export const useApi = () => {
     const config = useRuntimeConfig()
     const raw = (config.public as any)?.apiPrefix
     const apiPrefix = normalizePrefix(raw ?? '')
+    const appBaseURL = ((config as any)?.app?.baseURL ?? '/') as string
 
     const useAbsoluteUrl = ((config.public as any)?.apiUseAbsoluteUrl ?? false) === true
+    const useAbsoluteUrlInSubPath = appBaseURL !== '/'
 
     const apiUrl = (path: string) => {
         const urlPath = joinPath(apiPrefix, path)
-        if (!useAbsoluteUrl) return urlPath
+        if (!useAbsoluteUrl && !useAbsoluteUrlInSubPath) return urlPath
 
         const origin = getOrigin()
         return origin ? new URL(urlPath, origin).toString() : urlPath
