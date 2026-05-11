@@ -1,35 +1,58 @@
 <template>
     <div class="w-full">
-        <label v-if="label" class="mb-1 block text-sm font-medium text-(--md-sys-color-on-surface-variant)">
+        <label
+            v-if="label"
+            class="mb-1 block text-sm font-medium text-(--md-sys-color-on-surface-variant)"
+        >
             {{ label }}
         </label>
         <div class="relative">
-            <input :type="type" :value="modelValue" :placeholder="placeholder" :disabled="disabled" :name="name"
-                :autocomplete="autocomplete" :readonly="readonly"
-                class="w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-(--md-sys-color-on-surface) outline-none transition-all duration-200 placeholder:text-(--md-sys-color-on-surface-variant)/50"
+            <input
+                :type="type"
+                :value="modelValue"
+                :placeholder="placeholder"
+                :disabled="disabled"
+                :name="name"
+                :autocomplete="autocomplete"
+                :readonly="readonly"
+                class="w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-(--md-sys-color-on-surface) outline-none transition-[border-color,background-color] duration-200 ease-out hover:bg-(--md-sys-color-surface-variant)/5 placeholder:text-(--md-sys-color-on-surface-variant)/50"
                 :class="[
                     localError
-                        ? 'border-(--md-sys-color-error) focus:border-(--md-sys-color-error) focus:ring-1 focus:ring-(--md-sys-color-error)'
-                        : 'border-(--md-sys-color-outline) hover:border-(--md-sys-color-outline-variant) focus:border-(--md-sys-color-primary) focus:ring-1 focus:ring-(--md-sys-color-primary)',
+                        ? 'border-(--md-sys-color-error) focus:border-(--md-sys-color-error) focus:outline-none'
+                        : 'border-(--md-sys-color-outline) hover:border-(--md-sys-color-outline-variant) focus:border-(--md-sys-color-primary) focus:outline-none',
                     {
                         'cursor-not-allowed opacity-50': disabled,
                         'pl-10': $slots.prefix,
-                        'pr-10': $slots.suffix
+                        'pr-10': $slots.suffix,
                     },
-                ]" @input="handleInput" @change="handleChange" @blur="$emit('blur', $event)" @focus="$emit('focus', $event)" />
-            <div v-if="$slots.prefix"
-                class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-(--md-sys-color-on-surface-variant)">
+                ]"
+                @input="handleInput"
+                @blur="$emit('blur', $event)"
+                @focus="$emit('focus', $event)"
+            />
+            <div
+                v-if="$slots.prefix"
+                class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-(--md-sys-color-on-surface-variant)"
+            >
                 <slot name="prefix" />
             </div>
-            <div v-if="$slots.suffix"
-                class="absolute top-1/2 right-3 -translate-y-1/2 text-(--md-sys-color-on-surface-variant)">
+            <div
+                v-if="$slots.suffix"
+                class="absolute top-1/2 right-3 -translate-y-1/2 text-(--md-sys-color-on-surface-variant)"
+            >
                 <slot name="suffix" />
             </div>
         </div>
-        <div v-if="errorMessage" class="mt-1 text-xs text-(--md-sys-color-error)">
+        <div
+            v-if="errorMessage"
+            class="mt-1 text-xs text-(--md-sys-color-error)"
+        >
             {{ errorMessage }}
         </div>
-        <div v-else-if="hint" class="mt-1 text-xs text-(--md-sys-color-on-surface-variant)">
+        <div
+            v-else-if="hint"
+            class="mt-1 text-xs text-(--md-sys-color-on-surface-variant)"
+        >
             {{ hint }}
         </div>
     </div>
@@ -64,14 +87,16 @@ const emit = defineEmits<{
     (e: "update:modelValue", value: string | number): void;
     (e: "blur", event: FocusEvent): void;
     (e: "focus", event: FocusEvent): void;
-    (e: "change", event: Event): void;
 }>();
 
 const localError = ref(props.error);
 
-watch(() => props.error, (newVal) => {
-    localError.value = newVal;
-});
+watch(
+    () => props.error,
+    (newVal) => {
+        localError.value = newVal;
+    },
+);
 
 const errorMessage = computed(() =>
     typeof localError.value === "string" ? localError.value : "",
@@ -81,17 +106,13 @@ const handleInput = (event: Event) => {
     localError.value = false;
     const target = event.target as HTMLInputElement;
     let value: string | number = target.value;
-    if (props.type === 'number' && value !== '') {
+    if (props.type === "number" && value !== "") {
         const num = parseFloat(value);
         if (!isNaN(num)) {
             value = num;
         }
     }
     emit("update:modelValue", value);
-};
-
-const handleChange = (event: Event) => {
-    emit("change", event);
 };
 </script>
 

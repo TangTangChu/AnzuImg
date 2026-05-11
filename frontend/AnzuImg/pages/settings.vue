@@ -79,7 +79,7 @@
             <AnzuButton
                 @click="handleRegisterPasskey"
                 :status="registeringPasskey ? 'loading' : 'default'"
-                variant="outlined"
+                variant="text"
             >
                 {{ t("settings.passkeyManagement.registerNew") }}
             </AnzuButton>
@@ -172,7 +172,7 @@
                     {{ t("settings.apiTokens.description") }}
                 </p>
             </div>
-            <AnzuButton @click="showCreateTokenDialog = true" variant="outlined">
+            <AnzuButton @click="showCreateTokenDialog = true" variant="text">
                 {{ t("settings.apiTokens.createNew") }}
             </AnzuButton>
         </div>
@@ -274,11 +274,9 @@
         <div class="flex flex-col gap-4">
             <div class="flex flex-col gap-2">
                 <span class="text-sm font-medium text-(--md-sys-color-on-surface)">{{ t("settings.apiTokens.tokenType") }}</span>
-                <AnzuComboBox
+                <AnzuSelector
                     v-model="tokenForm.tokenType"
-                    :items="tokenTypeOptions"
-                    :aria-label="t('settings.apiTokens.tokenType')"
-                    :placeholder="t('settings.apiTokens.tokenTypePlaceholder')"
+                    :options="tokenTypeOptions"
                 />
             </div>
             <AnzuInput
@@ -320,7 +318,7 @@
 import { ref, onMounted, computed } from "vue";
 import Dashboard from "~/components/Dashboard.vue";
 import AnzuButton from "~/components/AnzuButton.vue";
-import AnzuComboBox from "~/components/AnzuComboBox.vue";
+import AnzuSelector from "~/components/AnzuSelector.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuTags from "~/components/AnzuTags.vue";
 import AnzuDialog from "~/components/AnzuDialog.vue";

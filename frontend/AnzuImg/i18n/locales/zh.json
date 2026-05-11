@@ -141,7 +141,8 @@
         "effort": "压缩努力程度 (0-9)",
         "submit": "开始上传",
         "routeUniqueWarning": "唯一路由别名（可选）",
-        "videoConvertDisabled": "视频文件不支持格式转换"
+        "videoConvertDisabled": "视频文件不支持格式转换",
+        "applyToAll": "将以上标签应用到全部文件"
     },
     "gallery": {
         "title": "图片库",

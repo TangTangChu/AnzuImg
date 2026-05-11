@@ -1,281 +1,282 @@
 {
-    "common": {
-        "actions": {
-            "more": "もっと見る",
-            "viewDetail": "詳細を見る",
-            "paginationPrevious": "前へ",
-            "paginationNext": "次へ",
-            "paginationJumpTo": "移動",
-            "paginationPageUnit": "ページ",
-            "paginationTargetPageNumber": "指定ページ",
-            "paginationJumpToPage": "{page} ページへ移動",
-            "paginationGoButton": "移動",
-            "cancel": "キャンセル",
-            "confirm": "確認",
-            "delete": "削除",
-            "login": "ログイン",
-            "logout": "ログアウト",
-            "download": "ダウンロード",
-            "close": "閉じる",
-            "copyLink": "リンクをコピー",
-            "loading": "読み込み中...",
-            "uploading": "アップロード中...",
-            "deleteConfirm": "削除してもよろしいですか？",
-            "deleteSuccess": "削除しました",
-            "deleteFailed": "削除に失敗しました",
-            "copySuccess": "コピーしました",
-            "open": "開く"
-        },
-        "validation": {
-            "passwordLength": "パスワードは8文字以上である必要があります",
-            "passwordUppercase": "パスワードには少なくとも1つの大文字が必要です",
-            "passwordLowercase": "パスワードには少なくとも1つの小文字が必要です",
-            "passwordNumber": "パスワードには少なくとも1つの数字が必要です"
-        },
-        "labels": {
-            "all": "すべて",
-            "description": "説明",
-            "tags": "タグ",
-            "password": "パスワード",
-            "toc": "目次",
-            "warning": "警告",
-            "info": "情報",
-            "tip": "ヒント",
-            "error": "エラー",
-            "success": "成功",
-            "ok": "OK"
-        },
-        "direction": {
-            "left1": "左",
-            "right1": "右",
-            "up1": "上",
-            "down1": "下"
-        },
-        "themeMenu": {
-            "tooltip": "テーマ設定",
-            "title": "テーマ設定",
-            "mode": "テーマモード",
-            "light": "ライト",
-            "dark": "ダーク"
-        },
-        "themeColorPicker": {
-            "tooltip": "テーマカラー変更",
-            "title": "テーマカラー",
-            "customColor": "カスタムカラー",
-            "colorInputLabel": "カスタムテーマカラーを選択",
-            "Themes": "テーマ",
-            "themeItem": "{name} のテーマカラー"
-        }
+  "common": {
+    "actions": {
+      "more": "もっと見る",
+      "viewDetail": "詳細を見る",
+      "paginationPrevious": "前へ",
+      "paginationNext": "次へ",
+      "paginationJumpTo": "移動",
+      "paginationPageUnit": "ページ",
+      "paginationTargetPageNumber": "指定ページ",
+      "paginationJumpToPage": "{page} ページへ移動",
+      "paginationGoButton": "移動",
+      "cancel": "キャンセル",
+      "confirm": "確認",
+      "delete": "削除",
+      "login": "ログイン",
+      "logout": "ログアウト",
+      "download": "ダウンロード",
+      "close": "閉じる",
+      "copyLink": "リンクをコピー",
+      "loading": "読み込み中...",
+      "uploading": "アップロード中...",
+      "deleteConfirm": "削除してもよろしいですか？",
+      "deleteSuccess": "削除しました",
+      "deleteFailed": "削除に失敗しました",
+      "copySuccess": "コピーしました",
+      "open": "開く"
     },
-    "nav": {
-        "home": "ホーム",
-        "gallery": "ギャラリー",
-        "upload": "アップロード",
-        "settings": "設定",
-        "logs": "ログ"
+    "validation": {
+      "passwordLength": "パスワードは8文字以上である必要があります",
+      "passwordUppercase": "パスワードには少なくとも1つの大文字が必要です",
+      "passwordLowercase": "パスワードには少なくとも1つの小文字が必要です",
+      "passwordNumber": "パスワードには少なくとも1つの数字が必要です"
     },
-    "dashboard": {
-        "totalImages": "メディア総数",
-        "totalSize": "ストレージ使用量",
-        "loginFailures24h": "ログイン失敗 (24h)",
-        "securityEvents24h": "セキュリティイベント (24h)",
-        "riskDisposition": "リスク処理",
-        "situationalAwareness": "状況認識",
-        "safeSystem": "異常なし"
+    "labels": {
+      "all": "すべて",
+      "description": "説明",
+      "tags": "タグ",
+      "password": "パスワード",
+      "toc": "目次",
+      "warning": "警告",
+      "info": "情報",
+      "tip": "ヒント",
+      "error": "エラー",
+      "success": "成功",
+      "ok": "OK"
     },
-    "auth": {
-        "registerPasskey": "Passkeyを登録"
+    "direction": {
+      "left1": "左",
+      "right1": "右",
+      "up1": "上",
+      "down1": "下"
     },
-    "meta": {
-        "fullName": "AnzuIMG"
+    "themeMenu": {
+      "tooltip": "テーマ設定",
+      "title": "テーマ設定",
+      "mode": "テーマモード",
+      "light": "ライト",
+      "dark": "ダーク"
     },
-    "setup": {
-        "title": "初期設定",
-        "description": "インスタンスを保護するためにシステムパスワードを設定してください。",
-        "setupTokenLabel": "Setup Token",
-        "setupTokenPlaceholder": "ANZUIMG_SETUP_TOKEN を設定した場合は必須",
-        "confirmPasswordLabel": "パスワード（確認）",
-        "submit": "設定を完了",
-        "passwordPlaceholder": "8文字以上、大小文字と数字を含む",
-        "confirmPasswordPlaceholder": "パスワードを再入力してください",
-        "passwordLengthError": "パスワードは8文字以上である必要があります",
-        "passwordMatchError": "パスワードが一致しません",
-        "success": "セットアップ完了",
-        "setupFailed": "設定に失敗しました。もう一度お試しください。"
-    },
-    "login": {
-        "title": "AnzuImg にログイン",
-        "passkeyButton": "Passkeyでログイン",
-        "registerPasskey": "新しいデバイスを登録 (Passkey)",
-        "success": "ログイン成功"
-    },
-    "upload": {
-        "title": "メディアアップロード",
-        "dragDrop": "メディアをここにドラッグ＆ドロップ",
-        "orSelect": "またはファイルを選択",
-        "success": "アップロード成功",
-        "route": "ルートパス設定",
-        "customFileName": "カスタムファイル名",
-        "customFileNamePlaceholder": "例：my-image",
-        "convert": "フォーマット変換",
-        "targetFormat": "出力フォーマット",
-        "quality": "画質 (1-100)",
-        "effort": "圧縮強度 (0-9)",
-        "submit": "アップロード開始",
-        "routeUniqueWarning": "一意のルートエイリアス（オプション）",
-        "videoConvertDisabled": "動画ファイルは形式変換をサポートしていません"
-    },
-    "gallery": {
-        "title": "ギャラリー",
-        "noImages": "画像がありません",
-        "downloadStarted": "ダウンロードを開始しました",
-        "previous": "前へ",
-        "next": "次へ",
-        "loadingDetails": "詳細を読み込み中...",
-        "detailLoadFailed": "詳細の読み込みに失敗しました",
-        "updated": "更新",
-        "routes": "ルートマッピング",
-        "urls": "アクセスURL",
-        "uploadedByToken": "API トークンでアップロード"
-    },
-    "tags": {
-        "addPlaceholder": "タグを追加...",
-        "selectLabel": "既存タグを選択",
-        "selectPlaceholder": "タグを選択",
-        "filterLabel": "タグで絞り込む",
-        "filterPlaceholder": "タグを選択",
-        "clearFilter": "クリア",
-        "add": "追加",
-        "remove": "削除",
-        "removeLabel": "タグ {tag} を削除",
-        "maxTagsError": "最大 {max} 個まで追加できます",
-        "duplicateError": "タグは既に存在します",
-        "validationError": "タグの検証に失敗しました",
-        "counter": "{current} / {max}",
-        "hint": "タグ入力後、Enter/カンマ/Tabで追加",
-        "validation": {
-            "tooShort": "タグが短すぎます（最小 {min} 文字）",
-            "tooLong": "タグが長すぎます（最大 {max} 文字）",
-            "invalidChars": "タグは日本語/英数字/空白/-/_ のみ使用できます"
-        }
-    },
-    "settings": {
-        "title": "設定",
-        "changePassword": {
-            "title": "パスワード変更",
-            "description": "管理者パスワードを変更します。パスワード変更後、すべての既存セッションはログアウトされます。",
-            "currentPassword": "現在のパスワード",
-            "currentPasswordPlaceholder": "現在のパスワードを入力してください",
-            "newPassword": "新しいパスワード",
-            "newPasswordPlaceholder": "8文字以上、大小文字と数字を含む",
-            "confirmPassword": "新しいパスワード（確認）",
-            "confirmPasswordPlaceholder": "新しいパスワードを再入力してください",
-            "submit": "パスワード変更",
-            "fillAllFields": "すべてのフィールドを入力してください",
-            "passwordLengthError": "新しいパスワードは8文字以上である必要があります",
-            "passwordMatchError": "新しいパスワードが一致しません",
-            "success": "パスワードを変更しました",
-            "failed": "パスワード変更に失敗しました。現在のパスワードを確認してください"
-        },
-        "passkeyManagement": {
-            "title": "PassKey管理",
-            "description": "PassKeyデバイスを管理します。PassKeyを使用すると、生体認証やセキュリティキーでログインできます。",
-            "registerNew": "新しいPassKeyを登録",
-            "noPasskeys": "PassKeyデバイスが登録されていません",
-            "unknownDevice": "不明なデバイス",
-            "registeredAt": "登録日時",
-            "lastUsed": "最後使用",
-            "registerSuccess": "PassKeyを登録しました",
-            "registerFailed": "PassKeyの登録に失敗しました"
-        },
-        "apiTokens": {
-            "description": "外部サービスが API にアクセスするための恒久トークンを生成します。IP の許可リストをサポートします。",
-            "createNew": "新しいトークンを作成",
-            "noTokens": "サービス トークンが見つかりません",
-            "name": "トークン名",
-            "namePlaceholder": "例: Docker Backup",
-            "tokenType": "トークン種別",
-            "tokenTypePlaceholder": "トークン種別を選択",
-            "tokenTypes": {
-                "full": "フルアクセス",
-                "upload": "アップロード + 一覧",
-                "list": "一覧のみ"
-            },
-            "ipAllowlist": "IP 許可リスト",
-            "ipAllowlistTip": "IP または CIDR (例: 192.168.1.0/24) を入力して Enter。空欄で全ての IP を許可。",
-            "anyIP": "すべての IP",
-            "created": "作成日時",
-            "lastUsed": "最終使用",
-            "neverUsed": "未使用",
-            "createSuccess": "トークンを作成しました",
-            "createFailed": "トークンの作成に失敗しました",
-            "tokenCreatedTitle": "トークン生成完了",
-            "tokenCreatedMessage": "安全上の理由から、このトークンは二度と表示されません。今すぐコピーしてください。",
-            "copy": "コピー",
-            "copySuccess": "トークンをコピーしました",
-            "logsTitle": "トークンログ",
-            "logsDescription": "最近の API トークンの操作履歴。",
-            "logsEmpty": "トークンログがありません",
-            "refreshLogs": "更新",
-            "cleanupTitle": "ログ削除",
-            "cleanupButton": "一括削除",
-            "cleanupDaysPlaceholder": "日数",
-            "cleanupInvalidDays": "有効な日数を入力してください",
-            "cleanupConfirm": "{days} 日より前のログを削除します。続行しますか？",
-            "cleanupSuccess": "{count} 件のログを削除しました",
-            "cleanupFailed": "削除に失敗しました",
-            "logToken": "トークン",
-            "logIP": "IP",
-            "logImage": "メディア",
-            "logActions": {
-                "tokenCreate": "トークン作成",
-                "tokenDelete": "トークン削除",
-                "imageUpload": "メディアアップロード",
-                "imageList": "メディア一覧"
-            }
-        },
-        "securityLogs": {
-            "title": "セキュリティ警告",
-            "description": "最近のセキュリティ/操作イベント（ログイン、ログアウト、パスワード変更、Passkey 管理）。",
-            "empty": "セキュリティ警告はありません",
-            "refresh": "更新",
-            "username": "ユーザー",
-            "ip": "IP",
-            "actions": {
-                "loginFailed": "ログイン失敗",
-                "loginSuccess": "ログイン成功",
-                "loginRateLimited": "ログイン試行が制限されました",
-                "loginBruteforceAlert": "ブルートフォース疑いアラート",
-                "logout": "ログアウト",
-                "passwordChanged": "パスワード変更成功",
-                "passwordChangeFailed": "パスワード変更失敗",
-                "passkeyRegisterSuccess": "Passkey 登録成功",
-                "passkeyRegisterFailed": "Passkey 登録失敗",
-                "passkeyLoginSuccess": "Passkey ログイン成功",
-                "passkeyLoginFailed": "Passkey ログイン失敗",
-                "passkeyDeleteSuccess": "Passkey 削除成功",
-                "passkeyDeleteFailed": "Passkey 削除失敗",
-                "tokenCreateSuccess": "API トークン作成成功",
-                "tokenCreateFailed": "API トークン作成失敗",
-                "tokenDeleteSuccess": "API トークン削除成功",
-                "tokenDeleteFailed": "API トークン削除失敗",
-                "tokenLogsCleanup": "API トークンログ削除完了",
-                "tokenLogsCleanupFailed": "API トークンログ削除失敗"
-            },
-            "levels": {
-                "info": "情報",
-                "warning": "警告",
-                "error": "エラー"
-            }
-        }
-    },
-    "routes": {
-        "title": "ルート管理",
-        "path": "ルートパス",
-        "target": "対象画像",
-        "createdAt": "作成日時",
-        "actions": "操作",
-        "visit": "アクセス",
-        "noRoutes": "ルートが見つかりません"
+    "themeColorPicker": {
+      "tooltip": "テーマカラー変更",
+      "title": "テーマカラー",
+      "customColor": "カスタムカラー",
+      "colorInputLabel": "カスタムテーマカラーを選択",
+      "Themes": "テーマ",
+      "themeItem": "{name} のテーマカラー"
     }
+  },
+  "nav": {
+    "home": "ホーム",
+    "gallery": "ギャラリー",
+    "upload": "アップロード",
+    "settings": "設定",
+    "logs": "ログ"
+  },
+  "dashboard": {
+    "totalImages": "メディア総数",
+    "totalSize": "ストレージ使用量",
+    "loginFailures24h": "ログイン失敗 (24h)",
+    "securityEvents24h": "セキュリティイベント (24h)",
+    "riskDisposition": "リスク処理",
+    "situationalAwareness": "状況認識",
+    "safeSystem": "異常なし"
+  },
+  "auth": {
+    "registerPasskey": "Passkeyを登録"
+  },
+  "meta": {
+    "fullName": "AnzuIMG"
+  },
+  "setup": {
+    "title": "初期設定",
+    "description": "インスタンスを保護するためにシステムパスワードを設定してください。",
+    "setupTokenLabel": "Setup Token",
+    "setupTokenPlaceholder": "ANZUIMG_SETUP_TOKEN を設定した場合は必須",
+    "confirmPasswordLabel": "パスワード（確認）",
+    "submit": "設定を完了",
+    "passwordPlaceholder": "8文字以上、大小文字と数字を含む",
+    "confirmPasswordPlaceholder": "パスワードを再入力してください",
+    "passwordLengthError": "パスワードは8文字以上である必要があります",
+    "passwordMatchError": "パスワードが一致しません",
+    "success": "セットアップ完了",
+    "setupFailed": "設定に失敗しました。もう一度お試しください。"
+  },
+  "login": {
+    "title": "AnzuImg にログイン",
+    "passkeyButton": "Passkeyでログイン",
+    "registerPasskey": "新しいデバイスを登録 (Passkey)",
+    "success": "ログイン成功"
+  },
+  "upload": {
+    "title": "メディアアップロード",
+    "dragDrop": "メディアをここにドラッグ＆ドロップ",
+    "orSelect": "またはファイルを選択",
+    "success": "アップロード成功",
+    "route": "ルートパス設定",
+    "customFileName": "カスタムファイル名",
+    "customFileNamePlaceholder": "例：my-image",
+    "convert": "フォーマット変換",
+    "targetFormat": "出力フォーマット",
+    "quality": "画質 (1-100)",
+    "effort": "圧縮強度 (0-9)",
+    "submit": "アップロード開始",
+    "routeUniqueWarning": "一意のルートエイリアス（オプション）",
+    "videoConvertDisabled": "動画ファイルは形式変換をサポートしていません",
+    "applyToAll": "上記のタグを全てのファイルに適用"
+  },
+  "gallery": {
+    "title": "ギャラリー",
+    "noImages": "画像がありません",
+    "downloadStarted": "ダウンロードを開始しました",
+    "previous": "前へ",
+    "next": "次へ",
+    "loadingDetails": "詳細を読み込み中...",
+    "detailLoadFailed": "詳細の読み込みに失敗しました",
+    "updated": "更新",
+    "routes": "ルートマッピング",
+    "urls": "アクセスURL",
+    "uploadedByToken": "API トークンでアップロード"
+  },
+  "tags": {
+    "addPlaceholder": "タグを追加...",
+    "selectLabel": "既存タグを選択",
+    "selectPlaceholder": "タグを選択",
+    "filterLabel": "タグで絞り込む",
+    "filterPlaceholder": "タグを選択",
+    "clearFilter": "クリア",
+    "add": "追加",
+    "remove": "削除",
+    "removeLabel": "タグ {tag} を削除",
+    "maxTagsError": "最大 {max} 個まで追加できます",
+    "duplicateError": "タグは既に存在します",
+    "validationError": "タグの検証に失敗しました",
+    "counter": "{current} / {max}",
+    "hint": "タグ入力後、Enter/カンマ/Tabで追加",
+    "validation": {
+      "tooShort": "タグが短すぎます（最小 {min} 文字）",
+      "tooLong": "タグが長すぎます（最大 {max} 文字）",
+      "invalidChars": "タグは日本語/英数字/空白/-/_ のみ使用できます"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "changePassword": {
+      "title": "パスワード変更",
+      "description": "管理者パスワードを変更します。パスワード変更後、すべての既存セッションはログアウトされます。",
+      "currentPassword": "現在のパスワード",
+      "currentPasswordPlaceholder": "現在のパスワードを入力してください",
+      "newPassword": "新しいパスワード",
+      "newPasswordPlaceholder": "8文字以上、大小文字と数字を含む",
+      "confirmPassword": "新しいパスワード（確認）",
+      "confirmPasswordPlaceholder": "新しいパスワードを再入力してください",
+      "submit": "パスワード変更",
+      "fillAllFields": "すべてのフィールドを入力してください",
+      "passwordLengthError": "新しいパスワードは8文字以上である必要があります",
+      "passwordMatchError": "新しいパスワードが一致しません",
+      "success": "パスワードを変更しました",
+      "failed": "パスワード変更に失敗しました。現在のパスワードを確認してください"
+    },
+    "passkeyManagement": {
+      "title": "PassKey管理",
+      "description": "PassKeyデバイスを管理します。PassKeyを使用すると、生体認証やセキュリティキーでログインできます。",
+      "registerNew": "新しいPassKeyを登録",
+      "noPasskeys": "PassKeyデバイスが登録されていません",
+      "unknownDevice": "不明なデバイス",
+      "registeredAt": "登録日時",
+      "lastUsed": "最後使用",
+      "registerSuccess": "PassKeyを登録しました",
+      "registerFailed": "PassKeyの登録に失敗しました"
+    },
+    "apiTokens": {
+      "description": "外部サービスが API にアクセスするための恒久トークンを生成します。IP の許可リストをサポートします。",
+      "createNew": "新しいトークンを作成",
+      "noTokens": "サービス トークンが見つかりません",
+      "name": "トークン名",
+      "namePlaceholder": "例: Docker Backup",
+      "tokenType": "トークン種別",
+      "tokenTypePlaceholder": "トークン種別を選択",
+      "tokenTypes": {
+        "full": "フルアクセス",
+        "upload": "アップロード + 一覧",
+        "list": "一覧のみ"
+      },
+      "ipAllowlist": "IP 許可リスト",
+      "ipAllowlistTip": "IP または CIDR (例: 192.168.1.0/24) を入力して Enter。空欄で全ての IP を許可。",
+      "anyIP": "すべての IP",
+      "created": "作成日時",
+      "lastUsed": "最終使用",
+      "neverUsed": "未使用",
+      "createSuccess": "トークンを作成しました",
+      "createFailed": "トークンの作成に失敗しました",
+      "tokenCreatedTitle": "トークン生成完了",
+      "tokenCreatedMessage": "安全上の理由から、このトークンは二度と表示されません。今すぐコピーしてください。",
+      "copy": "コピー",
+      "copySuccess": "トークンをコピーしました",
+      "logsTitle": "トークンログ",
+      "logsDescription": "最近の API トークンの操作履歴。",
+      "logsEmpty": "トークンログがありません",
+      "refreshLogs": "更新",
+      "cleanupTitle": "ログ削除",
+      "cleanupButton": "一括削除",
+      "cleanupDaysPlaceholder": "日数",
+      "cleanupInvalidDays": "有効な日数を入力してください",
+      "cleanupConfirm": "{days} 日より前のログを削除します。続行しますか？",
+      "cleanupSuccess": "{count} 件のログを削除しました",
+      "cleanupFailed": "削除に失敗しました",
+      "logToken": "トークン",
+      "logIP": "IP",
+      "logImage": "メディア",
+      "logActions": {
+        "tokenCreate": "トークン作成",
+        "tokenDelete": "トークン削除",
+        "imageUpload": "メディアアップロード",
+        "imageList": "メディア一覧"
+      }
+    },
+    "securityLogs": {
+      "title": "セキュリティ警告",
+      "description": "最近のセキュリティ/操作イベント（ログイン、ログアウト、パスワード変更、Passkey 管理）。",
+      "empty": "セキュリティ警告はありません",
+      "refresh": "更新",
+      "username": "ユーザー",
+      "ip": "IP",
+      "actions": {
+        "loginFailed": "ログイン失敗",
+        "loginSuccess": "ログイン成功",
+        "loginRateLimited": "ログイン試行が制限されました",
+        "loginBruteforceAlert": "ブルートフォース疑いアラート",
+        "logout": "ログアウト",
+        "passwordChanged": "パスワード変更成功",
+        "passwordChangeFailed": "パスワード変更失敗",
+        "passkeyRegisterSuccess": "Passkey 登録成功",
+        "passkeyRegisterFailed": "Passkey 登録失敗",
+        "passkeyLoginSuccess": "Passkey ログイン成功",
+        "passkeyLoginFailed": "Passkey ログイン失敗",
+        "passkeyDeleteSuccess": "Passkey 削除成功",
+        "passkeyDeleteFailed": "Passkey 削除失敗",
+        "tokenCreateSuccess": "API トークン作成成功",
+        "tokenCreateFailed": "API トークン作成失敗",
+        "tokenDeleteSuccess": "API トークン削除成功",
+        "tokenDeleteFailed": "API トークン削除失敗",
+        "tokenLogsCleanup": "API トークンログ削除完了",
+        "tokenLogsCleanupFailed": "API トークンログ削除失敗"
+      },
+      "levels": {
+        "info": "情報",
+        "warning": "警告",
+        "error": "エラー"
+      }
+    }
+  },
+  "routes": {
+    "title": "ルート管理",
+    "path": "ルートパス",
+    "target": "対象画像",
+    "createdAt": "作成日時",
+    "actions": "操作",
+    "visit": "アクセス",
+    "noRoutes": "ルートが見つかりません"
+  }
 }

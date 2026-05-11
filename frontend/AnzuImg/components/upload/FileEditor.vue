@@ -68,6 +68,12 @@
         :max-tags="10"
       />
 
+      <AnzuCheckbox
+        v-if="files.length > 1"
+        v-model="applyToAll"
+        :label="t('upload.applyToAll')"
+      />
+
       <AnzuTags
         v-model="selectedFile.routes"
         :label="t('upload.route')"
@@ -156,10 +162,10 @@
               class="text-xs text-(--md-sys-color-on-surface-variant) block mb-1"
               >Format</label
             >
-            <AnzuComboBox
+            <AnzuSelector
               :model-value="targetFormat"
               @update:model-value="$emit('update:targetFormat', String($event))"
-              :items="['webp', 'avif']"
+              :options="formatOptions"
             />
           </div>
           <div class="grid grid-cols-2 gap-4">
@@ -203,18 +209,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { formatFileSize } from "~/utils/format";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuTags from "~/components/AnzuTags.vue";
 import AnzuCheckbox from "~/components/AnzuCheckbox.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
+import AnzuSelector from "~/components/AnzuSelector.vue";
 import type { UploadFileItem } from "~/types/upload";
 import type { TagSummary } from "~/types/image";
 
 const props = defineProps<{
   selectedFile: UploadFileItem | null;
+  files: UploadFileItem[];
   tagList: TagSummary[];
   enableConvert: boolean;
   targetFormat: string;
@@ -236,7 +244,37 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
+const formatOptions = [
+  { label: "webp", value: "webp" },
+  { label: "avif", value: "avif" },
+];
+
 const selectedTagOption = ref<string | null>(null);
+const applyToAll = ref(false);
+
+watch(
+  () => props.selectedFile?.tags,
+  (newTags) => {
+    if (applyToAll.value && newTags && props.files) {
+      props.files.forEach((f) => {
+        if (f !== props.selectedFile) {
+          f.tags = [...newTags];
+        }
+      });
+    }
+  },
+  { deep: true },
+);
+
+watch(applyToAll, (val) => {
+  if (val && props.selectedFile && props.files) {
+    props.files.forEach((f) => {
+      if (f !== props.selectedFile) {
+        f.tags = [...props.selectedFile.tags];
+      }
+    });
+  }
+});
 
 const tagItems = computed(() =>
   props.tagList.map((item) => ({

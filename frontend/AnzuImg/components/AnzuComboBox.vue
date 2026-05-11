@@ -1,60 +1,115 @@
 <template>
-    <div ref="root" class="relative inline-flex w-full" data-click-away-ignore="true" @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave">
-        <slot name="trigger" :open="isOpen" :toggle="toggleMenu" :selected="selectedItem" :selectedLabel="selectedLabel"
-            :query="query" :setQuery="setQuery">
-            <button ref="triggerRef" type="button"
-                class="flex w-full min-w-40 items-center justify-between gap-2 rounded-md border border-(--md-sys-color-outline-variant) px-3 py-2 text-sm text-(--md-sys-color-on-surface) transition-colors hover:bg-(--md-sys-color-surface-container-high)"
-                @click="toggleMenu" :aria-label="ariaLabel" :aria-expanded="isOpen" aria-haspopup="listbox">
+    <div
+        ref="root"
+        class="relative inline-flex w-full"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+    >
+        <slot
+            name="trigger"
+            :open="isOpen"
+            :toggle="toggleMenu"
+            :selected="selectedItem"
+            :selectedLabel="selectedLabel"
+            :query="query"
+            :setQuery="setQuery"
+        >
+            <button
+                ref="triggerRef"
+                type="button"
+                class="flex w-full min-w-40 items-center justify-between gap-2 rounded-lg border border-(--md-sys-color-outline-variant) px-3 py-2 text-sm text-(--md-sys-color-on-surface) transition-colors hover:bg-(--md-sys-color-surface-container-high)"
+                @click="toggleMenu"
+                :aria-label="ariaLabel"
+                :aria-expanded="isOpen"
+                aria-haspopup="listbox"
+            >
                 <span class="truncate">
                     {{ selectedLabel || placeholder }}
                 </span>
-                <svg class="h-4 w-4 shrink-0 opacity-60" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd"
+                <svg
+                    class="h-4 w-4 shrink-0 opacity-60"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                >
+                    <path
+                        fill-rule="evenodd"
                         d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                        clip-rule="evenodd" />
+                        clip-rule="evenodd"
+                    />
                 </svg>
             </button>
         </slot>
 
         <Teleport to="body">
-            <transition enter-active-class="transition duration-150 ease-out"
-                enter-from-class="transform translate-y-1 opacity-0"
-                enter-to-class="transform translate-y-0 opacity-100"
-                leave-active-class="transition duration-120 ease-in"
-                leave-from-class="transform translate-y-0 opacity-100"
-                leave-to-class="transform translate-y-1 opacity-0">
-                <div v-if="isOpen" ref="menuRef" data-click-away-ignore="true"
-                    class="shadow-center-sm fixed z-50 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl bg-(--md-sys-color-surface-container) ring-1 ring-black/5"
-                    :class="menuWidthClass" :style="menuPositionStyle" role="listbox" @mouseenter="handleMouseEnter"
-                    @mouseleave="handleMouseLeave">
-                    <div class="border-b border-(--md-sys-color-outline-variant)/40 p-2">
-                        <input v-model="query" type="text"
+            <transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="transform scale-95 opacity-0"
+                enter-to-class="transform scale-100 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="transform scale-100 opacity-100"
+                leave-to-class="transform scale-95 opacity-0"
+            >
+                <div
+                    v-if="isOpen"
+                    ref="menuRef"
+                    class="shadow-center-sm fixed z-50 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg bg-(--md-sys-color-surface-container) ring-1 ring-black/5"
+                    :class="menuWidthClass"
+                    :style="menuPositionStyle"
+                    role="listbox"
+                    @mouseenter="handleMouseEnter"
+                    @mouseleave="handleMouseLeave"
+                >
+                    <div
+                        class="border-b border-(--md-sys-color-outline-variant)/40 p-2"
+                    >
+                        <input
+                            v-model="query"
+                            type="text"
                             class="w-full rounded-full border border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface) px-3 py-1.5 text-sm text-(--md-sys-color-on-surface) outline-none focus:ring-2 focus:ring-(--md-sys-color-primary)/20"
-                            :placeholder="searchPlaceholder" @keydown.escape.prevent="closeNow" />
+                            :placeholder="searchPlaceholder"
+                            @keydown.escape.prevent="closeNow"
+                        />
                     </div>
 
                     <div class="overflow-auto py-1" :style="menuBodyStyle">
-                        <button v-for="it in filteredItems" :key="getKey(it)" type="button" role="option"
-                            :aria-selected="isSelected(it)" @click="select(getValue(it))"
+                        <button
+                            v-for="it in filteredItems"
+                            :key="getKey(it)"
+                            type="button"
+                            role="option"
+                            :aria-selected="isSelected(it)"
+                            @click="select(getValue(it))"
                             class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium transition-colors"
-                            :class="isSelected(it)
+                            :class="
+                                isSelected(it)
                                     ? 'bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)'
                                     : 'text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container-high)'
-                                ">
-                            <span class="inline-block h-1.5 w-1.5 rounded-full" :class="isSelected(it)
-                                    ? 'bg-(--md-sys-color-primary)'
-                                    : 'bg-transparent'
-                                " />
+                            "
+                        >
+                            <span
+                                class="inline-block h-1.5 w-1.5 rounded-full"
+                                :class="
+                                    isSelected(it)
+                                        ? 'bg-(--md-sys-color-primary)'
+                                        : 'bg-transparent'
+                                "
+                            />
                             <span class="truncate">
-                                <slot name="item" :item="it" :selected="isSelected(it)">
+                                <slot
+                                    name="item"
+                                    :item="it"
+                                    :selected="isSelected(it)"
+                                >
                                     {{ getLabel(it) }}
                                 </slot>
                             </span>
                         </button>
 
-                        <div v-if="filteredItems.length === 0"
-                            class="px-3 py-3 text-sm text-(--md-sys-color-on-surface-variant)">
+                        <div
+                            v-if="filteredItems.length === 0"
+                            class="px-3 py-3 text-sm text-(--md-sys-color-on-surface-variant)"
+                        >
                             {{ emptyText }}
                         </div>
                     </div>
@@ -144,8 +199,8 @@ const updateMenuPosition = () => {
             props.menuAlign === "right"
                 ? rect.right
                 : props.menuAlign === "center"
-                    ? rect.left + rect.width / 2
-                    : rect.left,
+                  ? rect.left + rect.width / 2
+                  : rect.left,
         width: rect.width,
     };
 };

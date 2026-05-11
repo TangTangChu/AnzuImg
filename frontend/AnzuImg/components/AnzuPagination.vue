@@ -1,48 +1,110 @@
 <template>
-    <div class="flex flex-wrap items-center justify-center gap-2 my-4 text-(--md-sys-color-on-surface)">
-        <AnzuButton variant="outlined" class="h-10! w-10! min-w-10! px-0!" :disabled="currentPage <= 1"
-            @click="goToPage(currentPage - 1)" :aria-label="t('common.actions.paginationPrevious')">
-            <span class="text-base leading-none">
-                < </span>
-        </AnzuButton>
-        <template v-for="page in displayedPages" :key="page">
-            <div v-if="page === '...'"
-                class="flex h-10 w-10 items-center justify-center text-(--md-sys-color-on-surface-variant)">
-                ...
-            </div>
-            <AnzuButton v-else :variant="page === currentPage ? 'filled' : 'outlined'"
-                class="h-10! w-10! min-w-10! px-0!" @click="goToPage(page)">
-                {{ page }}
+    <nav
+        class="my-8 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-2"
+        :aria-label="t('common.actions.pagination')"
+    >
+        <div class="flex items-center gap-1">
+            <AnzuButton
+                variant="text"
+                size="md"
+                class="w-9! min-w-9! px-0!"
+                :disabled="currentPage <= 1"
+                :loading="loading"
+                @click="goToPage(currentPage - 1)"
+                :aria-label="t('common.actions.paginationPrevious')"
+            >
+                <template #icon>
+                    <ChevronLeftIcon class="h-4 w-4" />
+                </template>
             </AnzuButton>
-        </template>
 
-        <!-- 下一页 -->
-        <AnzuButton variant="outlined" class="h-10! w-10! min-w-10! px-0!" :disabled="currentPage >= totalPages"
-            @click="goToPage(currentPage + 1)" :aria-label="t('common.actions.paginationNext')">
-            <span class="text-base leading-none">></span>
-        </AnzuButton>
+            <div class="flex items-center gap-1">
+                <template
+                    v-for="(page, index) in displayedPages"
+                    :key="`${page}-${index}`"
+                >
+                    <span
+                        v-if="page === '...'"
+                        class="px-2 py-1 text-sm text-(--md-sys-color-on-surface-variant)/45"
+                        aria-hidden="true"
+                    >
+                        …
+                    </span>
+                    <AnzuButton
+                        v-else
+                        :variant="page === currentPage ? 'filled' : 'text'"
+                        size="md"
+                        class="w-9! min-w-9! px-0!"
+                        :disabled="loading"
+                        :aria-current="
+                            page === currentPage ? 'page' : undefined
+                        "
+                        :aria-label="
+                            t('common.actions.paginationPage', { page })
+                        "
+                        @click="goToPage(page)"
+                    >
+                        {{ page }}
+                    </AnzuButton>
+                </template>
+            </div>
 
-        <div class="flex items-center gap-2 ml-3 text-sm text-(--md-sys-color-on-surface)/80">
+            <AnzuButton
+                variant="text"
+                size="md"
+                class="w-9! min-w-9! px-0!"
+                :disabled="currentPage >= totalPages"
+                :loading="loading"
+                @click="goToPage(currentPage + 1)"
+                :aria-label="t('common.actions.paginationNext')"
+            >
+                <template #icon>
+                    <ChevronRightIcon class="h-4 w-4" />
+                </template>
+            </AnzuButton>
+        </div>
+
+        <div
+            class="flex items-center gap-2 text-sm text-(--md-sys-color-on-surface)/80 sm:ml-3"
+        >
             <span>{{ t("common.actions.paginationJumpTo") }}</span>
-            <div class="w-20">
-                <AnzuInput v-model.number="inputPage" type="number" :min="1" :max="totalPages" class="text-center"
-                    placeholder="" @keydown.enter="jumpToPage"
-                    :aria-label="t('common.actions.paginationTargetPageNumber')" />
+            <div class="h-9 w-16">
+                <AnzuInput
+                    v-model.number="inputPage"
+                    type="number"
+                    :min="1"
+                    :max="totalPages"
+                    class="text-center [&_input]:h-9!"
+                    placeholder=""
+                    @keydown.enter="jumpToPage"
+                    :aria-label="t('common.actions.paginationTargetPageNumber')"
+                />
             </div>
             <span>{{ t("common.actions.paginationPageUnit") }}</span>
-            <AnzuButton variant="filled" class="min-w-16!" @click="jumpToPage"
-                :aria-label="t('common.actions.paginationJumpToPage', { page: inputPage })">
+            <AnzuButton
+                variant="filled"
+                size="md"
+                class="min-w-16!"
+                :disabled="loading"
+                @click="jumpToPage"
+                :aria-label="
+                    t('common.actions.paginationJumpToPage', {
+                        page: inputPage,
+                    })
+                "
+            >
                 芳文跳
             </AnzuButton>
         </div>
-    </div>
+    </nav>
 </template>
 
 <script setup lang="ts">
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/outline";
 import { computed, ref } from "vue";
 import { useRouter } from "#imports";
-import AnzuButton from './AnzuButton.vue';
-import AnzuInput from './AnzuInput.vue';
+import AnzuButton from "./AnzuButton.vue";
+import AnzuInput from "./AnzuInput.vue";
 
 const { t } = useI18n();
 const props = defineProps({
@@ -60,6 +122,10 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    loading: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits(["pageChanged"]);
@@ -70,7 +136,7 @@ const inputPage = ref<string | number>("");
 const displayedPages = computed(() => {
     const pages = [];
     const { currentPage, totalPages } = props;
-    const maxVisible = 5; // 最多显示5个页码
+    const maxVisible = 5;
 
     if (totalPages <= maxVisible) {
         for (let i = 1; i <= totalPages; i++) {
@@ -112,7 +178,7 @@ const displayedPages = computed(() => {
 });
 
 const goToPage = (page: number | string) => {
-    if (typeof page !== 'number') return;
+    if (typeof page !== "number") return;
 
     if (page < 1 || page > props.totalPages || page === props.currentPage)
         return;
@@ -126,8 +192,16 @@ const goToPage = (page: number | string) => {
 };
 
 const jumpToPage = () => {
-    const page = typeof inputPage.value === 'string' ? parseInt(inputPage.value) : inputPage.value;
-    if (typeof page === 'number' && !isNaN(page) && page >= 1 && page <= props.totalPages) {
+    const page =
+        typeof inputPage.value === "string"
+            ? parseInt(inputPage.value)
+            : inputPage.value;
+    if (
+        typeof page === "number" &&
+        !isNaN(page) &&
+        page >= 1 &&
+        page <= props.totalPages
+    ) {
         goToPage(page);
         inputPage.value = "";
     }
@@ -135,5 +209,12 @@ const jumpToPage = () => {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
+:deep(input[type="number"])::-webkit-inner-spin-button,
+:deep(input[type="number"])::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+:deep(input[type="number"]) {
+    -moz-appearance: textfield;
+}
 </style>

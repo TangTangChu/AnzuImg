@@ -123,6 +123,7 @@
       >
         <FileEditor
           :selected-file="selectedFile"
+          :files="files"
           :tag-list="tagList?.data ?? []"
           v-model:enable-convert="enableConvert"
           v-model:target-format="targetFormat"

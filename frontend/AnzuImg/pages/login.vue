@@ -38,7 +38,7 @@
       <AnzuDivider>OR</AnzuDivider>
 
       <AnzuButton
-        variant="outlined"
+        variant="text"
         class="w-full"
         :status="loading ? 'loading' : 'default'"
         @click="handlePasskeyLogin"

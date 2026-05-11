@@ -75,7 +75,7 @@ func (s *LogQueryService) ListAppLogs(filter LogFilter, page, size int) ([]model
 	page, size = clampPage(page, size)
 	q := s.db.Model(&model.AppLog{})
 	if filter.Level != "" {
-		q = q.Where("level = ?", strings.ToUpper(strings.TrimSpace(filter.Level)))
+		q = q.Where("level = ?", strings.ToLower(strings.TrimSpace(filter.Level)))
 	}
 	if filter.Module != "" {
 		q = q.Where("module = ?", filter.Module)
@@ -158,7 +158,7 @@ func (s *LogQueryService) IterateAppLogs(filter LogFilter, hardLimit int, fn fun
 	}
 	q := s.db.Model(&model.AppLog{})
 	if filter.Level != "" {
-		q = q.Where("level = ?", strings.ToUpper(strings.TrimSpace(filter.Level)))
+		q = q.Where("level = ?", strings.ToLower(strings.TrimSpace(filter.Level)))
 	}
 	if filter.Module != "" {
 		q = q.Where("module = ?", filter.Module)

@@ -32,23 +32,23 @@
                     <div
                         v-for="log in appLogs"
                         :key="`${log.id}-${log.created_at}`"
-                        class="rounded-lg border border-(--md-sys-color-outline-variant) px-3 py-2 text-sm"
+                        class="rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm"
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <span
-                                class="text-xs px-1.5 py-0.5 rounded font-mono whitespace-nowrap"
+                                class="inline-flex items-center text-xs px-1.5 py-1 rounded font-semibold whitespace-nowrap"
                                 :class="levelClass(log.level)"
                             >
                                 {{ (log.level || '').toUpperCase() }}
                             </span>
-                            <span class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
+                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                 {{ log.module }}
                             </span>
-                            <span class="ml-auto text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
+                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                 {{ formatDate(log.created_at) }}
                             </span>
                         </div>
-                        <div class="mt-1 break-all whitespace-pre-wrap">
+                        <div class="mt-1 break-all whitespace-pre-wrap text-sm">
                             {{ log.message }}
                         </div>
                         <div v-if="log.request_id || log.ip_address" class="mt-1 text-xs opacity-70 break-all">
@@ -93,13 +93,13 @@
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <span
-                                class="text-xs px-1.5 py-0.5 rounded font-mono whitespace-nowrap"
+                                class="inline-flex items-center text-xs px-1.5 py-1 rounded font-semibold whitespace-nowrap"
                                 :class="securityLevelClass(log.level)"
                             >
                                 {{ (log.level || '').toUpperCase() }}
                             </span>
-                            <span class="font-semibold break-all">{{ log.action }}</span>
-                            <span class="ml-auto text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
+                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant) font-semibold whitespace-nowrap">{{ log.action }}</span>
+                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                 {{ formatDate(log.created_at) }}
                             </span>
                         </div>
@@ -148,8 +148,8 @@
                         class="rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm"
                     >
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-semibold break-all">{{ log.action }}</span>
-                            <span class="ml-auto text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
+                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container) font-semibold whitespace-nowrap">{{ log.action }}</span>
+                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                 {{ formatDate(log.created_at) }}
                             </span>
                         </div>
@@ -178,7 +178,7 @@ import { ref, computed, onMounted, h, defineComponent } from "vue";
 import AnzuTabs from "~/components/AnzuTabs.vue";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
-import AnzuComboBox from "~/components/AnzuComboBox.vue";
+import AnzuSelector from "~/components/AnzuSelector.vue";
 import AnzuProgressRing from "~/components/AnzuProgressRing.vue";
 import { useLogs } from "~/composables/useLogs";
 import { useLogStream } from "~/composables/useLogStream";
@@ -358,7 +358,7 @@ onMounted(() => {
 });
 
 const LogToolbar = defineComponent({
-    components: { AnzuInput, AnzuComboBox, AnzuButton },
+    components: { AnzuInput, AnzuSelector, AnzuButton },
     props: {
         filter: { type: Object as () => LogFilter, required: true },
         showLevelFilter: { type: Boolean, default: false },
@@ -387,31 +387,22 @@ const LogToolbar = defineComponent({
             h("div", { class: "mb-3 space-y-2" }, [
                 h(
                     "div",
-                    { class: "grid grid-cols-1 gap-2 sm:grid-cols-4" },
+                    { class: "flex flex-wrap items-center gap-2" },
                     [
                         h(AnzuInput, {
                             modelValue: p.filter.search,
                             placeholder: t("common.actions.search"),
+                            class: "flex-1 min-w-0",
                             "onUpdate:modelValue": (v: string) => (p.filter.search = v),
                             onKeyup: (e: KeyboardEvent) => {
                                 if (e.key === "Enter") emit("apply");
                             },
                         }),
-                        p.showLevelFilter
-                            ? h(AnzuComboBox, {
-                                  modelValue: p.filter.level,
-                                  items: levelOptions,
-                                  placeholder: t("logs.filters.level"),
-                                  "onUpdate:modelValue": (v: string) => {
-                                      p.filter.level = v;
-                                      emit("apply");
-                                  },
-                              })
-                            : null,
                         p.showModuleFilter
                             ? h(AnzuInput, {
                                   modelValue: p.filter.module,
                                   placeholder: t("logs.filters.module"),
+                                  class: "flex-1 min-w-0",
                                   "onUpdate:modelValue": (v: string) => (p.filter.module = v),
                                   onKeyup: (e: KeyboardEvent) => {
                                       if (e.key === "Enter") emit("apply");
@@ -421,6 +412,7 @@ const LogToolbar = defineComponent({
                         h(AnzuInput, {
                             modelValue: p.filter.ip,
                             placeholder: t("logs.filters.ip"),
+                            class: "flex-1 min-w-0",
                             "onUpdate:modelValue": (v: string) => (p.filter.ip = v),
                             onKeyup: (e: KeyboardEvent) => {
                                 if (e.key === "Enter") emit("apply");
@@ -428,6 +420,16 @@ const LogToolbar = defineComponent({
                         }),
                     ],
                 ),
+                p.showLevelFilter
+                    ? h(AnzuSelector, {
+                          modelValue: p.filter.level,
+                          options: levelOptions,
+                          "onUpdate:modelValue": (v: string) => {
+                              p.filter.level = v;
+                              emit("apply");
+                          },
+                      })
+                    : null,
                 h(
                     "div",
                     { class: "grid grid-cols-1 gap-2 sm:grid-cols-2" },
@@ -458,7 +460,7 @@ const LogToolbar = defineComponent({
                             ? h(
                                   AnzuButton,
                                   {
-                                      variant: p.streaming ? "filled" : "outlined",
+                                      variant: p.streaming ? "filled" : "text",
                                       class: "whitespace-nowrap",
                                       onClick: toggleStream,
                                   },

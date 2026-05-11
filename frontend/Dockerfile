@@ -8,7 +8,8 @@ RUN npm install -g pnpm
 
 RUN pnpm config set registry https://registry.npmmirror.com
 
-COPY frontend/AnzuImg/package.json frontend/AnzuImg/pnpm-lock.yaml ./
+COPY frontend/AnzuImg/package.json frontend/AnzuImg/pnpm-lock.yaml frontend/AnzuImg/pnpm-workspace.yaml ./
+
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/AnzuImg .
