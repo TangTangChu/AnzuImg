@@ -1,36 +1,43 @@
 <template>
-    <div class="space-y-8">
+    <div class="space-y-10">
         <div
             v-if="!allowWebModify"
-            class="rounded-lg border border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface-variant) p-3 text-sm text-(--md-sys-color-on-surface-variant)"
+            class="flex items-start gap-2 rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm text-(--md-sys-color-on-surface-variant)"
         >
-            {{ t("settings.systemConfig.disabledNotice") }}
+            <InformationCircleIcon class="w-5 h-5 shrink-0 mt-0.5 text-(--md-sys-color-on-surface-variant)" />
+            <span>{{ t("settings.systemConfig.disabledNotice") }}</span>
         </div>
 
-        <div v-for="group in groupedSchema" :key="group.name">
-            <h3 class="mb-3 text-lg font-semibold">
+        <div
+            v-for="(group, groupIdx) in groupedSchema"
+            :key="group.name"
+            :class="groupIdx > 0 ? 'pt-8 border-t border-(--md-sys-color-outline-variant)' : ''"
+        >
+            <h3 class="mb-5 text-lg font-semibold">
                 {{ t(`settings.systemConfig.groups.${group.name}`) }}
             </h3>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
                 <div
-                    v-for="field in group.fields"
+                    v-for="field in group.regular"
                     :key="field.key"
-                    class="rounded-xl border border-(--md-sys-color-outline-variant) p-4"
+                    class="flex flex-col gap-1.5"
+                    :class="isWideField(field) ? 'md:col-span-2' : ''"
                 >
-                    <div class="mb-2 flex items-center justify-between gap-2">
-                        <label class="text-sm font-medium">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="text-sm font-medium text-(--md-sys-color-on-surface)">
                             {{ t(`settings.systemConfig.fields.${field.key}.label`) }}
                         </label>
                         <span
                             v-if="isOverridden(field.key)"
-                            class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)"
+                            class="inline-flex items-center gap-1 text-xs text-(--md-sys-color-on-surface-variant)"
                         >
+                            <span class="w-1.5 h-1.5 rounded-full bg-(--md-sys-color-primary)"></span>
                             {{ t("settings.systemConfig.overridden") }}
                         </span>
                     </div>
                     <p
                         v-if="te(`settings.systemConfig.fields.${field.key}.hint`)"
-                        class="mb-2 text-xs text-(--md-sys-color-on-surface-variant)"
+                        class="text-xs text-(--md-sys-color-on-surface-variant)"
                     >
                         {{ t(`settings.systemConfig.fields.${field.key}.hint`) }}
                     </p>
@@ -60,7 +67,7 @@
                         :value="String(local[field.key] ?? '')"
                         :disabled="!allowWebModify"
                         rows="3"
-                        class="w-full rounded-md border border-(--md-sys-color-outline-variant) bg-transparent p-2 text-sm focus:outline-none focus:border-(--md-sys-color-primary)"
+                        class="w-full rounded-lg border border-(--md-sys-color-outline) bg-transparent px-3 py-2 text-sm text-(--md-sys-color-on-surface) outline-none transition-[border-color] duration-200 ease-out hover:border-(--md-sys-color-outline-variant) focus:border-(--md-sys-color-primary)"
                         @input="(e: any) => onInput(field.key, e.target.value)"
                     />
                     <AnzuInput
@@ -79,16 +86,39 @@
                         @update:modelValue="(v: any) => onInput(field.key, v)"
                     />
                 </div>
+
+                <div
+                    v-if="group.compactBools.length > 0"
+                    class="md:col-span-2 flex flex-wrap gap-x-6 gap-y-3"
+                >
+                    <div
+                        v-for="field in group.compactBools"
+                        :key="field.key"
+                        class="inline-flex items-center gap-1.5"
+                    >
+                        <AnzuCheckbox
+                            :model-value="!!local[field.key]"
+                            :label="t(`settings.systemConfig.fields.${field.key}.label`)"
+                            :disabled="!allowWebModify"
+                            @update:modelValue="(v: any) => onInput(field.key, !!v)"
+                        />
+                        <span
+                            v-if="isOverridden(field.key)"
+                            :title="t('settings.systemConfig.overridden')"
+                            class="w-1.5 h-1.5 rounded-full bg-(--md-sys-color-primary)"
+                        ></span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div
             v-if="allowWebModify"
-            class="sticky bottom-2 flex items-center justify-end gap-2 rounded-xl bg-(--md-sys-color-surface) p-3 shadow"
+            class="sticky bottom-2 flex items-center justify-end gap-2 rounded-xl border border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface) px-4 py-2"
         >
             <span
                 v-if="dirtyKeys.length > 0"
-                class="text-xs text-(--md-sys-color-on-surface-variant)"
+                class="text-xs text-(--md-sys-color-on-surface-variant) mr-auto"
             >
                 {{ t("settings.systemConfig.dirtyCount", { count: dirtyKeys.length }) }}
             </span>
@@ -119,6 +149,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+import { InformationCircleIcon } from "@heroicons/vue/24/outline";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
@@ -143,6 +174,27 @@ const emit = defineEmits<{
 const local = ref<Record<string, unknown>>({});
 const initial = ref<Record<string, unknown>>({});
 
+const resolveControl = (f: FieldSchema): string => {
+    if (f.type === "enum") return "enum";
+    if (f.type === "bool") return "bool";
+    if (f.type === "list") return "list";
+    if (f.type === "multiline") return "multiline";
+    if (f.type === "int" || f.type === "int64") return "int";
+    return "string";
+};
+
+const isWideField = (f: FieldSchema): boolean => {
+    const c = resolveControl(f);
+    return c === "list" || c === "multiline";
+};
+
+const isCompactBool = (f: FieldSchema): boolean => {
+    return (
+        resolveControl(f) === "bool" &&
+        !te(`settings.systemConfig.fields.${f.key}.hint`)
+    );
+};
+
 const overriddenKeys = computed(() =>
     props.values.filter((v) => v.overridden_in_db).map((v) => v.key),
 );
@@ -157,17 +209,12 @@ const groupedSchema = computed(() => {
         arr.push(f);
         map.set(f.group, arr);
     }
-    return Array.from(map.entries()).map(([name, fields]) => ({ name, fields }));
+    return Array.from(map.entries()).map(([name, fields]) => {
+        const compactBools = fields.filter((f) => isCompactBool(f));
+        const regular = fields.filter((f) => !isCompactBool(f));
+        return { name, regular, compactBools };
+    });
 });
-
-const resolveControl = (f: FieldSchema): string => {
-    if (f.type === "enum") return "enum";
-    if (f.type === "bool") return "bool";
-    if (f.type === "list") return "list";
-    if (f.type === "multiline") return "multiline";
-    if (f.type === "int" || f.type === "int64") return "int";
-    return "string";
-};
 
 const dirtyKeys = computed(() => {
     const out: string[] = [];
@@ -218,3 +265,4 @@ const onResetSelected = () => {
     emit("reset", overriddenKeys.value);
 };
 </script>
+

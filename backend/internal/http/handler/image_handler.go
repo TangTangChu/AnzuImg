@@ -21,7 +21,8 @@ import (
 )
 
 type ImageHandler struct {
-	svc *service.ImageService
+	svc        *service.ImageService
+	urlFetcher *service.URLFetcher
 }
 
 var allowedUploadMIMETypes = map[string]struct{}{
@@ -66,7 +67,8 @@ func detectUploadMIMEAndDimensions(buf []byte) (mimeType string, width, height i
 
 func NewImageHandler(cfg *config.Config, db *gorm.DB) *ImageHandler {
 	return &ImageHandler{
-		svc: service.NewImageService(cfg, db),
+		svc:        service.NewImageService(cfg, db),
+		urlFetcher: service.NewURLFetcher(cfg),
 	}
 }
 
@@ -101,10 +103,6 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 
 	files := form.File["file"]
-	if len(files) == 0 {
-		response.WriteErrorCode(c, http.StatusBadRequest, "file_required", "file is required")
-		return
-	}
 
 	// 文件数量限制
 	maxFiles := 20
@@ -117,6 +115,30 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 	if maxFiles > 0 && len(files) > maxFiles {
 		response.WriteErrorCode(c, http.StatusBadRequest, "too_many_files", "too many files")
+		return
+	}
+
+	type URLSource struct {
+		URL         string   `json:"url"`
+		ClientIndex int      `json:"client_index"`
+		Description string   `json:"description"`
+		Tags        []string `json:"tags"`
+		Routes      []string `json:"routes"`
+		CustomName  string   `json:"custom_name"`
+	}
+	var urlSources []URLSource
+	if urlSourcesStr := c.PostForm("url_sources"); urlSourcesStr != "" {
+		if err := json.Unmarshal([]byte(urlSourcesStr), &urlSources); err != nil {
+			response.WriteErrorCode(c, http.StatusBadRequest, "invalid_url_sources", "invalid url_sources json")
+			return
+		}
+	}
+	if maxFiles > 0 && len(files)+len(urlSources) > maxFiles {
+		response.WriteErrorCode(c, http.StatusBadRequest, "too_many_files", "too many files")
+		return
+	}
+	if len(files) == 0 && len(urlSources) == 0 {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_required", "file is required")
 		return
 	}
 
@@ -320,7 +342,133 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		})
 	}
 
+	for i, urlSrc := range urlSources {
+		clientIndex := len(files) + i
+		if urlSrc.ClientIndex >= 0 {
+			clientIndex = urlSrc.ClientIndex
+		}
+
+		rawURL := strings.TrimSpace(urlSrc.URL)
+		if rawURL == "" {
+			appendUploadError(clientIndex, "", "url_invalid", "url is required")
+			continue
+		}
+
+		fetchRes, err := h.urlFetcher.Fetch(c.Request.Context(), rawURL)
+		if err != nil {
+			code, msg := classifyURLFetchError(err)
+			appendUploadError(clientIndex, rawURL, code, msg)
+			continue
+		}
+
+		maxPerFile := int64(60 * 1024 * 1024)
+		if h.svc != nil {
+			if cfg := h.svc.Config(); cfg != nil {
+				if v := cfg.Effective().MaxUploadFileBytes; v > 0 {
+					maxPerFile = v
+				}
+			}
+		}
+		if maxPerFile > 0 && int64(len(fetchRes.Body)) > maxPerFile {
+			appendUploadError(clientIndex, rawURL, "file_too_large", "file too large")
+			continue
+		}
+
+		mimeType, width, height := detectUploadMIMEAndDimensions(fetchRes.Body)
+		if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
+			appendUploadError(clientIndex, rawURL, "unsupported_file_type", "unsupported file type: "+mimeType)
+			continue
+		}
+
+		candidateName := strings.TrimSpace(urlSrc.CustomName)
+		if candidateName == "" {
+			candidateName = fetchRes.Filename
+		}
+		if candidateName == "" {
+			candidateName = "remote-file"
+		}
+		cleanPath := filepath.Clean(candidateName)
+		if strings.Contains(cleanPath, "..") || filepath.IsAbs(cleanPath) || strings.ContainsAny(cleanPath, "/\\") {
+			cleanPath = filepath.Base(cleanPath)
+		}
+		if cleanPath == "" || cleanPath == "." || cleanPath == ".." {
+			appendUploadError(clientIndex, rawURL, "invalid_filename", "invalid filename")
+			continue
+		}
+		finalFileName := cleanPath
+
+		var uploadedByTokenID *uint
+		var uploadedByTokenName string
+		var uploadedByTokenType string
+		if uploaderToken != nil {
+			uploadedByTokenID = &uploaderToken.ID
+			uploadedByTokenName = uploaderToken.Name
+			uploadedByTokenType = uploaderToken.NormalizedType()
+		}
+
+		convertCurrent := convert && service.IsImageFile(mimeType)
+		res, err := h.svc.Upload(c.Request.Context(), fetchRes.Body, finalFileName, urlSrc.Routes, urlSrc.Description, urlSrc.Tags, mimeType, width, height, convertCurrent, targetFormat, quality, effort, uploadedByTokenID, uploadedByTokenName, uploadedByTokenType)
+		if err != nil {
+			appendUploadError(clientIndex, rawURL, "upload_failed", "upload failed")
+			continue
+		}
+
+		if uploaderToken != nil {
+			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			_ = tokenSvc.RecordLog(&model.APITokenLog{
+				TokenID:   uploaderToken.ID,
+				TokenName: uploaderToken.Name,
+				TokenType: uploaderToken.NormalizedType(),
+				Action:    "image_upload",
+				Method:    c.Request.Method,
+				Path:      c.Request.URL.Path,
+				IPAddress: middleware.ClientIP(c),
+				UserAgent: c.Request.UserAgent(),
+				ImageHash: res.Image.Hash,
+			})
+		}
+
+		results = append(results, gin.H{
+			"client_index":     clientIndex,
+			"hash":             res.Image.Hash,
+			"file_name":        res.Image.FileName,
+			"size":             res.Image.Size,
+			"mime":             res.Image.MimeType,
+			"path":             res.Image.Path,
+			"width":            res.Image.Width,
+			"height":           res.Image.Height,
+			"duration_seconds": res.Image.DurationSeconds,
+			"video_codec":      res.Image.VideoCodec,
+			"video_bitrate":    res.Image.VideoBitrate,
+			"audio_codec":      res.Image.AudioCodec,
+			"audio_bitrate":    res.Image.AudioBitrate,
+			"description":      res.Image.Description,
+			"tags":             res.Image.Tags,
+			"created_at":       res.Image.CreatedAt,
+			"updated_at":       res.Image.UpdatedAt,
+			"reused":           res.Reused,
+			"url":              res.HashURL,
+			"route":            res.Route,
+			"route_url":        res.RouteURL,
+			"source_url":       fetchRes.FinalURL,
+			"success":          true,
+		})
+	}
+
 	c.JSON(http.StatusOK, results)
+}
+
+func classifyURLFetchError(err error) (string, string) {
+	switch {
+	case errors.Is(err, service.ErrURLInvalid):
+		return "url_invalid", "invalid url"
+	case errors.Is(err, service.ErrURLBlocked):
+		return "url_blocked", "url target not allowed"
+	case errors.Is(err, service.ErrURLTooLarge):
+		return "url_too_large", "url response too large"
+	default:
+		return "url_fetch_failed", "failed to fetch url"
+	}
 }
 
 // GET /i/:hash

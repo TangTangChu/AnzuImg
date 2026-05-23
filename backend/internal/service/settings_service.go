@@ -39,6 +39,7 @@ const (
 	GroupNetwork        FieldGroup = "network"
 	GroupLogs           FieldGroup = "logs"
 	GroupStepUp         FieldGroup = "stepup"
+	GroupURLFetch       FieldGroup = "url_fetch"
 )
 
 // FieldSchema 描述一个可被 Web 修改的 effective 配置项。
@@ -56,9 +57,9 @@ type FieldSchema struct {
 
 // FieldValue 是返回给前端的当前值与来源标记。
 type FieldValue struct {
-	Key             string `json:"key"`
-	Value           any    `json:"value"`
-	OverriddenInDB  bool   `json:"overridden_in_db"`
+	Key            string `json:"key"`
+	Value          any    `json:"value"`
+	OverriddenInDB bool   `json:"overridden_in_db"`
 }
 
 // SettingsService 负责合并 env 默认值与 system_configs 覆盖值，构造并热替换
@@ -297,6 +298,14 @@ func buildSchema() []FieldSchema {
 
 		// stepup
 		{Key: "STEP_UP_MAX_AGE_SEC", Group: GroupStepUp, Type: FieldInt, Default: 120, Min: ptrInt(15), Max: ptrInt(3600)},
+
+		// URL 拉取
+		{Key: "URL_FETCH_TIMEOUT_SEC", Group: GroupURLFetch, Type: FieldInt, Default: 15, Min: ptrInt(1), Max: ptrInt(300)},
+		func() FieldSchema {
+			min, max := intRange(1, 1024)
+			return FieldSchema{Key: "URL_FETCH_MAX_MB", Group: GroupURLFetch, Type: FieldInt, Default: 60, Min: min, Max: max}
+		}(),
+		{Key: "URL_FETCH_ALLOW_PRIVATE", Group: GroupURLFetch, Type: FieldBool, Default: false},
 	}
 }
 
@@ -411,6 +420,13 @@ func applyOverride(eff *config.Effective, f FieldSchema, raw string) error {
 		eff.AppLogFileMaxAgeDays = model.ParseConfigInt(raw, 14)
 	case "STEP_UP_MAX_AGE_SEC":
 		eff.StepUpMaxAgeSeconds = model.ParseConfigInt(raw, 120)
+	case "URL_FETCH_TIMEOUT_SEC":
+		eff.URLFetchTimeoutSeconds = model.ParseConfigInt(raw, 15)
+	case "URL_FETCH_MAX_MB":
+		mb := model.ParseConfigInt64(raw, 60)
+		eff.URLFetchMaxBytes = mb * 1024 * 1024
+	case "URL_FETCH_ALLOW_PRIVATE":
+		eff.URLFetchAllowPrivate = model.ParseConfigBool(raw, false)
 	default:
 		return fmt.Errorf("unhandled key: %s", f.Key)
 	}
@@ -481,6 +497,12 @@ func extractEffectiveValue(eff *config.Effective, key string) any {
 		return eff.AppLogFileMaxAgeDays
 	case "STEP_UP_MAX_AGE_SEC":
 		return eff.StepUpMaxAgeSeconds
+	case "URL_FETCH_TIMEOUT_SEC":
+		return eff.URLFetchTimeoutSeconds
+	case "URL_FETCH_MAX_MB":
+		return eff.URLFetchMaxBytes / 1024 / 1024
+	case "URL_FETCH_ALLOW_PRIVATE":
+		return eff.URLFetchAllowPrivate
 	}
 	return nil
 }

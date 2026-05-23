@@ -107,7 +107,7 @@
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-start gap-3 overflow-hidden min-w-0">
                         <div
-                            class="rounded-full bg-(--md-sys-color-secondary-container) p-2.5 text-(--md-sys-color-on-secondary-container) shrink-0"
+                            class="rounded-full border border-(--md-sys-color-outline-variant) p-2.5 text-(--md-sys-color-on-surface-variant) shrink-0"
                         >
                             <svg
                                 class="h-6 w-6"
@@ -130,15 +130,14 @@
                             >
                                 {{ passkey.DeviceName || `Passkey #${passkey.ID}` }}
                             </h3>
-                            <div class="flex flex-wrap gap-2 mt-1.5">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-(--md-sys-color-on-surface-variant)">
                                 <span
                                     v-if="passkey.IPAddress"
-                                    class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant)"
+                                    class="font-mono"
                                 >
                                     {{ passkey.IPAddress }}
                                 </span>
                                 <span
-                                    class="text-xs text-(--md-sys-color-on-surface-variant) flex items-center"
                                     :title="formatDate(passkey.UpdatedAt || passkey.CreatedAt)"
                                 >
                                     {{ formatRelativeTime(passkey.UpdatedAt || passkey.CreatedAt, locale) }}
@@ -188,22 +187,22 @@
                 {{ t("settings.apiTokens.noTokens") }}
             </p>
         </div>
-        <div v-else class="grid gap-4 sm:grid-cols-1">
+        <div v-else class="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
             <div
                 v-for="token in apiTokens"
                 :key="token.id"
                 class="flex flex-col justify-between rounded-xl border border-(--md-sys-color-outline-variant) p-4 transition-colors"
             >
                 <div class="flex items-start justify-between">
-                    <div>
-                        <h3 class="font-semibold text-(--md-sys-color-on-surface)">{{ token.name }}</h3>
-                        <div class="mt-1 flex flex-wrap gap-2">
-                            <span class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)">
+                    <div class="min-w-0">
+                        <h3 class="font-semibold text-(--md-sys-color-on-surface) truncate">{{ token.name }}</h3>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)">
                                 {{ getTokenTypeLabel(token.token_type) }}
                             </span>
                             <span
                                 v-if="!token.ip_allowlist || token.ip_allowlist.length === 0"
-                                class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-error-container) text-(--md-sys-color-on-error-container)"
+                                class="inline-flex items-center text-xs px-1.5 py-0.5 rounded border border-(--md-sys-color-error) text-(--md-sys-color-error)"
                             >
                                 {{ t("settings.apiTokens.anyIP") }}
                             </span>
@@ -211,7 +210,7 @@
                                 v-else
                                 v-for="ip in token.ip_allowlist"
                                 :key="ip"
-                                class="text-xs px-1.5 py-0.5 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant)"
+                                class="inline-flex items-center text-xs px-1.5 py-0.5 rounded border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant) font-mono"
                             >
                                 {{ ip }}
                             </span>
@@ -225,7 +224,7 @@
                         <TrashIcon class="h-5 w-5" />
                     </AnzuButton>
                 </div>
-                <div class="mt-2 pt-2 border-t border-(--md-sys-color-outline-variant) border-opacity-50 flex justify-between text-xs text-(--md-sys-color-on-surface-variant) opacity-75">
+                <div class="mt-3 pt-2 border-t border-(--md-sys-color-outline-variant) flex justify-between text-xs text-(--md-sys-color-on-surface-variant)">
                     <span>{{ t("settings.apiTokens.created") }}: {{ formatDate(token.created_at) }}</span>
                     <span>
                         {{ t("settings.apiTokens.lastUsed") }}:

@@ -14,6 +14,7 @@
             "confirm": "确认",
             "delete": "删除",
             "deleting": "删除中",
+            "remove": "移除",
             "login": "登录",
             "logout": "退出登录",
             "download": "下载",
@@ -142,7 +143,47 @@
         "submit": "开始上传",
         "routeUniqueWarning": "唯一路由别名（可选）",
         "videoConvertDisabled": "视频文件不支持格式转换",
-        "applyToAll": "将以上标签应用到全部文件"
+        "applyToAll": "将以上标签应用到全部文件",
+        "actions": {
+            "retry": "重试",
+            "removeItem": "移除此项",
+            "addUrl": "添加链接"
+        },
+        "tabs": {
+            "file": "文件",
+            "url": "链接"
+        },
+        "url": {
+            "placeholder": "https://example.com/image.jpg",
+            "compactPlaceholder": "粘贴链接...",
+            "modeBrowser": "由浏览器加载",
+            "modeServer": "由服务器加载",
+            "modeBrowserHint": "由你的浏览器抓取链接，再随其它文件一起上传",
+            "modeServerHint": "由本站服务器抓取链接，请仅在信任来源时使用",
+            "add": "添加链接",
+            "invalid": "请输入有效的 http(s) 链接",
+            "fetchFailed": "浏览器加载失败，可尝试服务器加载或下载后上传",
+            "loading": "加载中...",
+            "serverItemHint": "服务器加载",
+            "riskTitle": "服务器端访问链接的风险",
+            "riskBody": "选择服务器加载时，本站服务器会主动访问您填写的 URL；目标方将看到本站服务器的 IP，且服务器会消耗带宽。请仅在信任来源时使用。",
+            "riskAck": "我已知晓，继续",
+            "riskCancel": "取消"
+        },
+        "summary": {
+            "label": "本次上传",
+            "success": "{count} 成功",
+            "failed": "{count} 失败",
+            "copyAll": "复制全部成功链接",
+            "copyAllDone": "已复制 {count} 个链接",
+            "copyAllEmpty": "暂无可复制的链接"
+        },
+        "result": {
+            "linkLabel": "可访问链接",
+            "openLink": "打开链接",
+            "startOver": "清空重来",
+            "failed": "上传失败"
+        }
     },
     "gallery": {
         "title": "图片库",
@@ -308,7 +349,8 @@
                 "password_policy": "密码策略",
                 "network": "网络与访问控制",
                 "logs": "日志策略",
-                "stepup": "二次确认"
+                "stepup": "二次确认",
+                "url_fetch": "链接抓取"
             },
             "fields": {
                 "MAX_UPLOAD_MB": { "label": "单次请求最大体积(MB)", "hint": "整体 multipart 大小上限" },
@@ -341,7 +383,10 @@
                 "APP_LOG_FILE_MAX_SIZE_MB": { "label": "单文件最大(MB)" },
                 "APP_LOG_FILE_MAX_BACKUPS": { "label": "保留备份数" },
                 "APP_LOG_FILE_MAX_AGE_DAYS": { "label": "保留天数" },
-                "STEP_UP_MAX_AGE_SEC": { "label": "二次确认有效秒数" }
+                "STEP_UP_MAX_AGE_SEC": { "label": "二次确认有效秒数" },
+                "URL_FETCH_TIMEOUT_SEC": { "label": "链接抓取超时(秒)", "hint": "服务器端拉取链接的总超时" },
+                "URL_FETCH_MAX_MB": { "label": "链接抓取最大体积(MB)", "hint": "超过则中断下载" },
+                "URL_FETCH_ALLOW_PRIVATE": { "label": "允许私网目标", "hint": "开启后服务器端可访问私网/回环 IP,仅在完全信任自有部署网络时启用,否则存在 SSRF 风险" }
             }
         }
     },

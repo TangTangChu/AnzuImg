@@ -104,6 +104,11 @@ type Effective struct {
 
 	// Step-up 二次确认
 	StepUpMaxAgeSeconds int
+
+	// URL 拉取
+	URLFetchTimeoutSeconds int
+	URLFetchMaxBytes       int64
+	URLFetchAllowPrivate   bool
 }
 
 type PasswordPolicy struct {
@@ -271,6 +276,10 @@ func DefaultEffective() *Effective {
 
 		CSPExtra:            getEnv("ANZUIMG_CSP_EXTRA", ""),
 		StepUpMaxAgeSeconds: getEnvInt("ANZUIMG_STEP_UP_MAX_AGE_SEC", 120),
+
+		URLFetchTimeoutSeconds: getEnvInt("ANZUIMG_URL_FETCH_TIMEOUT_SEC", 15),
+		URLFetchMaxBytes:       getEnvInt64MB("ANZUIMG_URL_FETCH_MAX_MB", 60),
+		URLFetchAllowPrivate:   getEnvBool("ANZUIMG_URL_FETCH_ALLOW_PRIVATE", false),
 	}
 }
 

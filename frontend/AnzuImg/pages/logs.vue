@@ -1,19 +1,19 @@
 <template>
     <h1 class="mb-6 text-3xl font-bold text-center">{{ t("logs.title") }}</h1>
 
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <AnzuTabs v-model="activeTab" :tabs="tabs">
             <template #tab-content-0>
                 <LogToolbar
                     :filter="appFilter"
-                    @apply="reloadApp(1)"
                     :export-csv="() => exportLogs('app', 'csv')"
                     :export-json="() => exportLogs('app', 'json')"
-                    :on-cleanup="() => onCleanup('app')"
+                    :on-cleanup="() => openCleanup('app')"
                     :show-level-filter="true"
                     :show-module-filter="true"
                     :enable-stream="true"
                     v-model:streaming="streaming"
+                    @apply="reloadApp(1)"
                     @stream-toggle="onStreamToggle"
                 />
 
@@ -28,35 +28,37 @@
                         {{ t("logs.empty") }}
                     </p>
                 </div>
-                <div v-else class="space-y-2">
-                    <div
-                        v-for="log in appLogs"
-                        :key="`${log.id}-${log.created_at}`"
-                        class="rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span
-                                class="inline-flex items-center text-xs px-1.5 py-1 rounded font-semibold whitespace-nowrap"
-                                :class="levelClass(log.level)"
+                <div v-else>
+                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                        <div
+                            v-for="log in appLogs"
+                            :key="`${log.id}-${log.created_at}`"
+                            class="py-2.5 px-1"
+                        >
+                            <div class="flex flex-wrap items-center gap-2 text-xs">
+                                <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap', levelBadge(log.level)]">
+                                    {{ (log.level || '').toUpperCase() }}
+                                </span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)">
+                                    {{ log.module }}
+                                </span>
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                    {{ formatDate(log.created_at) }}
+                                </span>
+                            </div>
+                            <div class="mt-1 break-words whitespace-pre-wrap text-sm text-(--md-sys-color-on-surface)">
+                                {{ log.message }}
+                            </div>
+                            <div
+                                v-if="log.request_id || log.ip_address"
+                                class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono"
                             >
-                                {{ (log.level || '').toUpperCase() }}
-                            </span>
-                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
-                                {{ log.module }}
-                            </span>
-                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
-                                {{ formatDate(log.created_at) }}
-                            </span>
-                        </div>
-                        <div class="mt-1 break-all whitespace-pre-wrap text-sm">
-                            {{ log.message }}
-                        </div>
-                        <div v-if="log.request_id || log.ip_address" class="mt-1 text-xs opacity-70 break-all">
-                            <span v-if="log.request_id">req_id: {{ log.request_id }} </span>
-                            <span v-if="log.ip_address"> · ip: {{ log.ip_address }}</span>
+                                <span v-if="log.request_id">req_id={{ log.request_id }}</span>
+                                <span v-if="log.ip_address"> · ip={{ log.ip_address }}</span>
+                            </div>
                         </div>
                     </div>
-                    <Pagination
+                    <LogPagination
                         :page="appPage"
                         :total="appTotal"
                         :size="pageSize"
@@ -69,10 +71,10 @@
             <template #tab-content-1>
                 <LogToolbar
                     :filter="securityFilter"
-                    @apply="reloadSecurity(1)"
                     :export-csv="() => exportLogs('security', 'csv')"
                     :export-json="() => exportLogs('security', 'json')"
-                    :on-cleanup="() => onCleanup('security')"
+                    :on-cleanup="() => openCleanup('security')"
+                    @apply="reloadSecurity(1)"
                 />
                 <div v-if="loadingSecurity" class="flex justify-center py-6">
                     <AnzuProgressRing :size="40" />
@@ -85,34 +87,35 @@
                         {{ t("logs.empty") }}
                     </p>
                 </div>
-                <div v-else class="space-y-2">
-                    <div
-                        v-for="log in securityLogs"
-                        :key="log.id"
-                        class="rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span
-                                class="inline-flex items-center text-xs px-1.5 py-1 rounded font-semibold whitespace-nowrap"
-                                :class="securityLevelClass(log.level)"
-                            >
-                                {{ (log.level || '').toUpperCase() }}
-                            </span>
-                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant) font-semibold whitespace-nowrap">{{ log.action }}</span>
-                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
-                                {{ formatDate(log.created_at) }}
-                            </span>
-                        </div>
-                        <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all">
-                            {{ log.message }}
-                        </div>
-                        <div class="mt-1 text-xs opacity-70 break-all">
-                            <span v-if="log.method || log.path">{{ log.method }} {{ log.path }} · </span>
-                            <span v-if="log.ip_address">ip: {{ log.ip_address }}</span>
-                            <span v-if="log.username"> · user: {{ log.username }}</span>
+                <div v-else>
+                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                        <div
+                            v-for="log in securityLogs"
+                            :key="log.id"
+                            class="py-2.5 px-1"
+                        >
+                            <div class="flex flex-wrap items-center gap-2 text-xs">
+                                <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap', securityLevelBadge(log.level)]">
+                                    {{ (log.level || '').toUpperCase() }}
+                                </span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)">
+                                    {{ log.action }}
+                                </span>
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                    {{ formatDate(log.created_at) }}
+                                </span>
+                            </div>
+                            <div class="mt-1 text-sm text-(--md-sys-color-on-surface) break-words">
+                                {{ log.message }}
+                            </div>
+                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono">
+                                <span v-if="log.method || log.path">{{ log.method }} {{ log.path }}</span>
+                                <span v-if="log.ip_address"> · ip={{ log.ip_address }}</span>
+                                <span v-if="log.username"> · user={{ log.username }}</span>
+                            </div>
                         </div>
                     </div>
-                    <Pagination
+                    <LogPagination
                         :page="securityPage"
                         :total="securityTotal"
                         :size="pageSize"
@@ -125,10 +128,10 @@
             <template #tab-content-2>
                 <LogToolbar
                     :filter="tokenFilter"
-                    @apply="reloadToken(1)"
                     :export-csv="() => exportLogs('token', 'csv')"
                     :export-json="() => exportLogs('token', 'json')"
-                    :on-cleanup="() => onCleanup('token')"
+                    :on-cleanup="() => openCleanup('token')"
+                    @apply="reloadToken(1)"
                 />
                 <div v-if="loadingToken" class="flex justify-center py-6">
                     <AnzuProgressRing :size="40" />
@@ -141,26 +144,32 @@
                         {{ t("logs.empty") }}
                     </p>
                 </div>
-                <div v-else class="space-y-2">
-                    <div
-                        v-for="log in tokenLogs"
-                        :key="log.id"
-                        class="rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="inline-flex items-center text-xs px-1.5 py-1 rounded bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container) font-semibold whitespace-nowrap">{{ log.action }}</span>
-                            <span class="ml-auto inline-flex items-center text-xs text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
-                                {{ formatDate(log.created_at) }}
-                            </span>
+                <div v-else>
+                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                        <div
+                            v-for="log in tokenLogs"
+                            :key="log.id"
+                            class="py-2.5 px-1"
+                        >
+                            <div class="flex flex-wrap items-center gap-2 text-xs">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-primary) text-(--md-sys-color-primary)">
+                                    {{ log.action }}
+                                </span>
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                    {{ formatDate(log.created_at) }}
+                                </span>
+                            </div>
+                            <div class="mt-1 text-sm text-(--md-sys-color-on-surface) break-words">
+                                <span>{{ log.token_name }} ({{ log.token_type }})</span>
+                                <span v-if="log.ip_address" class="text-(--md-sys-color-on-surface-variant) font-mono"> · ip={{ log.ip_address }}</span>
+                                <span v-if="log.image_hash" class="text-(--md-sys-color-on-surface-variant) font-mono"> · img={{ log.image_hash }}</span>
+                            </div>
+                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono">
+                                {{ log.method }} {{ log.path }}
+                            </div>
                         </div>
-                        <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all">
-                            <span>{{ log.token_name }} ({{ log.token_type }})</span>
-                            <span v-if="log.ip_address"> · ip: {{ log.ip_address }}</span>
-                            <span v-if="log.image_hash"> · img: {{ log.image_hash }}</span>
-                        </div>
-                        <div class="mt-1 text-xs opacity-70 break-all">{{ log.method }} {{ log.path }}</div>
                     </div>
-                    <Pagination
+                    <LogPagination
                         :page="tokenPage"
                         :total="tokenTotal"
                         :size="pageSize"
@@ -171,19 +180,42 @@
             </template>
         </AnzuTabs>
     </div>
+
+    <AnzuDialog
+        v-model:visible="cleanupDialogVisible"
+        :title="t('logs.cleanupTitle')"
+        :variant="DialogVariant.DESTRUCTIVE"
+        :actions="[
+            { text: t('common.actions.cancel'), variant: 'text', handler: closeCleanup },
+            { text: t('common.actions.confirm'), primary: true, variant: 'filled', handler: confirmCleanup, loading: cleanupRunning },
+        ]"
+    >
+        <div class="flex flex-col gap-3">
+            <p class="text-sm text-(--md-sys-color-on-surface-variant)">
+                {{ t("logs.cleanupPromptDays") }}
+            </p>
+            <AnzuInput
+                v-model="cleanupDays"
+                type="number"
+                :min="1"
+                placeholder="30"
+                @keydown.enter.prevent="confirmCleanup"
+            />
+        </div>
+    </AnzuDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h, defineComponent } from "vue";
+import { ref, computed, onMounted } from "vue";
 import AnzuTabs from "~/components/AnzuTabs.vue";
-import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
-import AnzuSelector from "~/components/AnzuSelector.vue";
 import AnzuProgressRing from "~/components/AnzuProgressRing.vue";
+import AnzuDialog from "~/components/AnzuDialog.vue";
+import LogToolbar from "~/components/log/LogToolbar.vue";
+import LogPagination from "~/components/log/LogPagination.vue";
 import { useLogs } from "~/composables/useLogs";
 import { useLogStream } from "~/composables/useLogStream";
 import { useNotification } from "~/composables/useNotification";
-import { useDialog } from "~/composables/useDialog";
 import { NotificationType } from "~/types/notification";
 import { DialogVariant } from "~/types/dialog";
 import { formatDate } from "~/utils/format";
@@ -193,7 +225,6 @@ import type { APITokenLog } from "~/types/api_token";
 
 const { t } = useI18n();
 const { notify } = useNotification();
-const { confirm } = useDialog();
 const logs = useLogs();
 const stream = useLogStream();
 
@@ -236,6 +267,11 @@ const tokenTotal = ref(0);
 const loadingToken = ref(false);
 
 const streaming = ref(false);
+
+const cleanupDialogVisible = ref(false);
+const cleanupSource = ref<LogSource | null>(null);
+const cleanupDays = ref<string>("30");
+const cleanupRunning = ref(false);
 
 const reloadApp = async (page = appPage.value) => {
     if (streaming.value) return;
@@ -293,20 +329,32 @@ const exportLogs = (source: LogSource, format: "csv" | "json") => {
     window.open(url, "_blank");
 };
 
-const onCleanup = async (source: LogSource) => {
-    const days = await promptDays();
-    if (!days) return;
-    const ok = await confirm(t("logs.cleanupConfirm", { days, source }), {
-        title: t("logs.cleanupTitle"),
-        variant: DialogVariant.DESTRUCTIVE,
-        actions: [
-            { text: t("common.actions.cancel"), variant: "text" },
-            { text: t("common.actions.confirm"), primary: true, variant: "filled" },
-        ],
-    });
-    if (!ok) return;
-    const res = await logs.cleanup(source, days);
+const openCleanup = (source: LogSource) => {
+    cleanupSource.value = source;
+    cleanupDays.value = "30";
+    cleanupDialogVisible.value = true;
+};
+
+const closeCleanup = () => {
+    if (cleanupRunning.value) return;
+    cleanupDialogVisible.value = false;
+};
+
+const confirmCleanup = async () => {
+    const n = Number(cleanupDays.value);
+    if (!n || n <= 0 || !Number.isInteger(n)) {
+        notify({ message: t("logs.cleanupInvalidDays"), type: NotificationType.WARNING });
+        return;
+    }
+    const source = cleanupSource.value;
+    if (!source) return;
+
+    cleanupRunning.value = true;
+    const res = await logs.cleanup(source, n);
+    cleanupRunning.value = false;
+
     if (res) {
+        cleanupDialogVisible.value = false;
         notify({
             message: t("logs.cleanupSuccess", { count: res.deleted }),
             type: NotificationType.SUCCESS,
@@ -319,241 +367,30 @@ const onCleanup = async (source: LogSource) => {
     }
 };
 
-const promptDays = async (): Promise<number | null> => {
-    const input = window.prompt(t("logs.cleanupPromptDays"), "30");
-    if (input === null) return null;
-    const n = Number(input);
-    if (!n || n <= 0 || !Number.isInteger(n)) {
-        notify({ message: t("logs.cleanupInvalidDays"), type: NotificationType.WARNING });
-        return null;
-    }
-    return n;
-};
-
-const levelClass = (level: string) => {
+const levelBadge = (level: string) => {
     switch ((level || "").toUpperCase()) {
         case "DEBUG":
-            return "bg-(--md-sys-color-surface-variant) text-(--md-sys-color-on-surface-variant)";
+            return "border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)";
         case "WARN":
-            return "bg-yellow-100 text-yellow-900";
+            return "border border-(--md-sys-color-tertiary) text-(--md-sys-color-tertiary)";
         case "ERROR":
         case "FATAL":
-            return "bg-(--md-sys-color-error-container) text-(--md-sys-color-on-error-container)";
+            return "border border-(--md-sys-color-error) text-(--md-sys-color-error)";
         default:
-            return "bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)";
+            return "border border-(--md-sys-color-primary) text-(--md-sys-color-primary)";
     }
 };
 
-const securityLevelClass = (level: string) => {
+const securityLevelBadge = (level: string) => {
     if (level === "warning" || level === "error") {
-        return "bg-(--md-sys-color-error-container) text-(--md-sys-color-on-error-container)";
+        return "border border-(--md-sys-color-error) text-(--md-sys-color-error)";
     }
-    return "bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)";
+    return "border border-(--md-sys-color-primary) text-(--md-sys-color-primary)";
 };
 
 onMounted(() => {
     reloadApp();
     reloadSecurity();
     reloadToken();
-});
-
-const LogToolbar = defineComponent({
-    components: { AnzuInput, AnzuSelector, AnzuButton },
-    props: {
-        filter: { type: Object as () => LogFilter, required: true },
-        showLevelFilter: { type: Boolean, default: false },
-        showModuleFilter: { type: Boolean, default: false },
-        enableStream: { type: Boolean, default: false },
-        streaming: { type: Boolean, default: false },
-        exportCsv: { type: Function as unknown as () => () => void, required: true },
-        exportJson: { type: Function as unknown as () => () => void, required: true },
-        onCleanup: { type: Function as unknown as () => () => void, required: true },
-    },
-    emits: ["apply", "update:streaming", "stream-toggle"],
-    setup(p, { emit }) {
-        const levelOptions = [
-            { label: t("logs.levels.all"), value: "" },
-            { label: "DEBUG", value: "debug" },
-            { label: "INFO", value: "info" },
-            { label: "WARN", value: "warn" },
-            { label: "ERROR", value: "error" },
-        ];
-        const toggleStream = () => {
-            const next = !p.streaming;
-            emit("update:streaming", next);
-            emit("stream-toggle", next);
-        };
-        return () =>
-            h("div", { class: "mb-3 space-y-2" }, [
-                h(
-                    "div",
-                    { class: "flex flex-wrap items-center gap-2" },
-                    [
-                        h(AnzuInput, {
-                            modelValue: p.filter.search,
-                            placeholder: t("common.actions.search"),
-                            class: "flex-1 min-w-0",
-                            "onUpdate:modelValue": (v: string) => (p.filter.search = v),
-                            onKeyup: (e: KeyboardEvent) => {
-                                if (e.key === "Enter") emit("apply");
-                            },
-                        }),
-                        p.showModuleFilter
-                            ? h(AnzuInput, {
-                                  modelValue: p.filter.module,
-                                  placeholder: t("logs.filters.module"),
-                                  class: "flex-1 min-w-0",
-                                  "onUpdate:modelValue": (v: string) => (p.filter.module = v),
-                                  onKeyup: (e: KeyboardEvent) => {
-                                      if (e.key === "Enter") emit("apply");
-                                  },
-                              })
-                            : null,
-                        h(AnzuInput, {
-                            modelValue: p.filter.ip,
-                            placeholder: t("logs.filters.ip"),
-                            class: "flex-1 min-w-0",
-                            "onUpdate:modelValue": (v: string) => (p.filter.ip = v),
-                            onKeyup: (e: KeyboardEvent) => {
-                                if (e.key === "Enter") emit("apply");
-                            },
-                        }),
-                    ],
-                ),
-                p.showLevelFilter
-                    ? h(AnzuSelector, {
-                          modelValue: p.filter.level,
-                          options: levelOptions,
-                          "onUpdate:modelValue": (v: string) => {
-                              p.filter.level = v;
-                              emit("apply");
-                          },
-                      })
-                    : null,
-                h(
-                    "div",
-                    { class: "grid grid-cols-1 gap-2 sm:grid-cols-2" },
-                    [
-                        h(AnzuInput, {
-                            modelValue: p.filter.start_date,
-                            type: "date",
-                            "onUpdate:modelValue": (v: string) => {
-                                p.filter.start_date = v;
-                                emit("apply");
-                            },
-                        }),
-                        h(AnzuInput, {
-                            modelValue: p.filter.end_date,
-                            type: "date",
-                            "onUpdate:modelValue": (v: string) => {
-                                p.filter.end_date = v;
-                                emit("apply");
-                            },
-                        }),
-                    ],
-                ),
-                h(
-                    "div",
-                    { class: "flex flex-wrap items-center justify-end gap-2" },
-                    [
-                        p.enableStream
-                            ? h(
-                                  AnzuButton,
-                                  {
-                                      variant: p.streaming ? "filled" : "text",
-                                      class: "whitespace-nowrap",
-                                      onClick: toggleStream,
-                                  },
-                                  () =>
-                                      p.streaming
-                                          ? t("logs.streamStop")
-                                          : t("logs.streamStart"),
-                              )
-                            : null,
-                        h(
-                            AnzuButton,
-                            {
-                                variant: "text",
-                                class: "whitespace-nowrap",
-                                onClick: () => emit("apply"),
-                            },
-                            () => t("logs.refresh"),
-                        ),
-                        h(
-                            AnzuButton,
-                            {
-                                variant: "text",
-                                class: "whitespace-nowrap",
-                                onClick: p.exportCsv,
-                            },
-                            () => t("logs.exportCsv"),
-                        ),
-                        h(
-                            AnzuButton,
-                            {
-                                variant: "text",
-                                class: "whitespace-nowrap",
-                                onClick: p.exportJson,
-                            },
-                            () => t("logs.exportJson"),
-                        ),
-                        h(
-                            AnzuButton,
-                            {
-                                variant: "text",
-                                class: "whitespace-nowrap text-(--md-sys-color-error)",
-                                onClick: p.onCleanup,
-                            },
-                            () => t("logs.cleanup"),
-                        ),
-                    ],
-                ),
-            ]);
-    },
-});
-
-const Pagination = defineComponent({
-    components: { AnzuButton },
-    props: {
-        page: { type: Number, required: true },
-        total: { type: Number, required: true },
-        size: { type: Number, required: true },
-        loading: { type: Boolean, default: false },
-    },
-    emits: ["update"],
-    setup(p, { emit }) {
-        const totalPages = computed(() => Math.max(1, Math.ceil(p.total / p.size)));
-        return () =>
-            totalPages.value > 1
-                ? h(
-                      "div",
-                      {
-                          class:
-                              "mt-2 flex items-center justify-end gap-2 text-xs text-(--md-sys-color-on-surface-variant)",
-                      },
-                      [
-                          h(
-                              AnzuButton,
-                              {
-                                  variant: "text",
-                                  disabled: p.page <= 1 || p.loading,
-                                  onClick: () => emit("update", p.page - 1),
-                              },
-                              () => t("common.actions.paginationPrevious"),
-                          ),
-                          h("span", null, `${p.page} / ${totalPages.value}`),
-                          h(
-                              AnzuButton,
-                              {
-                                  variant: "text",
-                                  disabled: p.page >= totalPages.value || p.loading,
-                                  onClick: () => emit("update", p.page + 1),
-                              },
-                              () => t("common.actions.paginationNext"),
-                          ),
-                      ],
-                  )
-                : null;
-    },
 });
 </script>

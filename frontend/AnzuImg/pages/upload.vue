@@ -1,57 +1,88 @@
 <template>
   <div class="h-full flex flex-col max-w-6xl mx-auto w-full">
-    <h1 class="mb-6 text-3xl font-bold text-center">{{ t("upload.title") }}</h1>
-    <div
-      v-if="files.length === 0"
-      class="flex-1 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-(--md-sys-color-outline-variant) transition-colors min-h-100 relative group p-12 cursor-pointer"
-      :class="[isDragging ? 'border-(--md-sys-color-primary)' : '']"
-      @dragenter.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
-      @dragover.prevent
-      @drop.prevent="handleDrop"
-      @click="triggerMainInput"
-    >
-      <input
-        type="file"
-        ref="fileInput"
-        class="hidden"
-        @change="handleFileSelect"
-        accept="image/*,video/*"
-        multiple
-      />
+    <h1 class="mb-4 text-3xl font-bold text-center">{{ t("upload.title") }}</h1>
 
-      <svg
-        class="mx-auto mb-4 h-16 w-16 text-(--md-sys-color-primary)"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-        />
-      </svg>
-      <p class="mb-2 text-xl font-medium text-(--md-sys-color-on-surface)">
-        {{ t("upload.dragDrop") }}
-      </p>
-      <p class="text-sm text-(--md-sys-color-on-surface-variant)">
-        {{ t("upload.orSelect") }}
-      </p>
-    </div>
-    <div
-      v-else
-      class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 animate-fade-in-up"
-    >
-      <!-- Left Panel: File Grid -->
+    <div v-if="files.length === 0" class="flex flex-col lg:flex-row gap-4 lg:gap-0">
       <div
-        class="lg:w-1/2 flex flex-col min-h-125 lg:h-150 rounded-xl overflow-hidden border border-(--md-sys-color-outline-variant) relative transition-colors"
-        :class="[
-          isDragging
-            ? 'border-dashed border-(--md-sys-color-primary) bg-(--md-sys-color-primary)/5'
-            : '',
-        ]"
+        class="flex-1 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-(--md-sys-color-outline-variant) transition-colors min-h-60 lg:min-h-72 relative group p-8 cursor-pointer lg:rounded-r-none lg:border-r-0"
+        :class="[isDragging ? 'border-(--md-sys-color-primary)' : '']"
+        @dragenter.prevent="isDragging = true"
+        @dragleave.prevent="isDragging = false"
+        @dragover.prevent
+        @drop.prevent="handleDrop"
+        @click="triggerMainInput"
+      >
+        <input
+          type="file"
+          ref="fileInput"
+          class="hidden"
+          @change="handleFileSelect"
+          accept="image/*,video/*"
+          multiple
+        />
+        <CloudArrowUpIcon class="h-14 w-14 mb-3 text-(--md-sys-color-primary)" />
+        <p class="mb-1 text-lg font-medium text-(--md-sys-color-on-surface)">
+          {{ t("upload.dragDrop") }}
+        </p>
+        <p class="text-sm text-(--md-sys-color-on-surface-variant)">
+          {{ t("upload.orSelect") }}
+        </p>
+      </div>
+
+      <div
+        class="flex-1 p-6 rounded-xl border-2 border-dashed border-(--md-sys-color-outline-variant) lg:rounded-l-none"
+      >
+        <UrlSourcePanel
+          :server-mode-acknowledged="serverModeAcknowledged"
+          :loading="urlLoading"
+          @update:server-mode-acknowledged="(v) => (serverModeAcknowledged = v)"
+          @add="handleAddUrl"
+        />
+      </div>
+    </div>
+
+    <div v-else class="flex flex-col lg:flex-row gap-3 mb-4">
+      <div
+        class="flex-1 flex items-center gap-3 rounded-lg border border-(--md-sys-color-outline-variant) px-3 py-2 cursor-pointer transition-colors hover:border-(--md-sys-color-outline)"
+        :class="[isDragging ? 'border-(--md-sys-color-primary) ring-2 ring-(--md-sys-color-primary)/30' : '']"
+        @dragenter.prevent="isDragging = true"
+        @dragleave.prevent="isDragging = false"
+        @dragover.prevent
+        @drop.prevent="handleDrop"
+        @click="triggerMainInput"
+      >
+        <input
+          type="file"
+          ref="fileInput"
+          class="hidden"
+          @change="handleFileSelect"
+          accept="image/*,video/*"
+          multiple
+        />
+        <CloudArrowUpIcon class="h-5 w-5 shrink-0 text-(--md-sys-color-primary)" />
+        <p class="text-sm text-(--md-sys-color-on-surface-variant) truncate">
+          {{ t("upload.dragDrop") }} · {{ t("upload.orSelect") }}
+        </p>
+      </div>
+
+      <div class="flex-1">
+        <UrlSourcePanel
+          compact
+          :server-mode-acknowledged="serverModeAcknowledged"
+          :loading="urlLoading"
+          @update:server-mode-acknowledged="(v) => (serverModeAcknowledged = v)"
+          @add="handleAddUrl"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="files.length > 0"
+      class="flex flex-col lg:flex-row flex-1 min-h-0 animate-fade-in-up"
+    >
+      <div
+        class="lg:w-1/2 flex flex-col min-h-125 lg:h-150 relative transition-colors"
+        :class="[isDragging ? 'ring-2 ring-inset ring-(--md-sys-color-primary)' : '']"
         @dragenter.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @dragover.prevent
@@ -67,19 +98,19 @@
         </div>
 
         <div
-          class="p-4 border-b border-(--md-sys-color-outline-variant) flex justify-between items-center"
+          class="px-2 py-3 border-b border-(--md-sys-color-outline-variant) flex justify-between items-center"
         >
-          <span class="font-medium"
+          <span class="font-medium text-sm"
             >{{ files.length }} {{ t("common.labels.files") }} ({{
               formatFileSize(totalSize)
             }})</span
           >
-          <AnzuButton variant="text" @click="clearAll">{{
+          <AnzuButton variant="text" size="sm" @click="clearAll">{{
             t("common.actions.clear")
           }}</AnzuButton>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4">
+        <div class="flex-1 overflow-y-auto py-3 pr-2">
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
             <FileGridItem
               v-for="(item, index) in files"
@@ -88,9 +119,12 @@
               :index="index"
               :is-selected="selectedIndex === index"
               @select="selectFile"
+              @copy="copySingleLink"
+              @retry="retryItem"
+              @remove="removeItem"
             />
             <div
-              class="relative aspect-square rounded-lg border-2 border-dashed border-(--md-sys-color-outline-variant) flex items-center justify-center cursor-pointer hover:bg-(--md-sys-color-surface-container) hover:border-(--md-sys-color-primary) transition-colors"
+              class="relative aspect-square rounded-lg border-2 border-dashed border-(--md-sys-color-outline-variant) flex items-center justify-center cursor-pointer hover:border-(--md-sys-color-primary) transition-colors"
               @click="triggerAddInput"
             >
               <input
@@ -101,25 +135,14 @@
                 accept="image/*,video/*"
                 multiple
               />
-              <svg
-                class="w-8 h-8 text-(--md-sys-color-on-surface-variant)"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
+              <PlusIcon class="w-8 h-8 text-(--md-sys-color-on-surface-variant)" />
             </div>
           </div>
         </div>
       </div>
+
       <div
-        class="lg:w-1/2 flex flex-col h-auto lg:h-150 rounded-xl border border-(--md-sys-color-outline-variant) overflow-hidden"
+        class="lg:w-1/2 flex flex-col h-auto lg:h-150 lg:border-l border-t lg:border-t-0 border-(--md-sys-color-outline-variant)"
       >
         <FileEditor
           :selected-file="selectedFile"
@@ -133,7 +156,13 @@
           :uploading="uploading"
           :has-files="files.length > 0"
           :total-files="files.length"
+          :success-count="successCount"
+          :failed-count="failedCount"
+          :all-done="allDone"
           @upload="startUpload"
+          @clear="clearAll"
+          @copy-all="copyAllSuccessLinks"
+          @retry-current="retryCurrent"
         />
       </div>
     </div>
@@ -142,6 +171,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from "vue";
+import { CloudArrowUpIcon, PlusIcon } from "@heroicons/vue/24/outline";
 import { useAuth } from "~/composables/useAuth";
 import { formatFileSize } from "~/utils/format";
 import AnzuButton from "~/components/AnzuButton.vue";
@@ -149,9 +179,14 @@ import { useNotification } from "~/composables/useNotification";
 import { NotificationType } from "~/types/notification";
 import { parseApiError } from "~/utils/api-error";
 import type { TagListResponse } from "~/types/image";
-import type { UploadFileItem, UploadResultItem } from "~/types/upload";
+import type {
+  UploadFileItem,
+  UploadResultItem,
+  UrlSourceMetadata,
+} from "~/types/upload";
 import FileGridItem from "~/components/upload/FileGridItem.vue";
 import FileEditor from "~/components/upload/FileEditor.vue";
+import UrlSourcePanel from "~/components/upload/UrlSourcePanel.vue";
 
 const { t } = useI18n();
 useAuth();
@@ -160,10 +195,13 @@ const { apiUrl } = useApi();
 
 const isDragging = ref(false);
 const uploading = ref(false);
+const urlLoading = ref(false);
 const files = ref<UploadFileItem[]>([]);
 const selectedIndex = ref<number>(0);
 const fileInput = ref<HTMLInputElement | null>(null);
 const addInput = ref<HTMLInputElement | null>(null);
+
+const serverModeAcknowledged = ref(false);
 
 const enableConvert = ref(false);
 const targetFormat = ref("webp");
@@ -180,13 +218,25 @@ const selectedFile = computed(() => {
 });
 
 const totalSize = computed(() => {
-  return files.value.reduce((acc, item) => acc + item.file.size, 0);
+  return files.value.reduce((acc, item) => acc + item.displaySize, 0);
 });
 
 const isVideoFile = (file: File) => file.type.startsWith("video/");
 
 const hasVideoFile = computed(() =>
-  files.value.some((item) => isVideoFile(item.file))
+  files.value.some((item) => item.file !== null && isVideoFile(item.file)),
+);
+
+const successCount = computed(
+  () => files.value.filter((f) => f.status === "success").length,
+);
+const failedCount = computed(
+  () => files.value.filter((f) => f.status === "error").length,
+);
+const allDone = computed(
+  () =>
+    files.value.length > 0 &&
+    files.value.every((f) => f.status !== "pending"),
 );
 
 watch(hasVideoFile, (value) => {
@@ -196,7 +246,9 @@ watch(hasVideoFile, (value) => {
 });
 
 onUnmounted(() => {
-  files.value.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+  files.value.forEach((item) => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  });
 });
 
 const triggerMainInput = () => {
@@ -207,9 +259,11 @@ const triggerAddInput = () => {
   addInput.value?.click();
 };
 
-const processFiles = (newFiles: FileList | null) => {
+const processFiles = (newFiles: FileList | File[] | null) => {
   if (!newFiles) return;
-  const newItems = Array.from(newFiles).map((file) => ({
+  const arr = Array.isArray(newFiles) ? newFiles : Array.from(newFiles);
+  if (arr.length === 0) return;
+  const newItems: UploadFileItem[] = arr.map((file) => ({
     file,
     previewUrl: URL.createObjectURL(file),
     description: "",
@@ -217,6 +271,10 @@ const processFiles = (newFiles: FileList | null) => {
     routes: [],
     customName: "",
     status: "pending" as const,
+    source: "file",
+    displayName: file.name,
+    displaySize: file.size,
+    displayMime: file.type,
   }));
 
   const startIndex = files.value.length;
@@ -248,46 +306,156 @@ const selectFile = (index: number) => {
 };
 
 const clearAll = () => {
-  files.value.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+  files.value.forEach((item) => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  });
   files.value = [];
   selectedIndex.value = 0;
 };
 
-const startUpload = async () => {
-  if (files.value.length === 0) return;
+const removeItem = (index: number) => {
+  if (uploading.value) return;
+  const target = files.value[index];
+  if (!target) return;
+  if (target.previewUrl) URL.revokeObjectURL(target.previewUrl);
+  files.value = files.value.filter((_, i) => i !== index);
+  if (files.value.length === 0) {
+    selectedIndex.value = 0;
+    return;
+  }
+  if (selectedIndex.value >= files.value.length) {
+    selectedIndex.value = files.value.length - 1;
+  } else if (selectedIndex.value > index) {
+    selectedIndex.value = selectedIndex.value - 1;
+  }
+};
+
+const urlBasename = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    if (segments.length > 0) {
+      const last = segments[segments.length - 1];
+      try {
+        return decodeURIComponent(last);
+      } catch {
+        return last;
+      }
+    }
+    return parsed.host;
+  } catch {
+    return url;
+  }
+};
+
+const handleAddUrl = async (url: string, mode: "browser" | "server") => {
+  if (mode === "browser") {
+    await addBrowserUrl(url);
+  } else {
+    addServerUrl(url);
+  }
+};
+
+const addBrowserUrl = async (url: string) => {
+  urlLoading.value = true;
+  try {
+    const resp = await fetch(url, { mode: "cors" });
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    const blob = await resp.blob();
+    const name = urlBasename(url) || "remote-file";
+    const file = new File([blob], name, {
+      type: blob.type || "application/octet-stream",
+    });
+    processFiles([file]);
+  } catch {
+    notify({
+      message: t("upload.url.fetchFailed"),
+      type: NotificationType.ERROR,
+    });
+  } finally {
+    urlLoading.value = false;
+  }
+};
+
+const addServerUrl = (url: string) => {
+  const item: UploadFileItem = {
+    file: null,
+    previewUrl: "",
+    description: "",
+    tags: [],
+    routes: [],
+    customName: "",
+    status: "pending",
+    source: "url-server",
+    sourceUrl: url,
+    displayName: urlBasename(url) || url,
+    displaySize: 0,
+    displayMime: "",
+  };
+  const startIndex = files.value.length;
+  files.value = [...files.value, item];
+  if (startIndex === 0) {
+    selectedIndex.value = 0;
+  }
+};
+
+const resetItemStatus = (item: UploadFileItem) => {
+  item.status = "pending";
+  item.error = undefined;
+  item.resultUrl = undefined;
+};
+
+const uploadItems = async (indices: number[]) => {
+  if (indices.length === 0) return;
+  const targets = indices
+    .map((i) => ({ index: i, item: files.value[i] }))
+    .filter((entry): entry is { index: number; item: UploadFileItem } => !!entry.item);
+  if (targets.length === 0) return;
 
   uploading.value = true;
+  targets.forEach(({ item }) => resetItemStatus(item));
 
-  // Reset
-  files.value.forEach((f) => {
-    f.status = "pending";
-    f.error = undefined;
-    f.resultUrl = undefined;
-  });
+  const localTargets = targets.filter(({ item }) => item.file !== null);
+  const urlTargets = targets.filter(({ item }) => item.source === "url-server");
 
   const formData = new FormData();
-  // Append all
-  files.value.forEach((item) => {
-    formData.append("file", item.file);
-  });
-
-  // Append metadata
-  const metadata = files.value.map((f, index) => ({
+  const fileMetadata = localTargets.map(({ index, item }) => ({
     client_index: index,
-    description: f.description,
-    tags: f.tags,
-    routes: f.routes,
-    custom_name: f.customName,
+    description: item.description,
+    tags: item.tags,
+    routes: item.routes,
+    custom_name: item.customName,
   }));
-  formData.append("metadata", JSON.stringify(metadata));
 
-  // Global settings
+  localTargets.forEach(({ item }) => {
+    formData.append("file", item.file as File);
+  });
+  if (fileMetadata.length > 0) {
+    formData.append("metadata", JSON.stringify(fileMetadata));
+  }
+
+  if (urlTargets.length > 0) {
+    const urlSources: UrlSourceMetadata[] = urlTargets.map(({ index, item }) => ({
+      url: item.sourceUrl as string,
+      client_index: index,
+      description: item.description,
+      tags: item.tags,
+      routes: item.routes,
+      custom_name: item.customName,
+    }));
+    formData.append("url_sources", JSON.stringify(urlSources));
+  }
+
   if (enableConvert.value && !hasVideoFile.value) {
     formData.append("convert", "true");
     formData.append("target_format", targetFormat.value);
     if (quality.value) formData.append("quality", quality.value);
     if (effort.value) formData.append("effort", effort.value);
   }
+
+  const targetIndexSet = new Set(targets.map((t) => t.index));
 
   try {
     const data = await $fetch<UploadResultItem[]>(apiUrl("/api/v1/images"), {
@@ -296,18 +464,22 @@ const startUpload = async () => {
     });
 
     if (Array.isArray(data)) {
-      let successCount = 0;
+      let successResultCount = 0;
       const claimed = new Set<number>();
+      const remaining = targets.map((t) => t.index);
       let fallbackCursor = 0;
 
       const claimFallbackIndex = (): number => {
         while (
-          fallbackCursor < files.value.length &&
-          claimed.has(fallbackCursor)
+          fallbackCursor < remaining.length &&
+          claimed.has(remaining[fallbackCursor] ?? -1)
         ) {
           fallbackCursor++;
         }
-        return fallbackCursor < files.value.length ? fallbackCursor++ : -1;
+        const next = remaining[fallbackCursor];
+        if (next === undefined) return -1;
+        fallbackCursor++;
+        return next;
       };
 
       data.forEach((res) => {
@@ -317,6 +489,7 @@ const startUpload = async () => {
           Number.isInteger(res.client_index) &&
           res.client_index >= 0 &&
           res.client_index < files.value.length &&
+          targetIndexSet.has(res.client_index) &&
           !claimed.has(res.client_index)
         ) {
           targetIndex = res.client_index;
@@ -337,33 +510,34 @@ const startUpload = async () => {
           try {
             targetItem.resultUrl = new URL(
               rawUrl,
-              window.location.origin
+              window.location.origin,
             ).toString();
           } catch {
             targetItem.resultUrl = rawUrl || `${window.location.origin}/`;
           }
-          successCount++;
+          successResultCount++;
         } else {
           targetItem.status = "error";
           targetItem.error = res.message || "Unknown error";
         }
       });
 
-      files.value.forEach((f, index) => {
-        if (!claimed.has(index) && f.status === "pending") {
-          f.status = "error";
-          f.error = "Upload failed";
+      targets.forEach(({ index }) => {
+        const item = files.value[index];
+        if (item && !claimed.has(index) && item.status === "pending") {
+          item.status = "error";
+          item.error = "Upload failed";
         }
       });
 
-      if (successCount === files.value.length) {
+      if (successResultCount === targets.length) {
         notify({
           message: t("upload.success"),
           type: NotificationType.SUCCESS,
         });
       } else {
         notify({
-          message: `Uploaded with ${files.value.length - successCount} errors`,
+          message: `Uploaded with ${targets.length - successResultCount} errors`,
           type: NotificationType.WARNING,
         });
       }
@@ -374,8 +548,69 @@ const startUpload = async () => {
       message: parsed.displayMessage,
       type: NotificationType.ERROR,
     });
+    targets.forEach(({ item }) => {
+      if (item.status === "pending") {
+        item.status = "error";
+        item.error = parsed.displayMessage;
+      }
+    });
   } finally {
     uploading.value = false;
+  }
+};
+
+const startUpload = () => uploadItems(files.value.map((_, i) => i));
+
+const retryItem = (index: number) => {
+  if (uploading.value) return;
+  uploadItems([index]);
+};
+
+const retryCurrent = () => {
+  if (uploading.value) return;
+  if (selectedIndex.value < 0 || selectedIndex.value >= files.value.length) return;
+  uploadItems([selectedIndex.value]);
+};
+
+const copySingleLink = async (index: number) => {
+  const url = files.value[index]?.resultUrl;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    notify({
+      message: t("common.actions.copySuccess"),
+      type: NotificationType.SUCCESS,
+    });
+  } catch {
+    notify({
+      message: url,
+      type: NotificationType.INFO,
+    });
+  }
+};
+
+const copyAllSuccessLinks = async () => {
+  const urls = files.value
+    .filter((f) => f.status === "success" && f.resultUrl)
+    .map((f) => f.resultUrl as string);
+  if (urls.length === 0) {
+    notify({
+      message: t("upload.summary.copyAllEmpty"),
+      type: NotificationType.INFO,
+    });
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(urls.join("\n"));
+    notify({
+      message: t("upload.summary.copyAllDone", { count: urls.length }),
+      type: NotificationType.SUCCESS,
+    });
+  } catch {
+    notify({
+      message: urls.join("\n"),
+      type: NotificationType.INFO,
+    });
   }
 };
 </script>

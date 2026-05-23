@@ -13,6 +13,7 @@
       "cancel": "キャンセル",
       "confirm": "確認",
       "delete": "削除",
+      "remove": "取り除く",
       "login": "ログイン",
       "logout": "ログアウト",
       "download": "ダウンロード",
@@ -124,7 +125,47 @@
     "submit": "アップロード開始",
     "routeUniqueWarning": "一意のルートエイリアス（オプション）",
     "videoConvertDisabled": "動画ファイルは形式変換をサポートしていません",
-    "applyToAll": "上記のタグを全てのファイルに適用"
+    "applyToAll": "上記のタグを全てのファイルに適用",
+    "actions": {
+      "retry": "再試行",
+      "removeItem": "この項目を削除",
+      "addUrl": "URL を追加"
+    },
+    "tabs": {
+      "file": "ファイル",
+      "url": "URL"
+    },
+    "url": {
+      "placeholder": "https://example.com/image.jpg",
+      "compactPlaceholder": "リンクを貼り付け...",
+      "modeBrowser": "ブラウザで取得",
+      "modeServer": "サーバーで取得",
+      "modeBrowserHint": "ブラウザが URL をダウンロードし、他のファイルと一緒にアップロードします",
+      "modeServerHint": "本サーバーが URL を取得します。信頼できるソースのみ使用してください",
+      "add": "URL を追加",
+      "invalid": "有効な http(s) URL を入力してください",
+      "fetchFailed": "ブラウザで取得に失敗しました。サーバー取得を試すか、手動でダウンロードしてアップロードしてください",
+      "loading": "読み込み中...",
+      "serverItemHint": "サーバー取得",
+      "riskTitle": "サーバー側 URL 取得のリスク",
+      "riskBody": "サーバー取得を選択すると、本サーバーが入力された URL に能動的にアクセスします。リモート側は本サーバーの IP を確認でき、帯域も消費されます。信頼できるソースのみご利用ください。",
+      "riskAck": "理解しました、続行",
+      "riskCancel": "キャンセル"
+    },
+    "summary": {
+      "label": "本回アップロード",
+      "success": "{count} 成功",
+      "failed": "{count} 失敗",
+      "copyAll": "成功したリンクを全てコピー",
+      "copyAllDone": "{count} 件のリンクをコピーしました",
+      "copyAllEmpty": "コピーできるリンクがありません"
+    },
+    "result": {
+      "linkLabel": "公開 URL",
+      "openLink": "リンクを開く",
+      "startOver": "クリアしてやり直す",
+      "failed": "アップロード失敗"
+    }
   },
   "gallery": {
     "title": "ギャラリー",

@@ -13,6 +13,7 @@
       "cancel": "Cancel",
       "confirm": "Confirm",
       "delete": "Delete",
+      "remove": "Remove",
       "login": "Login",
       "logout": "Logout",
       "download": "Download",
@@ -141,7 +142,47 @@
     "submit": "Start upload",
     "routeUniqueWarning": "Unique route alias (optional)",
     "videoConvertDisabled": "Video files do not support format conversion.",
-    "applyToAll": "Apply above tags to all files"
+    "applyToAll": "Apply above tags to all files",
+    "actions": {
+      "retry": "Retry",
+      "removeItem": "Remove this item",
+      "addUrl": "Add link"
+    },
+    "tabs": {
+      "file": "File",
+      "url": "URL"
+    },
+    "url": {
+      "placeholder": "https://example.com/image.jpg",
+      "compactPlaceholder": "Paste link...",
+      "modeBrowser": "Fetch in browser",
+      "modeServer": "Fetch on server",
+      "modeBrowserHint": "Your browser downloads the link and uploads it together with other files",
+      "modeServerHint": "This server downloads the link. Use only with trusted sources",
+      "add": "Add URL",
+      "invalid": "Please enter a valid http(s) URL",
+      "fetchFailed": "Browser failed to fetch the URL. Try server mode, or download and upload manually",
+      "loading": "Loading...",
+      "serverItemHint": "Server fetch",
+      "riskTitle": "Risk of server-side URL fetching",
+      "riskBody": "When server fetch is selected, this server will actively access the URL you entered. The target host will see this server's IP, and the server consumes bandwidth. Use only with trusted sources.",
+      "riskAck": "I understand, continue",
+      "riskCancel": "Cancel"
+    },
+    "summary": {
+      "label": "This upload",
+      "success": "{count} succeeded",
+      "failed": "{count} failed",
+      "copyAll": "Copy all links",
+      "copyAllDone": "{count} link(s) copied",
+      "copyAllEmpty": "No links to copy"
+    },
+    "result": {
+      "linkLabel": "Public URL",
+      "openLink": "Open link",
+      "startOver": "Clear & restart",
+      "failed": "Upload failed"
+    }
   },
   "gallery": {
     "title": "Gallery",
@@ -307,7 +348,8 @@
         "password_policy": "Password policy",
         "network": "Network & access",
         "logs": "Logs",
-        "stepup": "Step-up"
+        "stepup": "Step-up",
+        "url_fetch": "URL fetching"
       },
       "fields": {
         "MAX_UPLOAD_MB": {
@@ -408,6 +450,18 @@
         },
         "STEP_UP_MAX_AGE_SEC": {
           "label": "Step-up validity (sec)"
+        },
+        "URL_FETCH_TIMEOUT_SEC": {
+          "label": "URL fetch timeout (sec)",
+          "hint": "Total timeout for server-side URL pulls"
+        },
+        "URL_FETCH_MAX_MB": {
+          "label": "URL fetch max size (MB)",
+          "hint": "Abort downloads larger than this"
+        },
+        "URL_FETCH_ALLOW_PRIVATE": {
+          "label": "Allow private targets",
+          "hint": "Enable to let the server fetch private/loopback IPs. Use only with fully trusted internal networks; carries SSRF risk otherwise"
         }
       }
     }

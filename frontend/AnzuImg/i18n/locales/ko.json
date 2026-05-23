@@ -13,6 +13,7 @@
       "cancel": "취소",
       "confirm": "확인",
       "delete": "삭제",
+      "remove": "제거",
       "login": "로그인",
       "logout": "로그아웃",
       "download": "다운로드",
@@ -125,7 +126,47 @@
     "submit": "업로드 시작",
     "routeUniqueWarning": "고유 경로 별칭 (선택 사항)",
     "videoConvertDisabled": "동영상 파일은 형식 변환을 지원하지 않습니다",
-    "applyToAll": "위 태그를 모든 파일에 적용"
+    "applyToAll": "위 태그를 모든 파일에 적용",
+    "actions": {
+      "retry": "재시도",
+      "removeItem": "이 항목 제거",
+      "addUrl": "URL 추가"
+    },
+    "tabs": {
+      "file": "파일",
+      "url": "URL"
+    },
+    "url": {
+      "placeholder": "https://example.com/image.jpg",
+      "compactPlaceholder": "링크 붙여넣기...",
+      "modeBrowser": "브라우저에서 가져오기",
+      "modeServer": "서버에서 가져오기",
+      "modeBrowserHint": "브라우저가 URL을 다운로드하여 다른 파일과 함께 업로드합니다",
+      "modeServerHint": "서버가 URL을 가져옵니다. 신뢰할 수 있는 출처에만 사용하세요",
+      "add": "URL 추가",
+      "invalid": "유효한 http(s) URL을 입력하세요",
+      "fetchFailed": "브라우저에서 가져오지 못했습니다. 서버 모드를 시도하거나 다운로드 후 업로드하세요",
+      "loading": "로딩 중...",
+      "serverItemHint": "서버 가져오기",
+      "riskTitle": "서버 측 URL 가져오기 위험",
+      "riskBody": "서버 가져오기를 선택하면, 본 서버가 입력한 URL에 능동적으로 접근합니다. 대상 측은 본 서버의 IP를 보게 되고, 서버의 대역폭을 소비합니다. 신뢰할 수 있는 출처에만 사용하세요.",
+      "riskAck": "이해함, 계속",
+      "riskCancel": "취소"
+    },
+    "summary": {
+      "label": "이번 업로드",
+      "success": "{count} 성공",
+      "failed": "{count} 실패",
+      "copyAll": "성공한 링크 모두 복사",
+      "copyAllDone": "{count} 개의 링크가 복사되었습니다",
+      "copyAllEmpty": "복사할 링크가 없습니다"
+    },
+    "result": {
+      "linkLabel": "공개 URL",
+      "openLink": "링크 열기",
+      "startOver": "비우고 다시 시작",
+      "failed": "업로드 실패"
+    }
   },
   "gallery": {
     "title": "갤러리",
