@@ -4,37 +4,42 @@
             {{ t("auth.stepUp.description") }}
         </p>
 
-        <AnzuTabs v-if="hasMultipleMethods" v-model="activeMethod" :tabs="methodTabs">
-            <template #tab-content-0>
-                <PasswordForm
-                    :running="running"
-                    :error="error"
-                    @submit="onPasswordSubmit"
-                />
-            </template>
-            <template #tab-content-1>
-                <PasskeyForm
-                    :running="running"
-                    :error="error"
-                    @submit="onPasskeySubmit"
-                />
-            </template>
-        </AnzuTabs>
+        <form v-if="hasPassword" @submit.prevent="onPasswordSubmit" class="flex flex-col gap-3">
+            <AnzuInput
+                v-model="password"
+                type="password"
+                :label="t('auth.stepUp.passwordLabel')"
+                :placeholder="t('auth.stepUp.passwordPlaceholder')"
+                name="stepup-password"
+                autocomplete="current-password"
+            />
+            <p v-if="error" class="text-xs text-(--md-sys-color-error)">{{ error }}</p>
+            <div class="flex items-center gap-3">
+                <AnzuButton type="submit" :status="running ? 'loading' : 'default'" :disabled="running || !password">
+                    {{ t("auth.stepUp.confirm") }}
+                </AnzuButton>
+                <AnzuButton
+                    v-if="hasPasskey"
+                    variant="text"
+                    :disabled="running"
+                    @click="onPasskeySubmit"
+                >
+                    {{ t("auth.stepUp.usePasskey") }}
+                </AnzuButton>
+            </div>
+        </form>
 
-        <PasswordForm
-            v-else-if="onlyPassword"
-            :running="running"
-            :error="error"
-            @submit="onPasswordSubmit"
-        />
-        <PasskeyForm
-            v-else-if="onlyPasskey"
-            :running="running"
-            :error="error"
-            @submit="onPasskeySubmit"
-        />
+        <div v-else-if="hasPasskey" class="flex flex-col gap-3">
+            <p class="text-xs text-(--md-sys-color-on-surface-variant)">
+                {{ t("auth.stepUp.passkeyHint") }}
+            </p>
+            <p v-if="error" class="text-xs text-(--md-sys-color-error)">{{ error }}</p>
+            <AnzuButton :status="running ? 'loading' : 'default'" :disabled="running" @click="onPasskeySubmit">
+                {{ t("auth.stepUp.usePasskey") }}
+            </AnzuButton>
+        </div>
 
-        <div class="flex justify-end gap-2 pt-2">
+        <div class="flex justify-end pt-2">
             <AnzuButton variant="text" :disabled="running" @click="cancel">
                 {{ t("common.actions.cancel") }}
             </AnzuButton>
@@ -43,8 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, defineComponent } from "vue";
-import AnzuTabs from "~/components/AnzuTabs.vue";
+import { ref, computed } from "vue";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 
@@ -64,25 +68,16 @@ const emit = defineEmits<{
 
 const running = ref(false);
 const error = ref("");
-const activeMethod = ref<string | number>(props.available[0] ?? "password");
+const password = ref("");
 
-const hasMultipleMethods = computed(() => props.available.length > 1);
-const onlyPassword = computed(
-    () => props.available.length === 1 && props.available[0] === "password",
-);
-const onlyPasskey = computed(
-    () => props.available.length === 1 && props.available[0] === "passkey",
-);
-const methodTabs = computed(() => [
-    { label: t("auth.stepUp.byPassword"), value: "password" },
-    { label: t("auth.stepUp.byPasskey"), value: "passkey" },
-]);
+const hasPassword = computed(() => props.available.includes("password"));
+const hasPasskey = computed(() => props.available.includes("passkey"));
 
-const onPasswordSubmit = async (password: string) => {
-    if (running.value) return;
+const onPasswordSubmit = async () => {
+    if (running.value || !password.value) return;
     running.value = true;
     error.value = "";
-    const ok = await props.runPassword(password);
+    const ok = await props.runPassword(password.value);
     running.value = false;
     if (ok) {
         props.onResult?.(true);
@@ -110,89 +105,4 @@ const cancel = () => {
     props.onResult?.(false);
     emit("close");
 };
-
-const PasswordForm = defineComponent({
-    components: { AnzuInput, AnzuButton },
-    props: {
-        running: Boolean,
-        error: String,
-    },
-    emits: ["submit"],
-    setup(p, { emit }) {
-        const password = ref("");
-        const submit = () => {
-            if (!password.value) return;
-            emit("submit", password.value);
-        };
-        return () =>
-            h("form", {
-                onSubmit: (e: Event) => {
-                    e.preventDefault();
-                    submit();
-                },
-                class: "flex flex-col gap-3",
-            }, [
-                h(AnzuInput, {
-                    type: "password",
-                    label: t("auth.stepUp.passwordLabel"),
-                    placeholder: t("auth.stepUp.passwordPlaceholder"),
-                    modelValue: password.value,
-                    "onUpdate:modelValue": (v: string) => (password.value = v),
-                    name: "stepup-password",
-                    autocomplete: "current-password",
-                }),
-                p.error
-                    ? h(
-                          "p",
-                          { class: "text-xs text-(--md-sys-color-error)" },
-                          p.error,
-                      )
-                    : null,
-                h(
-                    AnzuButton,
-                    {
-                        type: "submit",
-                        status: p.running ? "loading" : "default",
-                        disabled: p.running || !password.value,
-                    },
-                    () => t("auth.stepUp.confirm"),
-                ),
-            ]);
-    },
-});
-
-const PasskeyForm = defineComponent({
-    components: { AnzuButton },
-    props: {
-        running: Boolean,
-        error: String,
-    },
-    emits: ["submit"],
-    setup(p, { emit }) {
-        return () =>
-            h("div", { class: "flex flex-col gap-3 items-stretch" }, [
-                h(
-                    "p",
-                    { class: "text-xs text-(--md-sys-color-on-surface-variant)" },
-                    t("auth.stepUp.passkeyHint"),
-                ),
-                p.error
-                    ? h(
-                          "p",
-                          { class: "text-xs text-(--md-sys-color-error)" },
-                          p.error,
-                      )
-                    : null,
-                h(
-                    AnzuButton,
-                    {
-                        status: p.running ? "loading" : "default",
-                        disabled: p.running,
-                        onClick: () => emit("submit"),
-                    },
-                    () => t("auth.stepUp.usePasskey"),
-                ),
-            ]);
-    },
-});
 </script>

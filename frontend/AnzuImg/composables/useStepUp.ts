@@ -22,6 +22,7 @@ export interface StepUpHandle {
 export const useStepUp = (): StepUpHandle => {
     const { apiUrl } = useApi()
     const { custom } = useDialog()
+    const { t } = useI18n()
 
     const stepUpWithPassword = async (password: string): Promise<boolean> => {
         try {
@@ -81,7 +82,7 @@ export const useStepUp = (): StepUpHandle => {
                     onResult,
                 },
                 {
-                    title: 'auth.stepUp.title',
+                    title: t('auth.stepUp.title'),
                     closeOnClickOutside: false,
                     closeOnEsc: true,
                     persistent: true,

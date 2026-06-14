@@ -9,10 +9,10 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <!-- Total Images -->
         <div
-          class="rounded-xl border border-(--md-sys-color-outline-variant) p-4 flex items-center gap-4"
+          class="rounded-lg bg-black/5 dark:bg-white/5 p-4 flex items-center gap-4"
         >
           <div
-            class="rounded-full bg-(--md-sys-color-primary-container) p-3 text-(--md-sys-color-on-primary-container)"
+            class="rounded-full bg-black/5 p-3 text-(--md-sys-color-primary) dark:bg-white/10"
           >
             <PhotoIcon class="w-6 h-6" />
           </div>
@@ -28,10 +28,10 @@
 
         <!-- Total Size -->
         <div
-          class="rounded-xl border border-(--md-sys-color-outline-variant) p-4 flex items-center gap-4"
+          class="rounded-lg bg-black/5 dark:bg-white/5 p-4 flex items-center gap-4"
         >
           <div
-            class="rounded-full bg-(--md-sys-color-secondary-container) p-3 text-(--md-sys-color-on-secondary-container)"
+            class="rounded-full bg-black/5 p-3 text-(--md-sys-color-on-surface-variant) dark:bg-white/10"
           >
             <ServerStackIcon class="w-6 h-6" />
           </div>
@@ -47,10 +47,10 @@
 
         <!-- Security Events -->
         <div
-          class="rounded-xl border border-(--md-sys-color-outline-variant) p-4 flex items-center gap-4 sm:col-span-2"
+          class="rounded-lg bg-black/5 dark:bg-white/5 p-4 flex items-center gap-4 sm:col-span-2"
         >
           <div
-            class="rounded-full bg-(--md-sys-color-tertiary-container) p-3 text-(--md-sys-color-on-tertiary-container)"
+            class="rounded-full bg-black/5 p-3 text-(--md-sys-color-tertiary) dark:bg-white/10"
           >
             <ShieldCheckIcon class="w-6 h-6" />
           </div>
@@ -75,10 +75,10 @@
       <!-- 有风险 -->
       <div v-if="(stats?.login_failures_24h || 0) > 0" class="grid grid-cols-1 gap-4">
         <div
-          class="rounded-xl border border-(--md-sys-color-outline-variant) p-4 flex items-center gap-4"
+          class="rounded-lg bg-black/5 dark:bg-white/5 p-4 flex items-center gap-4"
         >
           <div
-            class="rounded-full bg-(--md-sys-color-error-container) p-3 text-(--md-sys-color-on-error-container)"
+            class="rounded-full bg-(--md-sys-color-error)/10 p-3 text-(--md-sys-color-error)"
           >
             <NoSymbolIcon class="w-6 h-6" />
           </div>
@@ -94,7 +94,7 @@
       </div>
 
       <!-- 无风险 -->
-      <div v-else class="rounded-xl border border-(--md-sys-color-outline-variant) p-8 text-center">
+      <div v-else class="rounded-lg bg-black/5 dark:bg-white/5 p-8 text-center">
          <p class="text-(--md-sys-color-on-surface-variant)">
             {{ t("dashboard.safeSystem") }}
          </p>

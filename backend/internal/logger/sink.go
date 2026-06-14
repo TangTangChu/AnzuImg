@@ -15,10 +15,12 @@ import (
 // Record 是单条日志的结构化形式，给 Sink 实现使用。
 // Logger.log 在 fan-out 给 Sink 之前会构造 Record。
 type Record struct {
-	Time    time.Time
-	Level   Level
-	Module  string
-	Message string
+	Time      time.Time
+	Level     Level
+	Module    string
+	Message   string
+	RequestID string
+	IPAddress string
 }
 
 // Sink 接受结构化日志记录并按自身策略输出。Sink 实现需要并发安全。
@@ -114,6 +116,16 @@ func LevelName(l Level) string {
 	return "unknown"
 }
 
+// NormalizeLevelName 把级别字符串规整为规范短名，
+// 主要把历史的 warning 统一为 warn，其余原样小写。
+func NormalizeLevelName(s string) string {
+	t := strings.ToLower(strings.TrimSpace(s))
+	if t == "warning" {
+		return "warn"
+	}
+	return t
+}
+
 // formatPlainLine 把 Record 渲染为不含 ANSI 颜色码的单行文本，
 // FileSink 与 DBSink 共用。
 func formatPlainLine(rec Record) string {
@@ -177,8 +189,8 @@ func NewFileSink(opts FileSinkOptions) (*FileSink, error) {
 	return &FileSink{name: name, min: opts.MinLevel, w: w}, nil
 }
 
-func (s *FileSink) Name() string     { return s.name }
-func (s *FileSink) MinLevel() Level  { return s.min }
+func (s *FileSink) Name() string    { return s.name }
+func (s *FileSink) MinLevel() Level { return s.min }
 func (s *FileSink) Write(rec Record) {
 	if rec.Level < s.min {
 		return
@@ -200,11 +212,11 @@ func (s *FileSink) Close() error {
 // 一个简易的"NopSink",仅用于测试或占位。
 type nopSink struct{ name string }
 
-func NewNopSink(name string) Sink             { return &nopSink{name: name} }
-func (n *nopSink) Name() string               { return n.name }
-func (n *nopSink) MinLevel() Level            { return LevelOff }
-func (n *nopSink) Write(rec Record)           {}
-func (n *nopSink) Close() error               { return nil }
+func NewNopSink(name string) Sink   { return &nopSink{name: name} }
+func (n *nopSink) Name() string     { return n.name }
+func (n *nopSink) MinLevel() Level  { return LevelOff }
+func (n *nopSink) Write(rec Record) {}
+func (n *nopSink) Close() error     { return nil }
 
 // 兼容性：暴露内部 stdout writer 工厂，供测试或自定义 logger 输出复用。
 func DefaultStdout() io.Writer { return os.Stdout }

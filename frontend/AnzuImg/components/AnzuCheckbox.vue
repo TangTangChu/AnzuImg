@@ -4,13 +4,13 @@
     :class="disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'"
   >
     <div
-      class="relative flex items-center justify-center w-5 h-5 rounded border transition-colors"
+      class="relative flex items-center justify-center w-5 h-5 rounded transition-colors"
       :class="[
         modelValue
-          ? 'bg-(--md-sys-color-primary) border-(--md-sys-color-primary)'
-          : 'bg-transparent border-(--md-sys-color-outline)',
+          ? 'bg-(--md-sys-color-primary)'
+          : 'bg-black/10 dark:bg-white/10',
         !disabled && !modelValue
-          ? 'group-hover:border-(--md-sys-color-primary)'
+          ? 'group-hover:bg-black/15 dark:group-hover:bg-white/15'
           : '',
       ]"
     >

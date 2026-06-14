@@ -156,7 +156,7 @@
                       </span>
                     </NuxtLink>
 
-                    <div class="mt-1 border-l border-(--md-sys-color-outline-variant)/50 pl-2">
+                    <div class="mt-1 pl-2">
                       <NuxtLink v-for="child in (
                         link as NavLinkWithChildren
                       ).children" :key="child.path" :to="child.path"
@@ -269,7 +269,7 @@
         enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-150 ease-in"
         leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
         <div v-show="isMenuOpen"
-          class="absolute top-full right-0 z-60 mt-2 max-h-[calc(100vh-5rem)] w-64 origin-top-right overflow-y-auto rounded-xl border border-(--md-sys-color-outline-variant)/50 bg-(--md-sys-color-surface-container) p-3 shadow-lg md:hidden">
+          class="absolute top-full right-0 z-60 mt-2 max-h-[calc(100vh-5rem)] w-64 origin-top-right overflow-y-auto rounded-xl bg-(--md-sys-color-surface-container) p-3 shadow-lg ring-1 ring-black/5 md:hidden">
           <template v-for="link in navLinks" :key="`mobile-${link.path}`">
             <div v-if="'children' in link" class="mb-1">
               <div class="mobile-nav-link flex w-full items-center justify-between rounded-lg p-2 transition-colors"
@@ -481,9 +481,7 @@ const headerStyles = computed(() => {
       }%, transparent)`,
     backdropFilter: bgEffect ? "blur(10px)" : "none",
     WebkitBackdropFilter: bgEffect ? "blur(10px)" : "none",
-    borderBottom: bgEffect
-      ? "1px solid color-mix(in srgb, var(--md-sys-color-outline-variant), transparent 80%)"
-      : "1px solid transparent",
+    borderBottom: "none",
     boxShadow: bgEffect
       ? "0 4px 16px color-mix(in srgb, var(--md-sys-color-shadow), transparent 94%)"
       : "none",

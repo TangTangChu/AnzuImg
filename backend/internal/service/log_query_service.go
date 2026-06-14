@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
@@ -38,6 +39,38 @@ func clampPage(page, size int) (int, int) {
 		size = 50
 	}
 	return page, size
+}
+
+var levelOrder = []string{"debug", "info", "warn", "error", "fatal"}
+
+// levelsAtOrAbove 把单选的级别解释为“该级别及以上”，与实时流的 matchFilter 语义一致，
+// 并带上历史别名 warning，兼容旧的安全日志数据。
+func levelsAtOrAbove(name string) []string {
+	target := logger.NormalizeLevelName(name)
+	idx := -1
+	for i, l := range levelOrder {
+		if l == target {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return []string{strings.ToLower(strings.TrimSpace(name))}
+	}
+	out := make([]string, 0, len(levelOrder)+1)
+	for _, l := range levelOrder[idx:] {
+		out = append(out, l)
+		if l == "warn" {
+			out = append(out, "warning")
+		}
+	}
+	return out
+}
+
+// escapeLike 转义 LIKE 通配符，避免用户输入的 % _ \ 被当作模式，
+// 既防止意外的全表通配，也避免前导通配导致的歧义。
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 func parseTimeBound(raw string, endOfDay bool) (time.Time, bool) {
@@ -75,7 +108,7 @@ func (s *LogQueryService) ListAppLogs(filter LogFilter, page, size int) ([]model
 	page, size = clampPage(page, size)
 	q := s.db.Model(&model.AppLog{})
 	if filter.Level != "" {
-		q = q.Where("level = ?", strings.ToLower(strings.TrimSpace(filter.Level)))
+		q = q.Where("level IN ?", levelsAtOrAbove(filter.Level))
 	}
 	if filter.Module != "" {
 		q = q.Where("module = ?", filter.Module)
@@ -84,7 +117,7 @@ func (s *LogQueryService) ListAppLogs(filter LogFilter, page, size int) ([]model
 		q = q.Where("ip_address = ?", filter.IPAddress)
 	}
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + escapeLike(filter.Search) + "%"
 		q = q.Where("message LIKE ? OR module LIKE ?", like, like)
 	}
 	q = applyTimeBounds(q, filter)
@@ -104,10 +137,10 @@ func (s *LogQueryService) ListSecurityLogs(filter LogFilter, page, size int, fai
 	page, size = clampPage(page, size)
 	q := s.db.Model(&model.SecurityEventLog{})
 	if failedOnly {
-		q = q.Where("level IN ?", []string{"warning", "error"})
+		q = q.Where("level IN ?", levelsAtOrAbove("warn"))
 	}
 	if filter.Level != "" {
-		q = q.Where("level = ?", strings.ToLower(strings.TrimSpace(filter.Level)))
+		q = q.Where("level IN ?", levelsAtOrAbove(filter.Level))
 	}
 	if filter.Action != "" {
 		q = q.Where("action = ?", filter.Action)
@@ -116,7 +149,7 @@ func (s *LogQueryService) ListSecurityLogs(filter LogFilter, page, size int, fai
 		q = q.Where("ip_address = ?", filter.IPAddress)
 	}
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + escapeLike(filter.Search) + "%"
 		q = q.Where("action LIKE ? OR message LIKE ? OR path LIKE ? OR ip_address LIKE ? OR username LIKE ?", like, like, like, like, like)
 	}
 	q = applyTimeBounds(q, filter)
@@ -158,7 +191,7 @@ func (s *LogQueryService) IterateAppLogs(filter LogFilter, hardLimit int, fn fun
 	}
 	q := s.db.Model(&model.AppLog{})
 	if filter.Level != "" {
-		q = q.Where("level = ?", strings.ToLower(strings.TrimSpace(filter.Level)))
+		q = q.Where("level IN ?", levelsAtOrAbove(filter.Level))
 	}
 	if filter.Module != "" {
 		q = q.Where("module = ?", filter.Module)
@@ -167,7 +200,7 @@ func (s *LogQueryService) IterateAppLogs(filter LogFilter, hardLimit int, fn fun
 		q = q.Where("ip_address = ?", filter.IPAddress)
 	}
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + escapeLike(filter.Search) + "%"
 		q = q.Where("message LIKE ? OR module LIKE ?", like, like)
 	}
 	q = applyTimeBounds(q, filter)
@@ -195,7 +228,7 @@ func (s *LogQueryService) IterateSecurityLogs(filter LogFilter, failedOnly bool,
 	}
 	q := s.db.Model(&model.SecurityEventLog{})
 	if failedOnly {
-		q = q.Where("level IN ?", []string{"warning", "error"})
+		q = q.Where("level IN ?", levelsAtOrAbove("warn"))
 	}
 	if filter.Action != "" {
 		q = q.Where("action = ?", filter.Action)
@@ -204,7 +237,7 @@ func (s *LogQueryService) IterateSecurityLogs(filter LogFilter, failedOnly bool,
 		q = q.Where("ip_address = ?", filter.IPAddress)
 	}
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + escapeLike(filter.Search) + "%"
 		q = q.Where("action LIKE ? OR message LIKE ? OR path LIKE ? OR ip_address LIKE ? OR username LIKE ?", like, like, like, like, like)
 	}
 	q = applyTimeBounds(q, filter)

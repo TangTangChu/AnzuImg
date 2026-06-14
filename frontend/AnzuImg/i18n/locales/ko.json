@@ -19,6 +19,8 @@
       "download": "다운로드",
       "close": "닫기",
       "copyLink": "링크 복사",
+      "copyUrl": "URL 복사",
+      "copyMarkdown": "Markdown 복사",
       "loading": "로딩 중...",
       "uploading": "업로드 중...",
       "deleteConfirm": "삭제하시겠습니까?",
@@ -86,7 +88,20 @@
     "safeSystem": "이상 없음"
   },
   "auth": {
-    "registerPasskey": "Passkey 등록"
+    "registerPasskey": "Passkey 등록",
+    "stepUp": {
+      "title": "재인증",
+      "description": "민감한 작업입니다. 비밀번호 또는 Passkey로 확인해 주세요.",
+      "byPassword": "비밀번호",
+      "byPasskey": "Passkey",
+      "passwordLabel": "비밀번호",
+      "passwordPlaceholder": "현재 비밀번호 입력",
+      "passwordFailed": "비밀번호가 올바르지 않습니다",
+      "passkeyHint": "아래 버튼을 클릭하여 등록된 Passkey로 확인하세요.",
+      "usePasskey": "Passkey로 확인",
+      "passkeyFailed": "Passkey 확인에 실패했습니다",
+      "confirm": "확인"
+    }
   },
   "meta": {
     "fullName": "AnzuIMG"
@@ -120,6 +135,7 @@
     "customFileName": "사용자 지정 파일 이름",
     "customFileNamePlaceholder": "예: my-image",
     "convert": "형식 변환",
+    "convertSection": "변환 설정",
     "targetFormat": "대상 형식",
     "quality": "품질 (1-100)",
     "effort": "압축 강도 (0-9)",

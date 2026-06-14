@@ -2,7 +2,7 @@
   <div class="flex-1 flex flex-col min-h-0 h-full">
     <div
       v-if="allDone && totalFiles > 0"
-      class="px-4 py-3 border-b border-(--md-sys-color-outline-variant) flex flex-wrap items-center gap-x-4 gap-y-2"
+      class="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2"
     >
       <span class="text-xs uppercase tracking-wide text-(--md-sys-color-on-surface-variant)">
         {{ t("upload.summary.label") }}
@@ -40,7 +40,7 @@
       class="p-4 flex gap-4 items-center"
     >
       <div
-        class="h-16 w-16 rounded overflow-hidden shrink-0 flex items-center justify-center border border-(--md-sys-color-outline-variant)"
+        class="h-16 w-16 rounded-lg overflow-hidden shrink-0 flex items-center justify-center bg-(--md-sys-color-surface-container-lowest)"
       >
         <template v-if="hasLocalMedia(selectedFile)">
           <img
@@ -71,7 +71,9 @@
           class="text-xs text-(--md-sys-color-on-surface-variant)"
         >
           {{ formatFileSize(selectedFile.displaySize) }} ·
-          {{ selectedFile.displayMime }}
+          {{ selectedFile.displayMime }}<template v-if="selectedFile.displayWidth && selectedFile.displayHeight">
+            · {{ selectedFile.displayWidth }}x{{ selectedFile.displayHeight }}
+          </template>
         </p>
         <p
           v-else
@@ -83,127 +85,135 @@
       </div>
     </div>
 
-    <div v-if="selectedFile" class="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
-      <AnzuInput
-        v-model="selectedFile.customName"
-        :label="t('upload.customFileName')"
-        :placeholder="t('upload.customFileNamePlaceholder')"
-      />
-
-      <AnzuInput
-        v-model="selectedFile.description"
-        :label="t('common.labels.description')"
-      />
-
-      <div class="flex items-center gap-2">
-        <AnzuComboBox
-          v-model="selectedTagOption"
-          :items="tagItems"
-          :placeholder="t('tags.selectPlaceholder')"
-          :aria-label="t('tags.selectLabel')"
-          @change="handleTagPick"
-        />
-        <AnzuButton
-          class="shrink-0 whitespace-nowrap"
-          variant="tonal"
-          :disabled="!selectedTagOption"
-          @click="addSelectedTag"
-        >
-          {{ t("tags.add") }}
-        </AnzuButton>
-      </div>
-
-      <AnzuTags
-        v-model="selectedFile.tags"
-        :label="t('common.labels.tags')"
-        :max-tags="10"
-      />
-
-      <AnzuCheckbox
-        v-if="files.length > 1"
-        v-model="applyToAll"
-        :label="t('upload.applyToAll')"
-      />
-
-      <AnzuTags
-        v-model="selectedFile.routes"
-        :label="t('upload.route')"
-        :max-tags="5"
-      />
-    </div>
-    <div
-      v-if="selectedFile?.status === 'success' && selectedFile.resultUrl"
-      class="px-6 pb-4 mt-2"
-    >
-      <p class="font-bold text-sm flex items-center gap-2 mb-2 text-(--md-sys-color-on-surface)">
-        <CheckCircleIcon class="w-4 h-4 text-green-600 dark:text-green-400" />
-        {{ t("upload.success") }}
-      </p>
-      <p class="text-xs mb-1 text-(--md-sys-color-on-surface-variant)">
-        {{ t("upload.result.linkLabel") }}
-      </p>
-      <div class="flex items-center gap-2">
-        <input
-          type="text"
-          :value="selectedFile.resultUrl"
-          readonly
-          ref="resultInputRef"
-          class="flex-1 min-w-0 rounded-md border border-(--md-sys-color-outline-variant) bg-transparent px-2 py-1.5 text-xs text-(--md-sys-color-on-surface) font-mono focus:outline-none focus:border-(--md-sys-color-primary)"
-          @focus="selectAllText"
-        />
-        <AnzuButton
-          variant="tonal"
-          class="shrink-0 h-9! w-9! p-0! min-w-0!"
-          :title="t('common.actions.copyLink')"
-          @click="copyCurrentLink"
-        >
-          <ClipboardIcon class="w-4 h-4" />
-        </AnzuButton>
-        <AnzuButton
-          variant="text"
-          class="shrink-0 h-9! w-9! p-0! min-w-0!"
-          :title="t('upload.result.openLink')"
-          :href="selectedFile.resultUrl"
-          target="_blank"
-        >
-          <ArrowTopRightOnSquareIcon class="w-4 h-4" />
-        </AnzuButton>
-      </div>
-    </div>
-    <div
-      v-else-if="selectedFile?.status === 'error'"
-      class="px-6 pb-4 mt-2"
-    >
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <p class="font-bold text-sm flex items-center gap-2 text-(--md-sys-color-on-surface)">
-            <XCircleIcon class="w-4 h-4 text-(--md-sys-color-error)" />
-            {{ t("upload.result.failed") }}
-          </p>
-          <p class="text-xs mt-1 text-(--md-sys-color-on-surface-variant) break-words">{{ selectedFile.error }}</p>
+    <template v-if="selectedFile">
+      <div
+        v-if="selectedFile.status === 'success' && selectedFile.resultUrl"
+        class="px-6 pb-4 space-y-2"
+      >
+        <div class="flex items-center gap-2">
+          <CheckCircleIcon class="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
+          <span class="text-sm font-bold text-(--md-sys-color-on-surface)">{{ t("upload.success") }}</span>
+          <span class="text-xs text-(--md-sys-color-on-surface-variant)">{{ t("upload.result.linkLabel") }}</span>
         </div>
-        <AnzuButton
-          variant="tonal"
-          size="sm"
-          class="shrink-0"
-          :disabled="uploading"
-          @click="$emit('retry-current')"
-        >
-          <template #icon>
-            <ArrowPathIcon class="w-4 h-4" />
-          </template>
-          {{ t("upload.actions.retry") }}
-        </AnzuButton>
+        <div class="flex items-center gap-2">
+          <AnzuInput
+            :model-value="selectedFile.resultUrl"
+            readonly
+            class="flex-1 min-w-0 font-mono"
+            @focus="selectAllText"
+          />
+          <AnzuSplitButton
+            variant="tonal"
+            class="shrink-0"
+            @click="copyCurrentLink('url')"
+          >
+            <template #icon>
+              <ClipboardIcon class="w-4 h-4" />
+            </template>
+            <template #menu="{ close }">
+              <AnzuButton variant="text" size="sm" class="w-full justify-start" @click="copyCurrentLink('url'); close()">
+                {{ t("common.actions.copyUrl") }}
+              </AnzuButton>
+              <AnzuButton variant="text" size="sm" class="w-full justify-start" @click="copyCurrentLink('markdown'); close()">
+                {{ t("common.actions.copyMarkdown") }}
+              </AnzuButton>
+            </template>
+          </AnzuSplitButton>
+          <AnzuButton
+            variant="text"
+            class="shrink-0"
+            :title="t('upload.result.openLink')"
+            :href="selectedFile.resultUrl"
+            target="_blank"
+          >
+            <template #icon>
+              <ArrowTopRightOnSquareIcon class="w-4 h-4" />
+            </template>
+          </AnzuButton>
+        </div>
       </div>
-    </div>
+
+      <div
+        v-else-if="selectedFile.status === 'error'"
+        class="px-6 pb-4"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="font-bold text-sm flex items-center gap-2 text-(--md-sys-color-on-surface)">
+              <XCircleIcon class="w-4 h-4 text-(--md-sys-color-error)" />
+              {{ t("upload.result.failed") }}
+            </p>
+            <p class="text-xs mt-1 text-(--md-sys-color-on-surface-variant) break-words">{{ selectedFile.error }}</p>
+          </div>
+          <AnzuButton
+            variant="tonal"
+            size="sm"
+            class="shrink-0"
+            :disabled="uploading"
+            @click="$emit('retry-current')"
+          >
+            <template #icon>
+              <ArrowPathIcon class="w-4 h-4" />
+            </template>
+            {{ t("upload.actions.retry") }}
+          </AnzuButton>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <AnzuInput
+            v-model="selectedFile.customName"
+            :label="t('upload.customFileName')"
+            :placeholder="t('upload.customFileNamePlaceholder')"
+            class="col-span-2"
+          />
+
+          <AnzuInput
+            v-model="selectedFile.description"
+            :label="t('common.labels.description')"
+          />
+
+          <AnzuComboBox
+            v-model="selectedTagOption"
+            :items="tagItems"
+            :placeholder="t('tags.selectPlaceholder')"
+            :aria-label="t('tags.selectLabel')"
+            @change="handleTagPick"
+          />
+
+          <AnzuTags
+            v-model="selectedFile.tags"
+            :label="t('common.labels.tags')"
+            :max-tags="10"
+          />
+
+          <AnzuTags
+            v-model="selectedFile.routes"
+            :label="t('upload.route')"
+            :max-tags="5"
+          />
+        </div>
+
+        <AnzuCheckbox
+          v-if="files.length > 1"
+          v-model="applyToAll"
+          :label="t('upload.applyToAll')"
+        />
+      </div>
+    </template>
+
     <div
       v-if="!selectedFile"
       class="flex-1 flex items-center justify-center text-(--md-sys-color-on-surface-variant)"
     >
       Select a media file to edit details
     </div>
-    <div class="p-4 border-t border-(--md-sys-color-outline-variant)">
+    <div class="p-4">
       <div class="mb-4">
+        <p class="mb-2 text-xs font-medium text-(--md-sys-color-on-surface-variant)">
+          {{ t("upload.convertSection") }}
+        </p>
         <div class="flex items-center gap-2 mb-2">
           <AnzuCheckbox
             :model-value="enableConvert"
@@ -285,6 +295,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import { formatFileSize } from "~/utils/format";
 import AnzuButton from "~/components/AnzuButton.vue";
+import AnzuSplitButton from "~/components/AnzuSplitButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
 import AnzuTags from "~/components/AnzuTags.vue";
 import AnzuCheckbox from "~/components/AnzuCheckbox.vue";
@@ -333,7 +344,7 @@ const formatOptions = [
 
 const selectedTagOption = ref<string | null>(null);
 const applyToAll = ref(false);
-const resultInputRef = ref<HTMLInputElement | null>(null);
+
 
 watch(
   () => props.selectedFile?.tags,
@@ -367,13 +378,10 @@ const tagItems = computed(() =>
 );
 
 const handleTagPick = (value: string | number | null) => {
-  selectedTagOption.value = value ? String(value) : null;
-};
-
-const addSelectedTag = () => {
-  if (!props.selectedFile || !selectedTagOption.value) return;
-  if (!props.selectedFile.tags.includes(selectedTagOption.value)) {
-    props.selectedFile.tags.push(selectedTagOption.value);
+  if (!value || !props.selectedFile) return;
+  const tag = String(value);
+  if (!props.selectedFile.tags.includes(tag)) {
+    props.selectedFile.tags.push(tag);
   }
   selectedTagOption.value = null;
 };
@@ -387,17 +395,19 @@ const selectAllText = (e: FocusEvent) => {
   target?.select();
 };
 
-const copyCurrentLink = async () => {
+const copyCurrentLink = async (format: "url" | "markdown" = "url") => {
   const url = props.selectedFile?.resultUrl;
   if (!url) return;
+  const name = props.selectedFile?.displayName || "image";
+  const text = format === "markdown" ? `![${name}](${url})` : url;
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(text);
     notify({
       message: t("common.actions.copySuccess"),
       type: NotificationType.SUCCESS,
     });
   } catch {
-    resultInputRef.value?.select();
+    // clipboard API unavailable
   }
 };
 </script>

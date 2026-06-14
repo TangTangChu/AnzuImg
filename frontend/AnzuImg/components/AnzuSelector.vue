@@ -4,11 +4,11 @@
             <button
                 type="button"
                 @click="handleChange(option.value)"
-                class="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-medium transition-[background-color,color] duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-(--md-sys-color-primary)/20"
+                class="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-medium transition-[background-color,color] duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-(--md-sys-color-on-surface)/15"
                 :class="[
                     modelValue === option.value
-                        ? 'bg-(--md-sys-color-primary) text-(--md-sys-color-on-primary)'
-                        : 'bg-(--md-sys-color-surface-container-low) text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container-high)',
+                        ? 'bg-(--md-sys-color-primary)/8 text-(--md-sys-color-primary)'
+                        : 'bg-black/5 text-(--md-sys-color-on-surface-variant) hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10',
                 ]"
             >
                 {{ option.label }}

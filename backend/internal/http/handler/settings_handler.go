@@ -160,7 +160,7 @@ func (h *SettingsHandler) recordSecurityEvent(c *gin.Context, level, action, mes
 		Username:  username,
 	}
 	if err := h.db.Create(event).Error; err != nil {
-		h.log.Warnf("record security event failed: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("record security event failed: %v", err)
 	}
 }
 

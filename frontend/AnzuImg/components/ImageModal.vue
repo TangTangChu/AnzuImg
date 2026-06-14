@@ -5,9 +5,12 @@
       <AnzuButton
         @click.stop="handleClose"
         :aria-label="t('common.actions.close')"
-        class="absolute top-4 left-4 w-10! h-10! p-0! min-w-0! rounded-full z-20"
+        size="sm"
+        class="absolute top-4 left-4 z-20"
       >
-        <XMarkIcon class="h-6 w-6" />
+        <template #icon>
+          <XMarkIcon class="h-5 w-5" />
+        </template>
       </AnzuButton>
       <div
         class="flex-1 flex items-center justify-center p-4 overflow-hidden"
@@ -54,7 +57,7 @@
       <!-- Info Box -->
       <div
         v-if="displayImage"
-        class="bg-(--md-sys-color-surface-container) border-t border-(--md-sys-color-outline-variant) w-full h-72 shrink-0 z-20"
+        class="bg-(--md-sys-color-surface) w-full max-h-[40vh] shrink-0 z-20 shadow-[0_-2px_4px_rgba(0,0,0,0.06)]"
         @click.stop
       >
         <div class="h-full overflow-y-auto p-4 md:p-6 custom-scrollbar">
@@ -149,51 +152,64 @@
                     :disabled="!hasPrevious"
                     @click="handlePrevious"
                     variant="text"
-                    class="w-9! h-9! p-0! min-w-0! rounded-full"
+                    size="sm"
                   >
-                    <ChevronLeftIcon class="h-5 w-5" />
+                    <template #icon>
+                      <ChevronLeftIcon class="h-5 w-5" />
+                    </template>
                   </AnzuButton>
                   <AnzuButton
                     :disabled="!hasNext"
                     @click="handleNext"
                     variant="text"
-                    class="w-9! h-9! p-0! min-w-0! rounded-full"
+                    size="sm"
                   >
-                    <ChevronRightIcon class="h-5 w-5" />
+                    <template #icon>
+                      <ChevronRightIcon class="h-5 w-5" />
+                    </template>
                   </AnzuButton>
                 </div>
                 <template v-if="!isEditing">
                   <AnzuButton
                     @click="startEdit"
                     variant="text"
-                    class="w-10! h-10! p-0! min-w-0! rounded-full"
+                    size="sm"
                     title="Edit"
                   >
-                    <PencilIcon class="h-5 w-5" />
+                    <template #icon>
+                      <PencilIcon class="h-5 w-5" />
+                    </template>
                   </AnzuButton>
                   <AnzuButton
                     @click="handleDelete"
                     variant="text"
-                    class="w-10! h-10! p-0! min-w-0! rounded-full"
+                    size="sm"
                     :title="t('common.actions.delete')"
                   >
-                    <TrashIcon class="h-5 w-5" />
+                    <template #icon>
+                      <TrashIcon class="h-5 w-5" />
+                    </template>
                   </AnzuButton>
-                  <AnzuButton
-                    @click="handleCopyLink"
+                  <AnzuSplitButton
                     variant="text"
-                    class="w-10! h-10! p-0! min-w-0! rounded-full"
-                    :title="t('common.actions.copyLink')"
+                    size="sm"
+                    :items="copyItems"
+                    @click="emit('copy-link')"
+                    @select="(k) => emit('copy-link', k as 'url' | 'markdown')"
                   >
-                    <LinkIcon class="h-5 w-5" />
-                  </AnzuButton>
+                    <template #icon>
+                      <LinkIcon class="h-5 w-5" />
+                    </template>
+                  </AnzuSplitButton>
                   <AnzuButton
                     @click="handleDownload"
                     variant="text"
-                    class="w-10! h-10! p-0! min-w-0! rounded-full"
+                    size="sm"
                     :title="t('common.actions.download')"
                   >
-                    <ArrowDownTrayIcon class="h-5 w-5" />
+                    <template #icon>
+                      <ArrowDownTrayIcon class="h-5 w-5" />
+                    </template>
                   </AnzuButton>
                 </template>
                 <template v-else>
@@ -201,14 +217,14 @@
                     @click="saveEdit"
                     :loading="saving"
                     variant="filled"
-                    class="h-9! px-4! rounded-full"
+                    size="sm"
                   >
                     {{ t("common.actions.confirm") }}
                   </AnzuButton>
                   <AnzuButton
                     @click="cancelEdit"
                     variant="text"
-                    class="h-9! px-4! rounded-full"
+                    size="sm"
                   >
                     {{ t("common.actions.cancel") }}
                   </AnzuButton>
@@ -217,7 +233,7 @@
             </div>
 
             <div
-              class="border-t border-(--md-sys-color-outline-variant) my-4 opacity-50"
+              class="border-t border-black/10 dark:border-white/10 my-4"
             ></div>
             <div
               v-if="!isEditing"
@@ -313,6 +329,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from "vue";
 import AnzuButton from "./AnzuButton.vue";
+import AnzuSplitButton from "./AnzuSplitButton.vue";
 import AnzuProgressRing from "./AnzuProgressRing.vue";
 import AnzuAlert from "./AnzuAlert.vue";
 import AnzuInput from "./AnzuInput.vue";
@@ -516,6 +533,11 @@ const displayImage = computed(() => {
   return detailedImage.value || props.image;
 });
 
+const copyItems = computed(() => [
+  { key: "url", label: t("common.actions.copyUrl") },
+  { key: "markdown", label: t("common.actions.copyMarkdown") },
+]);
+
 const hasRoutes = computed(() => {
   return detailedImage.value?.routes && detailedImage.value.routes.length > 0;
 });
@@ -579,10 +601,6 @@ const handleNext = () => {
   if (props.hasNext) {
     emit("next");
   }
-};
-
-const handleCopyLink = () => {
-  emit("copy-link");
 };
 
 const handleDownload = () => {

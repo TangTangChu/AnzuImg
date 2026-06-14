@@ -38,22 +38,21 @@
       </div>
     </div>
 
-    <div v-if="pending" class="flex justify-center p-8">
-      <AnzuProgressRing status="loading" />
+    <div v-if="!images?.data?.length && !pending" class="p-8 text-center text-(--md-sys-color-on-surface-variant)">
+      <div v-if="error">
+        <AnzuAlert type="error">{{ error.message }}</AnzuAlert>
+      </div>
+      <template v-else>
+        {{ t("gallery.noImages") }}
+      </template>
     </div>
-
-    <div v-else-if="error" class="p-4 text-center">
-      <AnzuAlert type="error">{{ error.message }}</AnzuAlert>
-    </div>
-    <div
-      v-else-if="!images?.data?.length"
-      class="p-8 text-center text-(--md-sys-color-on-surface-variant)"
-    >
-      {{ t("gallery.noImages") }}
+    <div v-else-if="!images?.data?.length && pending" class="flex justify-center py-12">
+      <AnzuProgressRing :size="48" />
     </div>
     <div v-else>
       <div
         class="columns-2 gap-2 space-y-2 md:columns-auto md:space-y-0 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4"
+        :class="pending ? 'opacity-50 pointer-events-none' : ''"
       >
         <div
           v-for="(img, index) in images.data"
@@ -64,7 +63,7 @@
           <img
             :src="`/i/${img.hash}/thumbnail`"
             :alt="img.file_name"
-            class="w-full object-cover transition-transform duration-300 group-hover:scale-105 md:h-full"
+            class="w-full object-cover md:h-full"
             loading="lazy"
           />
           <span
@@ -82,22 +81,25 @@
           <div
             class="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           >
-            <div class="flex items-center justify-end gap-2">
-              <AnzuButton
+            <div class="flex items-center justify-end gap-2" @click.stop>
+              <AnzuSplitButton
                 variant="filled"
-                class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-                @click.stop="copyLink(img.hash)"
-                :title="t('common.actions.copyLink')"
+                :items="copyItems"
+                @click="copyAs(img.hash, 'url')"
+                @select="(k) => copyAs(img.hash, k as 'url' | 'markdown')"
               >
-                <LinkIcon class="h-5 w-5" />
-              </AnzuButton>
+                <template #icon>
+                  <LinkIcon class="h-5 w-5" />
+                </template>
+              </AnzuSplitButton>
               <AnzuButton
                 variant="tonal"
-                class="w-9! h-9! p-0! min-w-0! rounded-full shadow-sm"
-                @click.stop="deleteImage(img.hash)"
+                @click="deleteImage(img.hash)"
                 :title="t('common.actions.delete')"
               >
-                <TrashIcon class="h-5 w-5" />
+                <template #icon>
+                  <TrashIcon class="h-5 w-5" />
+                </template>
               </AnzuButton>
             </div>
           </div>
@@ -108,6 +110,7 @@
           :current-page="currentPage"
           :total-pages="totalPages"
           base-url="/gallery"
+          :loading="pending"
         />
       </div>
     </div>
@@ -130,9 +133,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useAuth } from "~/composables/useAuth";
 import AnzuButton from "~/components/AnzuButton.vue";
+import AnzuSplitButton from "~/components/AnzuSplitButton.vue";
 import AnzuProgressRing from "~/components/AnzuProgressRing.vue";
 import AnzuAlert from "~/components/AnzuAlert.vue";
 import ImageModal from "~/components/ImageModal.vue";
@@ -153,6 +157,11 @@ import {
 } from "@heroicons/vue/24/outline";
 
 const { t } = useI18n();
+
+const copyItems = [
+  { key: "url", label: t("common.actions.copyUrl") },
+  { key: "markdown", label: t("common.actions.copyMarkdown") },
+];
 useAuth();
 const { notify } = useNotification();
 const { confirm } = useDialog();
@@ -242,6 +251,16 @@ const tagItems = computed(() =>
   })),
 );
 
+watch(pending, (isLoading, wasLoading) => {
+  if (wasLoading && !isLoading) {
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+  }
+});
+
 const totalPages = computed(() => {
   if (!images.value) return 0;
   const size = images.value.size || limit;
@@ -317,18 +336,20 @@ const showNextImage = () => {
   }
 };
 
-const copyLink = (hash: string) => {
+const copyAs = (hash: string, format: "url" | "markdown" = "url") => {
   const url = `${window.location.origin}/i/${hash}`;
-  navigator.clipboard.writeText(url);
+  const img = images.value?.data?.find((i) => i.hash === hash);
+  const text = format === "markdown" ? `![${img?.file_name || hash}](${url})` : url;
+  navigator.clipboard.writeText(text);
   notify({
     message: t("common.actions.copySuccess"),
     type: NotificationType.SUCCESS,
   });
 };
 
-const copyImageUrl = () => {
+const copyImageUrl = (format?: "url" | "markdown") => {
   if (currentImage.value) {
-    copyLink(currentImage.value.hash);
+    copyAs(currentImage.value.hash, format);
   }
 };
 

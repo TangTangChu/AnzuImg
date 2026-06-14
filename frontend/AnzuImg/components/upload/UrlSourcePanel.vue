@@ -43,12 +43,12 @@
       </label>
     </div>
 
-    <div v-else class="inline-flex rounded-lg border border-(--md-sys-color-outline-variant) overflow-hidden">
+    <div v-else class="inline-flex rounded-lg overflow-hidden bg-(--md-sys-color-surface-container-lowest)">
       <button
         type="button"
         class="px-3 h-9 text-xs transition-colors"
         :class="mode === 'browser'
-          ? 'bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)'
+          ? 'bg-(--md-sys-color-primary)/8 text-(--md-sys-color-primary)'
           : 'text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-on-surface)/5'"
         :disabled="loading"
         @click="selectMode('browser')"
@@ -57,9 +57,9 @@
       </button>
       <button
         type="button"
-        class="px-3 h-9 text-xs flex items-center gap-1 border-l border-(--md-sys-color-outline-variant) transition-colors"
+        class="px-3 h-9 text-xs flex items-center gap-1 transition-colors"
         :class="mode === 'server'
-          ? 'bg-(--md-sys-color-secondary-container) text-(--md-sys-color-on-secondary-container)'
+          ? 'bg-(--md-sys-color-primary)/8 text-(--md-sys-color-primary)'
           : 'text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-on-surface)/5'"
         :disabled="loading"
         @click="selectMode('server')"

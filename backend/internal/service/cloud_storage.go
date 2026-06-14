@@ -116,7 +116,7 @@ func (s *CloudStorage) Save(ctx context.Context, hash string, data []byte, mimeT
 	// 生成云端存储路径（按hash前两位分目录）
 	key := fmt.Sprintf("%s/%s", hash[:2], hash)
 
-	s.log.Infof("Uploading to cloud storage: bucket=%s, key=%s, size=%d",
+	s.log.Ctx(ctx).Infof("Uploading to cloud storage: bucket=%s, key=%s, size=%d",
 		s.bucket, key, len(data))
 
 	// 上传到S3
@@ -134,7 +134,7 @@ func (s *CloudStorage) Save(ctx context.Context, hash string, data []byte, mimeT
 		return "", 0, fmt.Errorf("failed to upload to cloud storage: %w", err)
 	}
 
-	s.log.Infof("Successfully uploaded to cloud storage: bucket=%s, key=%s", s.bucket, key)
+	s.log.Ctx(ctx).Infof("Successfully uploaded to cloud storage: bucket=%s, key=%s", s.bucket, key)
 	return key, int64(len(data)), nil
 }
 
@@ -161,7 +161,7 @@ func normalizeEndpointHost(endpoint string) string {
 
 // Delete 删除云端文件
 func (s *CloudStorage) Delete(ctx context.Context, relPath string) error {
-	s.log.Infof("Deleting from cloud storage: bucket=%s, key=%s",
+	s.log.Ctx(ctx).Infof("Deleting from cloud storage: bucket=%s, key=%s",
 		s.bucket, relPath)
 
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
@@ -178,7 +178,7 @@ func (s *CloudStorage) Delete(ctx context.Context, relPath string) error {
 
 // Exists 检查文件是否存在于云端
 func (s *CloudStorage) Exists(ctx context.Context, relPath string) (bool, error) {
-	s.log.Infof("Checking existence in cloud storage: bucket=%s, key=%s",
+	s.log.Ctx(ctx).Infof("Checking existence in cloud storage: bucket=%s, key=%s",
 		s.bucket, relPath)
 
 	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{

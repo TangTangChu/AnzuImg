@@ -2,10 +2,10 @@
   <div class="h-full flex flex-col max-w-6xl mx-auto w-full">
     <h1 class="mb-4 text-3xl font-bold text-center">{{ t("upload.title") }}</h1>
 
-    <div v-if="files.length === 0" class="flex flex-col lg:flex-row gap-4 lg:gap-0">
+    <div v-if="files.length === 0" class="flex flex-col lg:flex-row gap-4">
       <div
-        class="flex-1 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-(--md-sys-color-outline-variant) transition-colors min-h-60 lg:min-h-72 relative group p-8 cursor-pointer lg:rounded-r-none lg:border-r-0"
-        :class="[isDragging ? 'border-(--md-sys-color-primary)' : '']"
+        class="flex-1 flex flex-col items-center justify-center rounded-lg bg-(--md-sys-color-surface-container-lowest) transition-all min-h-60 lg:min-h-72 relative group p-8 cursor-pointer"
+        :class="[isDragging ? 'ring-2 ring-(--md-sys-color-primary)' : '']"
         @dragenter.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @dragover.prevent
@@ -30,7 +30,7 @@
       </div>
 
       <div
-        class="flex-1 p-6 rounded-xl border-2 border-dashed border-(--md-sys-color-outline-variant) lg:rounded-l-none"
+        class="flex-1 p-6 rounded-lg"
       >
         <UrlSourcePanel
           :server-mode-acknowledged="serverModeAcknowledged"
@@ -43,8 +43,8 @@
 
     <div v-else class="flex flex-col lg:flex-row gap-3 mb-4">
       <div
-        class="flex-1 flex items-center gap-3 rounded-lg border border-(--md-sys-color-outline-variant) px-3 py-2 cursor-pointer transition-colors hover:border-(--md-sys-color-outline)"
-        :class="[isDragging ? 'border-(--md-sys-color-primary) ring-2 ring-(--md-sys-color-primary)/30' : '']"
+        class="flex-1 flex items-center gap-3 rounded-lg bg-(--md-sys-color-surface-container-lowest) px-3 py-2 cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+        :class="[isDragging ? 'ring-2 ring-(--md-sys-color-primary)' : '']"
         @dragenter.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @dragover.prevent
@@ -78,7 +78,7 @@
 
     <div
       v-if="files.length > 0"
-      class="flex flex-col lg:flex-row flex-1 min-h-0 animate-fade-in-up"
+      class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0 animate-fade-in-up"
     >
       <div
         class="lg:w-1/2 flex flex-col min-h-125 lg:h-150 relative transition-colors"
@@ -98,7 +98,7 @@
         </div>
 
         <div
-          class="px-2 py-3 border-b border-(--md-sys-color-outline-variant) flex justify-between items-center"
+          class="px-2 py-3 flex justify-between items-center"
         >
           <span class="font-medium text-sm"
             >{{ files.length }} {{ t("common.labels.files") }} ({{
@@ -110,7 +110,7 @@
           }}</AnzuButton>
         </div>
 
-        <div class="flex-1 overflow-y-auto py-3 pr-2">
+        <div class="flex-1 overflow-y-auto py-3 px-2">
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
             <FileGridItem
               v-for="(item, index) in files"
@@ -118,13 +118,14 @@
               :item="item"
               :index="index"
               :is-selected="selectedIndex === index"
+              :uploading="uploading"
               @select="selectFile"
               @copy="copySingleLink"
               @retry="retryItem"
               @remove="removeItem"
             />
             <div
-              class="relative aspect-square rounded-lg border-2 border-dashed border-(--md-sys-color-outline-variant) flex items-center justify-center cursor-pointer hover:border-(--md-sys-color-primary) transition-colors"
+              class="relative aspect-square rounded-lg bg-(--md-sys-color-surface-container-lowest) flex items-center justify-center cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               @click="triggerAddInput"
             >
               <input
@@ -142,7 +143,7 @@
       </div>
 
       <div
-        class="lg:w-1/2 flex flex-col h-auto lg:h-150 lg:border-l border-t lg:border-t-0 border-(--md-sys-color-outline-variant)"
+        class="lg:w-1/2 flex flex-col h-auto lg:h-150 overflow-hidden"
       >
         <FileEditor
           :selected-file="selectedFile"
@@ -223,6 +224,28 @@ const totalSize = computed(() => {
 
 const isVideoFile = (file: File) => file.type.startsWith("video/");
 
+const loadMediaDimensions = (item: UploadFileItem) => {
+  if (!item.file || !item.previewUrl) return;
+  const url = item.previewUrl;
+  if (isVideoFile(item.file)) {
+    const el = document.createElement("video");
+    el.preload = "metadata";
+    el.onloadedmetadata = () => {
+      item.displayWidth = el.videoWidth;
+      item.displayHeight = el.videoHeight;
+      el.src = "";
+    };
+    el.src = url;
+  } else {
+    const img = new Image();
+    img.onload = () => {
+      item.displayWidth = img.naturalWidth;
+      item.displayHeight = img.naturalHeight;
+    };
+    img.src = url;
+  }
+};
+
 const hasVideoFile = computed(() =>
   files.value.some((item) => item.file !== null && isVideoFile(item.file)),
 );
@@ -282,6 +305,7 @@ const processFiles = (newFiles: FileList | File[] | null) => {
   if (newItems.length > 0 && startIndex === 0) {
     selectedIndex.value = 0;
   }
+  newItems.forEach(loadMediaDimensions);
 };
 
 const handleDrop = (e: DragEvent) => {
@@ -559,7 +583,13 @@ const uploadItems = async (indices: number[]) => {
   }
 };
 
-const startUpload = () => uploadItems(files.value.map((_, i) => i));
+const startUpload = () =>
+  uploadItems(
+    files.value.reduce<number[]>((acc, item, i) => {
+      if (item.status !== "success") acc.push(i);
+      return acc;
+    }, []),
+  );
 
 const retryItem = (index: number) => {
   if (uploading.value) return;

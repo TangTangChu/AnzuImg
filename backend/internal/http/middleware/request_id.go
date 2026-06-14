@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
+	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
 )
 
 func RequestID() gin.HandlerFunc {
@@ -19,6 +20,13 @@ func RequestID() gin.HandlerFunc {
 
 		c.Set(response.CtxRequestIDKey, requestID)
 		c.Header(response.HeaderRequestID, requestID)
+
+		ctx := logger.ContextWithFields(c.Request.Context(), logger.RequestFields{
+			RequestID: requestID,
+			IPAddress: ClientIP(c),
+		})
+		c.Request = c.Request.WithContext(ctx)
+
 		c.Next()
 	}
 }

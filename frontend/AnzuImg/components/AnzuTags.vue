@@ -5,14 +5,14 @@
         </label>
         
         <!-- 标签显示区域 -->
-        <div 
-            class="flex flex-wrap items-center gap-2 rounded-lg border bg-transparent px-3 py-2 transition-all duration-200"
+        <div
+            class="flex flex-wrap items-center gap-2 rounded-lg bg-black/5 px-3 py-2 transition-all duration-200 dark:bg-white/5"
             :class="[
                 errorMessage
-                    ? 'border-(--md-sys-color-error) ring-1 ring-(--md-sys-color-error)'
+                    ? 'ring-2 ring-(--md-sys-color-error)'
                     : isFocused
-                        ? 'border-(--md-sys-color-primary) ring-1 ring-(--md-sys-color-primary)'
-                        : 'border-(--md-sys-color-outline) hover:border-(--md-sys-color-outline-variant)',
+                        ? 'ring-2 ring-(--md-sys-color-on-surface)/15'
+                        : '',
                 disabled ? 'cursor-not-allowed opacity-50' : 'cursor-text'
             ]"
             @focusin="isFocused = true"
@@ -22,7 +22,7 @@
             <div 
                 v-for="(tag, index) in modelValue" 
                 :key="getTagKey(tag, index)" 
-                class="inline-flex items-center gap-1 rounded-full bg-(--md-sys-color-secondary-container) px-3 py-1 text-sm text-(--md-sys-color-on-secondary-container) transition-colors"
+                class="inline-flex items-center gap-1 rounded-lg bg-black/10 px-3 py-1 text-sm text-(--md-sys-color-on-surface) transition-colors dark:bg-white/15"
                 :class="[
                     removable ? 'pr-2' : '',
                     disabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -34,7 +34,7 @@
                 <button 
                     v-if="removable && !disabled" 
                     type="button" 
-                    class="flex h-4 w-4 items-center justify-center rounded-full text-(--md-sys-color-on-secondary-container)/60 transition-colors hover:bg-(--md-sys-color-on-secondary-container)/10 hover:text-(--md-sys-color-on-secondary-container)"
+                    class="flex h-4 w-4 items-center justify-center rounded-full text-(--md-sys-color-on-surface)/50 transition-colors hover:bg-black/10 hover:text-(--md-sys-color-on-surface) dark:hover:bg-white/15"
                     @click.stop="removeTag(index)" 
                     :aria-label="getRemoveAriaLabel(tag)"
                 >

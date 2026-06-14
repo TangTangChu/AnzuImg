@@ -1,13 +1,7 @@
 <template>
   <div
-    class="relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all group select-none"
-    :class="[
-      isSelected
-        ? 'border-(--md-sys-color-primary) ring-2 ring-(--md-sys-color-primary/20)'
-        : 'border-transparent hover:border-(--md-sys-color-outline)',
-      item.status === 'error' ? 'border-(--md-sys-color-error)!' : '',
-      item.status === 'success' ? 'border-green-500!' : '',
-    ]"
+    class="relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all group select-none"
+    :class="isSelected ? 'ring-2 ring-(--md-sys-color-primary)' : ''"
     @click="$emit('select', index)"
   >
     <template v-if="hasLocalMedia">
@@ -28,7 +22,7 @@
     </template>
     <div
       v-else
-      class="w-full h-full flex flex-col items-center justify-center border border-dashed border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant) px-2 text-center"
+      class="w-full h-full flex flex-col items-center justify-center bg-black/5 dark:bg-white/5 text-(--md-sys-color-on-surface-variant) px-2 text-center"
     >
       <LinkIcon class="w-7 h-7 mb-1" />
       <p class="text-[10px] leading-tight break-all line-clamp-2">
@@ -38,11 +32,18 @@
     </div>
 
     <div
-      v-if="item.status !== 'pending'"
+      v-if="uploading && item.status === 'pending'"
+      class="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none"
+    >
+      <AnzuProgressRing :size="28" :stroke-width="3" status="loading" primary-color="#ffffff" />
+    </div>
+
+    <div
+      v-else-if="item.status !== 'pending'"
       class="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none"
     >
       <CheckIcon v-if="item.status === 'success'" class="w-8 h-8 text-green-400" />
-      <XMarkIcon v-else-if="item.status === 'error'" class="w-8 h-8 text-red-400" />
+      <XMarkIcon v-else-if="item.status === 'error'" class="w-8 h-8 text-(--md-sys-color-error)" />
     </div>
 
     <div
@@ -52,7 +53,7 @@
       <button
         v-if="item.status === 'success' && item.resultUrl"
         type="button"
-        class="h-6 w-6 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75 transition-colors"
+        class="h-6 w-6 rounded-lg bg-black/55 text-white flex items-center justify-center hover:bg-black/75 transition-colors"
         :title="t('common.actions.copyLink')"
         @click.stop="$emit('copy', index)"
       >
@@ -61,7 +62,7 @@
       <button
         v-if="item.status === 'error'"
         type="button"
-        class="h-6 w-6 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75 transition-colors"
+        class="h-6 w-6 rounded-lg bg-black/55 text-white flex items-center justify-center hover:bg-black/75 transition-colors"
         :title="t('upload.actions.retry')"
         @click.stop="$emit('retry', index)"
       >
@@ -69,7 +70,7 @@
       </button>
       <button
         type="button"
-        class="h-6 w-6 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-(--md-sys-color-error) transition-colors"
+        class="h-6 w-6 rounded-lg bg-black/55 text-white flex items-center justify-center hover:bg-(--md-sys-color-error) transition-colors"
         :title="t('upload.actions.removeItem')"
         @click.stop="$emit('remove', index)"
       >
@@ -78,7 +79,7 @@
     </div>
 
     <div
-      class="absolute top-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded transition-opacity"
+      class="absolute top-1.5 left-1.5 h-6 min-w-6 px-1 rounded-lg bg-black/50 text-white text-[11px] font-medium flex items-center justify-center transition-opacity"
       :class="actionsVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
     >
       {{ index + 1 }}
@@ -101,6 +102,7 @@ const props = defineProps<{
   item: UploadFileItem;
   index: number;
   isSelected: boolean;
+  uploading: boolean;
 }>();
 
 defineEmits<{

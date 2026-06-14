@@ -16,6 +16,8 @@ export interface UploadFileItem {
   displayName: string;
   displaySize: number;
   displayMime: string;
+  displayWidth?: number;
+  displayHeight?: number;
 }
 
 export interface UploadResultItem {

@@ -425,6 +425,11 @@ func applyAppLogSinks(cfg *config.Config, db *gorm.DB, hub *service.LogStreamHub
 	eff := cfg.Effective()
 	logger.SetStdoutMinLevel(logger.ParseLevel(eff.AppLogStdoutLevel))
 
+	// 实时流 sink: 始终注册,独立于 DB sink,保证 SSE 不受 DB 级别或攒批延迟影响
+	if old := logger.AddGlobalSink(service.NewLogStreamSink(hub, "stream", logger.LevelDebug)); old != nil {
+		_ = old.Close()
+	}
+
 	// File sink
 	if !eff.AppLogFileEnabled || logger.ParseLevel(eff.AppLogFileLevel) == logger.LevelOff {
 		if old := logger.RemoveGlobalSink("file"); old != nil {
@@ -466,7 +471,7 @@ func applyAppLogSinks(cfg *config.Config, db *gorm.DB, hub *service.LogStreamHub
 		}
 		return
 	}
-	sink := service.NewLogDBSink(db, hub, service.LogDBSinkOptions{
+	sink := service.NewLogDBSink(db, service.LogDBSinkOptions{
 		Name:       "db",
 		MinLevel:   dbLevel,
 		BufferSize: eff.AppLogDBBufferSize,

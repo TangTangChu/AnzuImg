@@ -509,10 +509,12 @@ func (h *AuthHandler) ListSecurityLogs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	failedOnly, _ := strconv.ParseBool(c.DefaultQuery("failed_only", "true"))
 
-	search := c.DefaultQuery("search", "")
-	startDate := c.DefaultQuery("start_date", "")
-	endDate := c.DefaultQuery("end_date", "")
-	actionType := c.DefaultQuery("type", "")
+	filter := service.LogFilter{
+		Search:    c.DefaultQuery("search", ""),
+		Action:    c.DefaultQuery("type", ""),
+		StartDate: c.DefaultQuery("start_date", ""),
+		EndDate:   c.DefaultQuery("end_date", ""),
+	}
 
 	if page < 1 {
 		page = 1
@@ -521,46 +523,8 @@ func (h *AuthHandler) ListSecurityLogs(c *gin.Context) {
 		pageSize = 20
 	}
 
-	query := h.db.Model(&model.SecurityEventLog{})
-	if failedOnly {
-		query = query.Where("level = ? OR level = ?", "warning", "error")
-	}
-
-	if search != "" {
-		like := "%" + search + "%"
-		query = query.Where("action LIKE ? OR message LIKE ? OR path LIKE ? OR ip_address LIKE ? OR username LIKE ?", like, like, like, like, like)
-	}
-
-	if startDate != "" {
-		if t, err := time.Parse(time.RFC3339, startDate); err == nil {
-			query = query.Where("created_at >= ?", t)
-		} else if t, err := time.Parse("2006-01-02", startDate); err == nil {
-			query = query.Where("created_at >= ?", t)
-		}
-	}
-
-	if endDate != "" {
-		if t, err := time.Parse(time.RFC3339, endDate); err == nil {
-			query = query.Where("created_at <= ?", t)
-		} else if t, err := time.Parse("2006-01-02", endDate); err == nil {
-			t = t.Add(24 * time.Hour).Add(-1 * time.Second)
-			query = query.Where("created_at <= ?", t)
-		}
-	}
-
-	if actionType != "" {
-		query = query.Where("action = ?", actionType)
-	}
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		response.WriteErrorCode(c, http.StatusInternalServerError, "list_security_logs_failed", "failed to list security logs")
-		return
-	}
-
-	offset := (page - 1) * pageSize
-	var events []model.SecurityEventLog
-	if err := query.Order("created_at DESC").Limit(pageSize).Offset(offset).Find(&events).Error; err != nil {
+	events, total, err := service.NewLogQueryService(h.db).ListSecurityLogs(filter, page, pageSize, failedOnly)
+	if err != nil {
 		response.WriteErrorCode(c, http.StatusInternalServerError, "list_security_logs_failed", "failed to list security logs")
 		return
 	}
@@ -602,7 +566,7 @@ func (h *AuthHandler) recordSecurityEventWithUser(c *gin.Context, level, action,
 		CreatedAt: time.Now(),
 	}
 	if err := h.db.Create(log).Error; err != nil {
-		h.log.Warnf("failed to record security event: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("failed to record security event: %v", err)
 	}
 }
 
@@ -617,7 +581,7 @@ func (h *AuthHandler) recordSecurityEventWithDedup(c *gin.Context, level, action
 		Where("action = ? AND ip_address = ? AND created_at > ?", action, middleware.ClientIP(c), cutoff).
 		Count(&exists).Error
 	if err != nil {
-		h.log.Warnf("failed to check security event dedup: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("failed to check security event dedup: %v", err)
 	}
 	if exists > 0 {
 		return
@@ -633,7 +597,7 @@ func (h *AuthHandler) recordBruteforceAlertIfNeeded(c *gin.Context, clientIP str
 	}
 	failedCount, err := model.CountRecentFailedAttempts(h.db, clientIP, eff.LoginLockoutMinutes)
 	if err != nil {
-		h.log.Warnf("failed to count login attempts for alert: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("failed to count login attempts for alert: %v", err)
 		return
 	}
 

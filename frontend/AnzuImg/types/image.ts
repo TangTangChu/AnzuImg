@@ -56,7 +56,7 @@ export interface ImageModalEmits {
     (e: 'close'): void;
     (e: 'previous'): void;
     (e: 'next'): void;
-    (e: 'copy-link'): void;
+    (e: 'copy-link', format?: 'url' | 'markdown'): void;
     (e: 'download'): void;
     (e: 'delete', hash: string): void;
 }

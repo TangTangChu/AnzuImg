@@ -135,6 +135,7 @@ func (h *LogHandler) Export(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10000"))
+	failedOnly, _ := strconv.ParseBool(c.DefaultQuery("failed_only", "false"))
 	filter := parseLogFilter(c)
 
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
@@ -147,19 +148,17 @@ func (h *LogHandler) Export(c *gin.Context) {
 		c.Writer.Header().Set("Content-Type", "application/json")
 	}
 
-	if err := h.streamExport(c.Writer, source, format, filter, limit); err != nil {
-		h.log.Warnf("export logs failed: %v", err)
+	if err := h.streamExport(c.Writer, source, format, filter, limit, failedOnly); err != nil {
+		h.log.Ctx(c.Request.Context()).Warnf("export logs failed: %v", err)
 	}
 }
 
-func (h *LogHandler) streamExport(w io.Writer, source, format string, filter service.LogFilter, limit int) error {
+func (h *LogHandler) streamExport(w io.Writer, source, format string, filter service.LogFilter, limit int, failedOnly bool) error {
 	switch source {
 	case "app":
 		return h.streamAppExport(w, format, filter, limit)
 	case "security":
-		failedOnly, _ := strconv.ParseBool(strings.TrimSpace(filter.Search))
-		_ = failedOnly
-		return h.streamSecurityExport(w, format, filter, limit)
+		return h.streamSecurityExport(w, format, filter, limit, failedOnly)
 	case "token":
 		return h.streamTokenExport(w, format, filter, limit)
 	}
@@ -190,11 +189,11 @@ func (h *LogHandler) streamAppExport(w io.Writer, format string, filter service.
 	return err
 }
 
-func (h *LogHandler) streamSecurityExport(w io.Writer, format string, filter service.LogFilter, limit int) error {
+func (h *LogHandler) streamSecurityExport(w io.Writer, format string, filter service.LogFilter, limit int, failedOnly bool) error {
 	if format == "csv" {
 		cw := csv.NewWriter(w)
 		_ = cw.Write([]string{"created_at", "level", "category", "action", "message", "method", "path", "ip_address", "username"})
-		err := h.q.IterateSecurityLogs(filter, false, limit, func(row model.SecurityEventLog) error {
+		err := h.q.IterateSecurityLogs(filter, failedOnly, limit, func(row model.SecurityEventLog) error {
 			return cw.Write([]string{row.CreatedAt.UTC().Format(time.RFC3339), row.Level, row.Category, row.Action, row.Message, row.Method, row.Path, row.IPAddress, row.Username})
 		})
 		cw.Flush()
@@ -203,7 +202,7 @@ func (h *LogHandler) streamSecurityExport(w io.Writer, format string, filter ser
 	enc := json.NewEncoder(w)
 	_, _ = w.Write([]byte("["))
 	first := true
-	err := h.q.IterateSecurityLogs(filter, false, limit, func(row model.SecurityEventLog) error {
+	err := h.q.IterateSecurityLogs(filter, failedOnly, limit, func(row model.SecurityEventLog) error {
 		if !first {
 			_, _ = w.Write([]byte(","))
 		}
@@ -301,6 +300,6 @@ func (h *LogHandler) recordSecurityEvent(c *gin.Context, level, action, message 
 		Username:  "admin",
 	}
 	if err := h.db.Create(event).Error; err != nil {
-		h.log.Warnf("record security event failed: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("record security event failed: %v", err)
 	}
 }

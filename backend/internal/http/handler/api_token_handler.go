@@ -198,6 +198,6 @@ func (h *APITokenHandler) recordSecurityEvent(c *gin.Context, level, action, mes
 		CreatedAt: time.Now(),
 	}
 	if err := h.db.Create(event).Error; err != nil {
-		h.log.Warnf("failed to record token security event: %v", err)
+		h.log.Ctx(c.Request.Context()).Warnf("failed to record token security event: %v", err)
 	}
 }

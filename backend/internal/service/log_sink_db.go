@@ -2,6 +2,7 @@ package service
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,6 +16,7 @@ import (
 type LogStreamHub struct {
 	mu          sync.RWMutex
 	subscribers map[*logSubscription]struct{}
+	dropped     atomic.Int64
 }
 
 type LogSubscriber struct {
@@ -75,9 +77,13 @@ func (h *LogStreamHub) Publish(rec model.AppLog) {
 		case sub.ch <- rec:
 		default:
 			// 慢消费者: 直接丢弃这一条避免阻塞其他订阅者
+			h.dropped.Add(1)
 		}
 	}
 }
+
+// DroppedCount 返回因订阅者缓冲满而丢弃的累计条数,用于可观测。
+func (h *LogStreamHub) DroppedCount() int64 { return h.dropped.Load() }
 
 func matchFilter(f LogStreamFilter, rec model.AppLog) bool {
 	if f.Module != "" && rec.Module != f.Module {
@@ -89,16 +95,16 @@ func matchFilter(f LogStreamFilter, rec model.AppLog) bool {
 	return logger.ParseLevel(rec.Level) >= f.MinLevel
 }
 
-// LogDBSink 把日志异步批量写入 app_logs 表,同时 fan-out 给 LogStreamHub。
-// 通道缓冲满了直接丢弃,保证业务路径不被阻塞。
+// LogDBSink 把日志异步批量写入 app_logs 表。
+// 通道缓冲满了直接丢弃,保证业务路径不被阻塞;丢弃量通过 dropped 计数暴露。
 type LogDBSink struct {
 	name   string
 	min    logger.Level
 	db     *gorm.DB
-	hub    *LogStreamHub
 	bufLog *logger.Logger
 
 	in       chan model.AppLog
+	dropped  atomic.Int64
 	stopOnce sync.Once
 	stopped  chan struct{}
 	done     chan struct{}
@@ -112,7 +118,7 @@ type LogDBSinkOptions struct {
 	FlushEvery time.Duration
 }
 
-func NewLogDBSink(db *gorm.DB, hub *LogStreamHub, opts LogDBSinkOptions) *LogDBSink {
+func NewLogDBSink(db *gorm.DB, opts LogDBSinkOptions) *LogDBSink {
 	name := opts.Name
 	if name == "" {
 		name = "db"
@@ -131,7 +137,6 @@ func NewLogDBSink(db *gorm.DB, hub *LogStreamHub, opts LogDBSinkOptions) *LogDBS
 		name:    name,
 		min:     opts.MinLevel,
 		db:      db,
-		hub:     hub,
 		bufLog:  logger.Register("log-db-sink"),
 		in:      make(chan model.AppLog, bufSize),
 		stopped: make(chan struct{}),
@@ -141,7 +146,7 @@ func NewLogDBSink(db *gorm.DB, hub *LogStreamHub, opts LogDBSinkOptions) *LogDBS
 	return s
 }
 
-func (s *LogDBSink) Name() string    { return s.name }
+func (s *LogDBSink) Name() string           { return s.name }
 func (s *LogDBSink) MinLevel() logger.Level { return s.min }
 func (s *LogDBSink) Write(rec logger.Record) {
 	if rec.Level < s.min || s.min == logger.LevelOff {
@@ -152,6 +157,8 @@ func (s *LogDBSink) Write(rec logger.Record) {
 		Level:     logger.LevelName(rec.Level),
 		Module:    rec.Module,
 		Message:   rec.Message,
+		RequestID: rec.RequestID,
+		IPAddress: rec.IPAddress,
 	}
 	select {
 	case <-s.stopped:
@@ -162,6 +169,7 @@ func (s *LogDBSink) Write(rec logger.Record) {
 	case s.in <- row:
 	default:
 		// 缓冲满直接丢弃,避免反压拖慢业务
+		s.dropped.Add(1)
 	}
 }
 
@@ -184,10 +192,8 @@ func (s *LogDBSink) run(batchSize int, flushEvery time.Duration) {
 			// 不通过自身 logger 防止反复递归: 用 stdout 的 default logger 即可
 			s.bufLog.Warnf("flush app logs failed: %v", err)
 		}
-		if s.hub != nil {
-			for _, row := range batch {
-				s.hub.Publish(row)
-			}
+		if d := s.dropped.Swap(0); d > 0 {
+			s.bufLog.Warnf("dropped %d app log(s): db sink buffer full", d)
 		}
 		batch = batch[:0]
 	}
@@ -217,3 +223,38 @@ func (s *LogDBSink) run(batchSize int, flushEvery time.Duration) {
 		}
 	}
 }
+
+// LogStreamSink 把每条日志直接 fan-out 给 LogStreamHub,与 DB 持久化解耦:
+// 即使 DB sink 被关闭或攒批延迟,SSE 实时流也始终实时。
+// 自身只负责广播,过滤交给各订阅者的 filter,故 MinLevel 取最低。
+type LogStreamSink struct {
+	name string
+	min  logger.Level
+	hub  *LogStreamHub
+}
+
+func NewLogStreamSink(hub *LogStreamHub, name string, min logger.Level) *LogStreamSink {
+	if name == "" {
+		name = "stream"
+	}
+	return &LogStreamSink{name: name, min: min, hub: hub}
+}
+
+func (s *LogStreamSink) Name() string           { return s.name }
+func (s *LogStreamSink) MinLevel() logger.Level { return s.min }
+
+func (s *LogStreamSink) Write(rec logger.Record) {
+	if s.hub == nil || rec.Level < s.min || s.min == logger.LevelOff {
+		return
+	}
+	s.hub.Publish(model.AppLog{
+		CreatedAt: rec.Time,
+		Level:     logger.LevelName(rec.Level),
+		Module:    rec.Module,
+		Message:   rec.Message,
+		RequestID: rec.RequestID,
+		IPAddress: rec.IPAddress,
+	})
+}
+
+func (s *LogStreamSink) Close() error { return nil }

@@ -16,7 +16,7 @@
                 :aria-describedby="message ? 'dialog-message' : undefined" @keydown.esc="handleEsc">
                 <!-- Header -->
                 <div v-if="showHeader"
-                    class="flex items-center justify-between border-b border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface-container) px-6 py-4">
+                    class="flex items-center justify-between px-6 py-4">
                     <div class="flex items-center gap-3">
                         <component v-if="iconComponent" :is="iconComponent" class="h-5 w-5 shrink-0"
                             :class="iconColorClass" />
@@ -27,19 +27,19 @@
                     </div>
 
                     <button v-if="showCloseButton" @click="handleClose"
-                        class="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none text-(--md-sys-color-on-surface-variant) transition-colors hover:bg-(--md-sys-color-surface-container-high) hover:text-(--md-sys-color-on-surface)"
+                        class="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none text-(--md-sys-color-on-surface-variant) transition-colors hover:bg-black/5 hover:text-(--md-sys-color-on-surface) dark:hover:bg-white/5"
                         aria-label="关闭对话框">
                         &times;
                     </button>
                 </div>
 
                 <!-- Content -->
-                <div class="flex-1 overflow-auto bg-(--md-sys-color-surface-container) p-6" :class="{
+                <div class="flex-1 overflow-auto p-6" :class="{
                     'pt-4': !showHeader,
                     'max-h-[calc(100vh-16rem)]': maxHeight === undefined,
                 }" :style="contentStyles">
                     <div v-if="type === DialogType.CUSTOM && component">
-                        <component :is="component" v-bind="componentProps" @close="handleClose" />
+                        <component :is="component" v-bind="componentProps" @close="handleComponentClose" />
                     </div>
                     <template v-else>
                         <p v-if="message" id="dialog-message" class="text-(--md-sys-color-on-surface-variant)">
@@ -51,7 +51,7 @@
 
                 <!-- Actions -->
                 <div v-if="showActions"
-                    class="flex items-center justify-end gap-2 bg-(--md-sys-color-surface-container) px-6 py-4">
+                    class="flex items-center justify-end gap-2 px-6 py-4">
                     <AnzuButton v-for="(action, index) in effectiveActions" :key="index" @click="handleAction(action)"
                         :variant="action.variant || 'text'" :disabled="action.disabled"
                         :status="action.loading ? 'loading' : 'default'" :class="{
@@ -245,29 +245,20 @@ const positionTransition = computed(() => {
 
 const sizeClasses = computed(() => {
     const classes: Record<string, string> = {
-        [DialogSize.SM]: "w-80 rounded-xl",
-        [DialogSize.MD]: "w-96 rounded-xl",
-        [DialogSize.LG]: "w-xl rounded-xl",
-        [DialogSize.XL]: "w-3xl rounded-xl",
-        [DialogSize.FULL]: "inset-4 rounded-xl",
+        [DialogSize.SM]: "w-80 rounded-lg",
+        [DialogSize.MD]: "w-96 rounded-lg",
+        [DialogSize.LG]: "w-xl rounded-lg",
+        [DialogSize.XL]: "w-3xl rounded-lg",
+        [DialogSize.FULL]: "inset-4 rounded-lg",
     };
 
     return classes[props.size] || classes[DialogSize.MD];
 });
 
-const variantClasses = computed(() => {
-    const classes: Record<string, string> = {
-        [DialogVariant.DESTRUCTIVE]: "border-(--md-sys-color-error-container)",
-        [DialogVariant.SUCCESS]: "border-(--md-sys-color-primary-container)",
-        [DialogVariant.WARNING]: "border-(--md-sys-color-tertiary-container)",
-        [DialogVariant.INFO]: "border-(--md-sys-color-secondary-container)",
-    };
-
-    return classes[props.variant] || "";
-});
+const variantClasses = computed(() => "");
 
 const dialogClasses = computed(() => {
-    return "bg-(--md-sys-color-surface-container) border border-(--md-sys-color-outline-variant) shadow-lg";
+    return "bg-(--md-sys-color-surface-container-lowest) shadow-lg";
 });
 
 const contentStyles = computed(() => {
@@ -284,6 +275,13 @@ const contentStyles = computed(() => {
 const handleClose = () => {
     if (props.persistent) return;
 
+    emit("update:visible", false);
+    emit("close");
+    emit("cancel");
+};
+
+// 自定义内容组件自行决定何时关闭,不受 persistent 约束
+const handleComponentClose = () => {
     emit("update:visible", false);
     emit("close");
     emit("cancel");

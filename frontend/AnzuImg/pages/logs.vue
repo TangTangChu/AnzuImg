@@ -22,27 +22,27 @@
                 </div>
                 <div
                     v-else-if="appLogs.length === 0"
-                    class="rounded-lg border border-(--md-sys-color-outline-variant) p-6 text-center"
+                    class="rounded-lg bg-black/5 p-6 text-center dark:bg-white/5"
                 >
                     <p class="text-(--md-sys-color-on-surface-variant)">
                         {{ t("logs.empty") }}
                     </p>
                 </div>
                 <div v-else>
-                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                    <div class="flex flex-col gap-1">
                         <div
                             v-for="log in appLogs"
                             :key="`${log.id}-${log.created_at}`"
-                            class="py-2.5 px-1"
+                            class="rounded-lg px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                         >
                             <div class="flex flex-wrap items-center gap-2 text-xs">
-                                <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap', levelBadge(log.level)]">
+                                <span :class="['inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold leading-4 whitespace-nowrap', levelBadge(log.level)]">
                                     {{ (log.level || '').toUpperCase() }}
                                 </span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold leading-4 whitespace-nowrap bg-black/5 text-(--md-sys-color-on-surface-variant) dark:bg-white/10">
                                     {{ log.module }}
                                 </span>
-                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                     {{ formatDate(log.created_at) }}
                                 </span>
                             </div>
@@ -51,7 +51,7 @@
                             </div>
                             <div
                                 v-if="log.request_id || log.ip_address"
-                                class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono"
+                                class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all"
                             >
                                 <span v-if="log.request_id">req_id={{ log.request_id }}</span>
                                 <span v-if="log.ip_address"> · ip={{ log.ip_address }}</span>
@@ -81,34 +81,34 @@
                 </div>
                 <div
                     v-else-if="securityLogs.length === 0"
-                    class="rounded-lg border border-(--md-sys-color-outline-variant) p-6 text-center"
+                    class="rounded-lg bg-black/5 p-6 text-center dark:bg-white/5"
                 >
                     <p class="text-(--md-sys-color-on-surface-variant)">
                         {{ t("logs.empty") }}
                     </p>
                 </div>
                 <div v-else>
-                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                    <div class="flex flex-col gap-1">
                         <div
                             v-for="log in securityLogs"
                             :key="log.id"
-                            class="py-2.5 px-1"
+                            class="rounded-lg px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                         >
                             <div class="flex flex-wrap items-center gap-2 text-xs">
-                                <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap', securityLevelBadge(log.level)]">
+                                <span :class="['inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold leading-4 whitespace-nowrap', securityLevelBadge(log.level)]">
                                     {{ (log.level || '').toUpperCase() }}
                                 </span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold leading-4 whitespace-nowrap bg-black/5 text-(--md-sys-color-on-surface-variant) dark:bg-white/10">
                                     {{ log.action }}
                                 </span>
-                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                     {{ formatDate(log.created_at) }}
                                 </span>
                             </div>
                             <div class="mt-1 text-sm text-(--md-sys-color-on-surface) break-words">
                                 {{ log.message }}
                             </div>
-                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono">
+                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all">
                                 <span v-if="log.method || log.path">{{ log.method }} {{ log.path }}</span>
                                 <span v-if="log.ip_address"> · ip={{ log.ip_address }}</span>
                                 <span v-if="log.username"> · user={{ log.username }}</span>
@@ -138,33 +138,33 @@
                 </div>
                 <div
                     v-else-if="tokenLogs.length === 0"
-                    class="rounded-lg border border-(--md-sys-color-outline-variant) p-6 text-center"
+                    class="rounded-lg bg-black/5 p-6 text-center dark:bg-white/5"
                 >
                     <p class="text-(--md-sys-color-on-surface-variant)">
                         {{ t("logs.empty") }}
                     </p>
                 </div>
                 <div v-else>
-                    <div class="divide-y divide-(--md-sys-color-outline-variant) border-y border-(--md-sys-color-outline-variant)">
+                    <div class="flex flex-col gap-1">
                         <div
                             v-for="log in tokenLogs"
                             :key="log.id"
-                            class="py-2.5 px-1"
+                            class="rounded-lg px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                         >
                             <div class="flex flex-wrap items-center gap-2 text-xs">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold leading-4 whitespace-nowrap border border-(--md-sys-color-primary) text-(--md-sys-color-primary)">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold leading-4 whitespace-nowrap bg-(--md-sys-color-primary)/12 text-(--md-sys-color-primary)">
                                     {{ log.action }}
                                 </span>
-                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap font-mono">
+                                <span class="ml-auto text-(--md-sys-color-on-surface-variant) whitespace-nowrap">
                                     {{ formatDate(log.created_at) }}
                                 </span>
                             </div>
                             <div class="mt-1 text-sm text-(--md-sys-color-on-surface) break-words">
                                 <span>{{ log.token_name }} ({{ log.token_type }})</span>
-                                <span v-if="log.ip_address" class="text-(--md-sys-color-on-surface-variant) font-mono"> · ip={{ log.ip_address }}</span>
-                                <span v-if="log.image_hash" class="text-(--md-sys-color-on-surface-variant) font-mono"> · img={{ log.image_hash }}</span>
+                                <span v-if="log.ip_address" class="text-(--md-sys-color-on-surface-variant)"> · ip={{ log.ip_address }}</span>
+                                <span v-if="log.image_hash" class="text-(--md-sys-color-on-surface-variant)"> · img={{ log.image_hash }}</span>
                             </div>
-                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all font-mono">
+                            <div class="mt-1 text-xs text-(--md-sys-color-on-surface-variant) break-all">
                                 {{ log.method }} {{ log.path }}
                             </div>
                         </div>
@@ -370,22 +370,28 @@ const confirmCleanup = async () => {
 const levelBadge = (level: string) => {
     switch ((level || "").toUpperCase()) {
         case "DEBUG":
-            return "border border-(--md-sys-color-outline-variant) text-(--md-sys-color-on-surface-variant)";
+            return "bg-slate-500/15 text-slate-600 dark:text-slate-300";
+        case "INFO":
+            return "bg-sky-500/15 text-sky-700 dark:text-sky-300";
         case "WARN":
-            return "border border-(--md-sys-color-tertiary) text-(--md-sys-color-tertiary)";
+            return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
         case "ERROR":
         case "FATAL":
-            return "border border-(--md-sys-color-error) text-(--md-sys-color-error)";
+            return "bg-rose-500/15 text-rose-700 dark:text-rose-300";
         default:
-            return "border border-(--md-sys-color-primary) text-(--md-sys-color-primary)";
+            return "bg-(--md-sys-color-primary)/12 text-(--md-sys-color-primary)";
     }
 };
 
 const securityLevelBadge = (level: string) => {
-    if (level === "warning" || level === "error") {
-        return "border border-(--md-sys-color-error) text-(--md-sys-color-error)";
+    const l = (level || "").toLowerCase();
+    if (l === "warn" || l === "warning") {
+        return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
     }
-    return "border border-(--md-sys-color-primary) text-(--md-sys-color-primary)";
+    if (l === "error" || l === "fatal") {
+        return "bg-rose-500/15 text-rose-700 dark:text-rose-300";
+    }
+    return "bg-sky-500/15 text-sky-700 dark:text-sky-300";
 };
 
 onMounted(() => {

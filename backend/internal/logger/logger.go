@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -38,10 +39,10 @@ const (
 )
 
 type Logger struct {
-	module     string
-	out        io.Writer
-	bufPool    *sync.Pool
-	stdoutMin  Level
+	module    string
+	out       io.Writer
+	bufPool   *sync.Pool
+	stdoutMin Level
 }
 
 var (
@@ -184,8 +185,12 @@ func (l *Logger) logf(level Level, format string, args ...any) {
 
 // 格式: UTC 时间 [模块] [级别] 文本
 func (l *Logger) log(level Level, msg string) {
+	l.logWith(level, msg, RequestFields{})
+}
+
+func (l *Logger) logWith(level Level, msg string, f RequestFields) {
 	now := time.Now()
-	rec := Record{Time: now, Level: level, Module: l.module, Message: msg}
+	rec := Record{Time: now, Level: level, Module: l.module, Message: msg, RequestID: f.RequestID, IPAddress: f.IPAddress}
 
 	// stdout：带 ANSI 颜色
 	stdoutThreshold := l.stdoutMin
@@ -242,4 +247,65 @@ func (l *Logger) writeColored(rec Record) {
 	buf.WriteString(colorReset)
 	buf.WriteByte('\n')
 	_, _ = l.out.Write(buf.Bytes())
+}
+
+// RequestFields 是请求级别的日志附加字段，由中间件注入 context，
+// 经 Logger.Ctx 取出后随 Record 落库到 app_logs。
+type RequestFields struct {
+	RequestID string
+	IPAddress string
+}
+
+type ctxKey struct{}
+
+// ContextWithFields 把请求级字段写入 context，供下游 Logger.Ctx 提取。
+func ContextWithFields(ctx context.Context, f RequestFields) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, ctxKey{}, f)
+}
+
+func fieldsFromContext(ctx context.Context) RequestFields {
+	if ctx == nil {
+		return RequestFields{}
+	}
+	if f, ok := ctx.Value(ctxKey{}).(RequestFields); ok {
+		return f
+	}
+	return RequestFields{}
+}
+
+// Entry 是绑定了请求级字段的轻量 logger，由 Logger.Ctx / Logger.With 创建。
+type Entry struct {
+	l *Logger
+	f RequestFields
+}
+
+// Ctx 返回一个携带 context 中请求字段的 Entry；ctx 无字段时退化为普通日志。
+func (l *Logger) Ctx(ctx context.Context) *Entry {
+	return &Entry{l: l, f: fieldsFromContext(ctx)}
+}
+
+// With 直接绑定请求字段，适合已显式持有 reqID/ip 的调用方。
+func (l *Logger) With(f RequestFields) *Entry {
+	return &Entry{l: l, f: f}
+}
+
+func (e *Entry) Debug(v ...any) { e.l.logWith(LevelDebug, fmt.Sprint(v...), e.f) }
+func (e *Entry) Info(v ...any)  { e.l.logWith(LevelInfo, fmt.Sprint(v...), e.f) }
+func (e *Entry) Warn(v ...any)  { e.l.logWith(LevelWarn, fmt.Sprint(v...), e.f) }
+func (e *Entry) Error(v ...any) { e.l.logWith(LevelError, fmt.Sprint(v...), e.f) }
+
+func (e *Entry) Debugf(format string, args ...any) {
+	e.l.logWith(LevelDebug, fmt.Sprintf(format, args...), e.f)
+}
+func (e *Entry) Infof(format string, args ...any) {
+	e.l.logWith(LevelInfo, fmt.Sprintf(format, args...), e.f)
+}
+func (e *Entry) Warnf(format string, args ...any) {
+	e.l.logWith(LevelWarn, fmt.Sprintf(format, args...), e.f)
+}
+func (e *Entry) Errorf(format string, args ...any) {
+	e.l.logWith(LevelError, fmt.Sprintf(format, args...), e.f)
 }

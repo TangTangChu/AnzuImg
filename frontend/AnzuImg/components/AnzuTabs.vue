@@ -1,7 +1,7 @@
 <template>
     <div class="w-full" :class="containerClasses">
         <!-- 标签头区域 -->
-        <div class="relative border-b border-(--md-sys-color-outline)" :class="headerClasses">
+        <div class="relative" :class="headerClasses">
             <div ref="scrollerRef" class="relative overflow-x-auto scrollbar-none">
                 <div class="inline-flex min-w-full" role="tablist">
                     <button v-for="(tab, index) in normalizedTabs" :key="tab._value"
@@ -16,13 +16,13 @@
                         </slot>
 
                         <!-- 标签文本 -->
-                        <span class="truncate max-w-30">
+                        <span class="whitespace-nowrap">
                             {{ tab._label }}
                         </span>
 
                         <!-- 徽章 -->
                         <span v-if="tab.badge !== undefined"
-                            class="inline-flex items-center justify-center min-w-5 h-5 px-1 text-xs font-medium rounded-full"
+                            class="inline-flex items-center justify-center min-w-5 h-5 px-1 text-xs font-medium rounded-lg"
                             :class="[
                                 isTabActive(index)
                                     ? 'bg-(--md-sys-color-primary) text-(--md-sys-color-on-primary)'
@@ -131,8 +131,8 @@ const activeTab = computed(() => {
 });
 
 const containerClasses = computed(() => [
-    props.variant === 'filled' ? 'bg-(--md-sys-color-surface)' : '',
-    props.variant === 'outlined' ? 'border border-(--md-sys-color-outline) rounded-lg' : '',
+    props.variant === 'filled' ? 'bg-(--md-sys-color-surface-container-lowest)' : '',
+    props.variant === 'outlined' ? 'bg-(--md-sys-color-surface-container-lowest) rounded-lg' : '',
     props.disabled ? 'opacity-50 pointer-events-none' : ''
 ]);
 
@@ -158,7 +158,7 @@ function getTabClasses(tab: NormalizedTab, index: number) {
     const classes = [];
 
     if (!isActive && !tab.disabled) {
-        classes.push('text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface)');
+        classes.push('text-(--md-sys-color-on-surface-variant) rounded-t-lg hover:bg-black/5 hover:text-(--md-sys-color-on-surface) dark:hover:bg-white/5');
     } else if (tab.disabled || props.disabled) {
         classes.push('cursor-not-allowed opacity-50');
     }
@@ -170,10 +170,10 @@ function getTabClasses(tab: NormalizedTab, index: number) {
     if (isActive) {
         switch (props.variant) {
             case 'filled':
-                classes.push('bg-(--md-sys-color-surface-container-highest) text-(--md-sys-color-primary) rounded-t-lg');
+                classes.push('bg-black/5 dark:bg-white/10 text-(--md-sys-color-primary) rounded-t-lg');
                 break;
             case 'outlined':
-                classes.push('border border-(--md-sys-color-outline) border-b-transparent bg-(--md-sys-color-surface) text-(--md-sys-color-primary) rounded-t-lg');
+                classes.push('bg-black/5 dark:bg-white/10 text-(--md-sys-color-primary) rounded-t-lg');
                 break;
             default:
                 classes.push('text-(--md-sys-color-primary)');

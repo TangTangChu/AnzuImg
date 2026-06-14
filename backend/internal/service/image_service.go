@@ -110,7 +110,7 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 			audioCodec = info.AudioCodec
 			audioBitrate = info.AudioBitrate
 		} else {
-			s.log.Warnf("Failed to probe video metadata: %v", err)
+			s.log.Ctx(ctx).Warnf("Failed to probe video metadata: %v", err)
 		}
 	}
 
@@ -168,19 +168,19 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 			// LocalStorage: hash[:2]/hash_thumb.webp
 			_, _, err := s.storage.Save(ctx, hashStr+"_thumb.webp", thumbData, "image/webp")
 			if err != nil {
-				s.log.Warnf("Failed to save thumbnail: %v", err)
+				s.log.Ctx(ctx).Warnf("Failed to save thumbnail: %v", err)
 			}
 		} else {
-			s.log.Warnf("Failed to generate thumbnail: %v", err)
+			s.log.Ctx(ctx).Warnf("Failed to generate thumbnail: %v", err)
 		}
 	} else if IsVideoFile(mimeType) {
 		if thumbData, err := GenerateVideoThumbnail(ctx, buf, 800, 800); err == nil {
 			_, _, err := s.storage.Save(ctx, hashStr+"_thumb.jpg", thumbData, "image/jpeg")
 			if err != nil {
-				s.log.Warnf("Failed to save video thumbnail: %v", err)
+				s.log.Ctx(ctx).Warnf("Failed to save video thumbnail: %v", err)
 			}
 		} else {
-			s.log.Warnf("Failed to generate video thumbnail: %v", err)
+			s.log.Ctx(ctx).Warnf("Failed to generate video thumbnail: %v", err)
 		}
 	}
 
@@ -222,7 +222,7 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		return nil
 	}); err != nil {
 		if delErr := s.storage.Delete(ctx, relPath); delErr != nil {
-			s.log.Warnf("Failed to cleanup file after db rollback: %v", delErr)
+			s.log.Ctx(ctx).Warnf("Failed to cleanup file after db rollback: %v", delErr)
 		}
 		suffixes := []string{"_thumb.webp", "_thumb.jpg", "_thumb"}
 		for _, suffix := range suffixes {
@@ -455,13 +455,13 @@ func (s *ImageService) DeleteImage(ctx context.Context, hash string) error {
 	}
 
 	if err := s.storage.Delete(ctx, img.Path); err != nil {
-		s.log.Warnf("Failed to delete file from storage: %v", err)
+		s.log.Ctx(ctx).Warnf("Failed to delete file from storage: %v", err)
 	}
 
 	suffixes := []string{"_thumb.webp", "_thumb.jpg", "_thumb"}
 	for _, suffix := range suffixes {
 		if err := s.storage.Delete(ctx, img.Path+suffix); err != nil {
-			s.log.Debugf("Failed to delete thumbnail %s: %v", suffix, err)
+			s.log.Ctx(ctx).Debugf("Failed to delete thumbnail %s: %v", suffix, err)
 		}
 	}
 

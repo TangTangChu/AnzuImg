@@ -19,6 +19,8 @@
       "download": "ダウンロード",
       "close": "閉じる",
       "copyLink": "リンクをコピー",
+      "copyUrl": "URLをコピー",
+      "copyMarkdown": "Markdownをコピー",
       "loading": "読み込み中...",
       "uploading": "アップロード中...",
       "deleteConfirm": "削除してもよろしいですか？",
@@ -85,7 +87,20 @@
     "safeSystem": "異常なし"
   },
   "auth": {
-    "registerPasskey": "Passkeyを登録"
+    "registerPasskey": "Passkeyを登録",
+    "stepUp": {
+      "title": "再認証",
+      "description": "この操作は重要です。パスワードまたはPasskeyで確認してください。",
+      "byPassword": "パスワード",
+      "byPasskey": "Passkey",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "現在のパスワードを入力",
+      "passwordFailed": "パスワードが正しくありません",
+      "passkeyHint": "下のボタンをクリックして登録済みのPasskeyで確認します。",
+      "usePasskey": "Passkeyで確認",
+      "passkeyFailed": "Passkeyの確認に失敗しました",
+      "confirm": "確認"
+    }
   },
   "meta": {
     "fullName": "AnzuIMG"
@@ -119,6 +134,7 @@
     "customFileName": "カスタムファイル名",
     "customFileNamePlaceholder": "例：my-image",
     "convert": "フォーマット変換",
+    "convertSection": "変換設定",
     "targetFormat": "出力フォーマット",
     "quality": "画質 (1-100)",
     "effort": "圧縮強度 (0-9)",

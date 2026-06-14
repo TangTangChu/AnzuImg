@@ -2,7 +2,7 @@
     <div class="space-y-10">
         <div
             v-if="!allowWebModify"
-            class="flex items-start gap-2 rounded-lg border border-(--md-sys-color-outline-variant) p-3 text-sm text-(--md-sys-color-on-surface-variant)"
+            class="flex items-start gap-2 rounded-lg bg-black/5 p-3 text-sm text-(--md-sys-color-on-surface-variant) dark:bg-white/5"
         >
             <InformationCircleIcon class="w-5 h-5 shrink-0 mt-0.5 text-(--md-sys-color-on-surface-variant)" />
             <span>{{ t("settings.systemConfig.disabledNotice") }}</span>
@@ -11,7 +11,7 @@
         <div
             v-for="(group, groupIdx) in groupedSchema"
             :key="group.name"
-            :class="groupIdx > 0 ? 'pt-8 border-t border-(--md-sys-color-outline-variant)' : ''"
+            :class="groupIdx > 0 ? 'pt-10' : ''"
         >
             <h3 class="mb-5 text-lg font-semibold">
                 {{ t(`settings.systemConfig.groups.${group.name}`) }}
@@ -62,13 +62,12 @@
                         :disabled="!allowWebModify"
                         @update:modelValue="(v: any) => onInput(field.key, v)"
                     />
-                    <textarea
+                    <AnzuTextarea
                         v-else-if="resolveControl(field) === 'multiline'"
-                        :value="String(local[field.key] ?? '')"
+                        :model-value="String(local[field.key] ?? '')"
                         :disabled="!allowWebModify"
-                        rows="3"
-                        class="w-full rounded-lg border border-(--md-sys-color-outline) bg-transparent px-3 py-2 text-sm text-(--md-sys-color-on-surface) outline-none transition-[border-color] duration-200 ease-out hover:border-(--md-sys-color-outline-variant) focus:border-(--md-sys-color-primary)"
-                        @input="(e: any) => onInput(field.key, e.target.value)"
+                        :rows="3"
+                        @update:model-value="(v: string) => onInput(field.key, v)"
                     />
                     <AnzuInput
                         v-else-if="resolveControl(field) === 'int'"
@@ -114,7 +113,7 @@
 
         <div
             v-if="allowWebModify"
-            class="sticky bottom-2 flex items-center justify-end gap-2 rounded-xl border border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface) px-4 py-2"
+            class="sticky bottom-2 flex items-center justify-end gap-2 rounded-lg bg-(--md-sys-color-surface)/80 px-4 py-2 backdrop-blur-md"
         >
             <span
                 v-if="dirtyKeys.length > 0"
@@ -152,6 +151,7 @@ import { ref, computed, watch } from "vue";
 import { InformationCircleIcon } from "@heroicons/vue/24/outline";
 import AnzuButton from "~/components/AnzuButton.vue";
 import AnzuInput from "~/components/AnzuInput.vue";
+import AnzuTextarea from "~/components/AnzuTextarea.vue";
 import AnzuComboBox from "~/components/AnzuComboBox.vue";
 import AnzuTags from "~/components/AnzuTags.vue";
 import AnzuCheckbox from "~/components/AnzuCheckbox.vue";
