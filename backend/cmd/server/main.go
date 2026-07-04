@@ -106,6 +106,25 @@ CREATE INDEX IF NOT EXISTS idx_images_uploaded_by_token_id ON images(uploaded_by
 			return fmt.Errorf("alter images table failed: %w", err)
 		}
 
+		createUploadTasksTable := `
+CREATE TABLE IF NOT EXISTS upload_tasks (
+    id            VARCHAR(36) PRIMARY KEY,
+    status        VARCHAR(32)  NOT NULL,
+    file_name     VARCHAR(255),
+    result        JSONB,
+    error_code    VARCHAR(64),
+    error_message TEXT,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    completed_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_upload_tasks_status ON upload_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_upload_tasks_created_at ON upload_tasks(created_at);
+`
+		if err := tx.Exec(createUploadTasksTable).Error; err != nil {
+			return fmt.Errorf("create upload_tasks table failed: %w", err)
+		}
+
 		createRoutesTable := `
 CREATE TABLE IF NOT EXISTS image_routes (
     id         BIGSERIAL PRIMARY KEY,

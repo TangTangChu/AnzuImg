@@ -458,6 +458,178 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
+// POST /api/v1/images/tasks
+func (h *ImageHandler) UploadTask(c *gin.Context) {
+	var uploaderToken *model.APIToken
+	if v, ok := c.Get("api_token"); ok {
+		if t, ok2 := v.(*model.APIToken); ok2 {
+			uploaderToken = t
+		}
+	}
+
+	maxTotal := int64(100 * 1024 * 1024)
+	if h.svc != nil {
+		if cfg := h.svc.Config(); cfg != nil {
+			if v := cfg.Effective().MaxUploadBytes; v > 0 {
+				maxTotal = v
+			}
+		}
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxTotal)
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_required", "file is required")
+		return
+	}
+
+	maxPerFile := int64(60 * 1024 * 1024)
+	if h.svc != nil {
+		if cfg := h.svc.Config(); cfg != nil {
+			if v := cfg.Effective().MaxUploadFileBytes; v > 0 {
+				maxPerFile = v
+			}
+		}
+	}
+	if maxPerFile > 0 && fileHeader.Size > maxPerFile {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_too_large", "file too large")
+		return
+	}
+
+	f, err := fileHeader.Open()
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_open_failed", "open file failed")
+		return
+	}
+	reader := io.Reader(f)
+	if maxPerFile > 0 {
+		reader = io.LimitReader(f, maxPerFile+1)
+	}
+	buf, err := io.ReadAll(reader)
+	f.Close()
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_read_failed", "read file failed")
+		return
+	}
+	if maxPerFile > 0 && int64(len(buf)) > maxPerFile {
+		response.WriteErrorCode(c, http.StatusBadRequest, "file_too_large", "file too large")
+		return
+	}
+
+	mimeType, width, height := detectUploadMIMEAndDimensions(buf)
+	if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
+		response.WriteErrorCode(c, http.StatusBadRequest, "unsupported_file_type", "unsupported file type: "+mimeType)
+		return
+	}
+
+	originalFileName := fileHeader.Filename
+	cleanPath := filepath.Clean(originalFileName)
+	if strings.Contains(cleanPath, "..") || filepath.IsAbs(cleanPath) || strings.ContainsAny(cleanPath, "/\\") {
+		originalFileName = filepath.Base(cleanPath)
+	} else {
+		originalFileName = cleanPath
+	}
+	if originalFileName == "" || originalFileName == "." || originalFileName == ".." {
+		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_filename", "invalid filename")
+		return
+	}
+
+	finalFileName := originalFileName
+	if customName := c.PostForm("custom_name"); customName != "" {
+		cleanCustomName := filepath.Clean(customName)
+		if !strings.Contains(cleanCustomName, "..") && !filepath.IsAbs(cleanCustomName) && !strings.ContainsAny(cleanCustomName, "/\\") {
+			cn := filepath.Base(cleanCustomName)
+			if cn != "" && cn != "." && cn != ".." {
+				finalFileName = cn
+			}
+		}
+	}
+
+	var tags []string
+	if tagsStr := c.PostForm("tags"); tagsStr != "" {
+		tagList := strings.Split(tagsStr, ",")
+		for _, tag := range tagList {
+			tag = strings.TrimSpace(tag)
+			if tag != "" {
+				tags = append(tags, tag)
+			}
+		}
+	}
+	var routes []string
+	if routeStr := c.PostForm("route"); routeStr != "" {
+		list := strings.Split(routeStr, ",")
+		for _, r := range list {
+			r = strings.TrimSpace(r)
+			if r != "" {
+				routes = append(routes, r)
+			}
+		}
+	}
+
+	convert, _ := strconv.ParseBool(c.PostForm("convert"))
+	targetFormat := c.PostForm("target_format")
+	quality, _ := strconv.Atoi(c.PostForm("quality"))
+	effort, _ := strconv.Atoi(c.PostForm("effort"))
+
+	var uploadedByTokenID *uint
+	var uploadedByTokenName string
+	var uploadedByTokenType string
+	if uploaderToken != nil {
+		uploadedByTokenID = &uploaderToken.ID
+		uploadedByTokenName = uploaderToken.Name
+		uploadedByTokenType = uploaderToken.NormalizedType()
+	}
+
+	task, err := h.svc.EnqueueUploadTask(service.UploadTaskInput{
+		Buf:                 buf,
+		FileName:            finalFileName,
+		Routes:              routes,
+		Description:         c.PostForm("description"),
+		Tags:                tags,
+		MimeType:            mimeType,
+		Width:               width,
+		Height:              height,
+		Convert:             convert && service.IsImageFile(mimeType),
+		TargetFormat:        targetFormat,
+		Quality:             quality,
+		Effort:              effort,
+		UploadedByTokenID:   uploadedByTokenID,
+		UploadedByTokenName: uploadedByTokenName,
+		UploadedByTokenType: uploadedByTokenType,
+		RequestMethod:       c.Request.Method,
+		RequestPath:         c.Request.URL.Path,
+		IPAddress:           middleware.ClientIP(c),
+		UserAgent:           c.Request.UserAgent(),
+	})
+	if err != nil {
+		response.WriteErrorCode(c, http.StatusInternalServerError, "enqueue_upload_failed", "failed to enqueue upload")
+		return
+	}
+
+	c.JSON(http.StatusAccepted, task)
+}
+
+// GET /api/v1/images/tasks/:id
+func (h *ImageHandler) GetUploadTask(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		response.WriteErrorCode(c, http.StatusBadRequest, "task_id_required", "task id is required")
+		return
+	}
+
+	task, err := h.svc.GetUploadTask(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.WriteErrorCode(c, http.StatusNotFound, "task_not_found", "task not found")
+			return
+		}
+		response.WriteErrorCode(c, http.StatusInternalServerError, "get_upload_task_failed", "failed to get upload task")
+		return
+	}
+
+	c.JSON(http.StatusOK, task)
+}
+
 func classifyURLFetchError(err error) (string, string) {
 	switch {
 	case errors.Is(err, service.ErrURLInvalid):

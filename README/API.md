@@ -313,6 +313,8 @@
 
 转换参数仅对图片生效。`convert=true` 时可配合 `target_format`、`quality` 和 `effort` 进行格式转换。视频不会执行图片转换流程。
 
+该接口会同步等待媒体保存和格式转换完成。缩略图会在保存成功后后台生成，缩略图尚未生成时 `/i/:hash/thumbnail` 会回退返回原媒体。
+
 `metadata` 结构如下：
 
 ```json
@@ -351,6 +353,113 @@
     "message": "unsupported file type: text/plain"
   }
 ]
+```
+
+#### 创建上传任务
+
+`POST /api/v1/images/tasks`
+
+该接口用于创建单文件异步上传任务。请求使用 `multipart/form-data`，字段与同步上传的全局字段保持一致：
+
+- `file`: 媒体文件，必需
+- `route`: 路由别名，可选
+- `description`: 描述，可选
+- `tags`: 逗号分隔标签，可选
+- `custom_name`: 自定义文件名，可选
+- `convert`: 是否转换图片格式，可选
+- `target_format`: 转换目标格式，可选，支持 `webp` / `avif`
+- `quality`: 转换质量，可选
+- `effort`: 转换努力程度，可选
+
+任务接口只负责快速入队，后台 worker 会继续执行检测、图片转换、存储、入库和缩略图生成。适合前端、CMS 或反向代理不适合长时间等待的场景。
+
+成功创建任务返回 `202 Accepted`：
+
+```json
+{
+  "id": "9f4ff4d8-3d0e-44e5-9f3b-2d72f7e6c1d4",
+  "status": "pending",
+  "file_name": "example.png",
+  "created_at": "2026-07-04T00:00:00Z",
+  "updated_at": "2026-07-04T00:00:00Z"
+}
+```
+
+若队列已满，也会返回任务对象，但状态为 `failed`：
+
+```json
+{
+  "id": "9f4ff4d8-3d0e-44e5-9f3b-2d72f7e6c1d4",
+  "status": "failed",
+  "file_name": "example.png",
+  "error_code": "queue_full",
+  "error_message": "upload queue is full",
+  "created_at": "2026-07-04T00:00:00Z",
+  "updated_at": "2026-07-04T00:00:00Z",
+  "completed_at": "2026-07-04T00:00:00Z"
+}
+```
+
+#### 查询上传任务
+
+`GET /api/v1/images/tasks/:id`
+
+该接口用于查询上传任务状态。任务状态包括：
+
+- `pending`: 已创建，等待 worker 处理
+- `running`: 正在处理
+- `succeeded`: 上传完成，`result` 为最终媒体信息
+- `failed`: 上传失败，查看 `error_code` 和 `error_message`
+
+处理中响应：
+
+```json
+{
+  "id": "9f4ff4d8-3d0e-44e5-9f3b-2d72f7e6c1d4",
+  "status": "running",
+  "file_name": "example.png",
+  "created_at": "2026-07-04T00:00:00Z",
+  "updated_at": "2026-07-04T00:00:01Z"
+}
+```
+
+成功响应：
+
+```json
+{
+  "id": "9f4ff4d8-3d0e-44e5-9f3b-2d72f7e6c1d4",
+  "status": "succeeded",
+  "file_name": "example.png",
+  "result": {
+    "success": true,
+    "hash": "...",
+    "file_name": "example.avif",
+    "url": "/i/...",
+    "path": "ab/...",
+    "mime": "image/avif",
+    "width": 800,
+    "height": 600,
+    "reused": false
+  },
+  "created_at": "2026-07-04T00:00:00Z",
+  "updated_at": "2026-07-04T00:00:10Z",
+  "completed_at": "2026-07-04T00:00:10Z"
+}
+```
+
+失败响应：
+
+```json
+{
+  "id": "9f4ff4d8-3d0e-44e5-9f3b-2d72f7e6c1d4",
+  "status": "failed",
+  "file_name": "example.png",
+  "error_code": "upload_failed",
+  "error_message": "convert image failed: ...",
+  "created_at": "2026-07-04T00:00:00Z",
+  "updated_at": "2026-07-04T00:00:10Z",
+  "completed_at": "2026-07-04T00:00:10Z"
+}
 ```
 
 #### 获取媒体列表

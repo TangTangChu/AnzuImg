@@ -163,6 +163,8 @@ func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHand
 	{
 		api.GET("/ping", middleware.RequireTokenType(model.TokenTypeFull), hh.Ping)
 		api.POST("/images", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.Upload)
+		api.POST("/images/tasks", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.UploadTask)
+		api.GET("/images/tasks/:id", middleware.RequireTokenScopes(model.ScopeImagesUpload), ih.GetUploadTask)
 		api.GET("/images", middleware.RequireTokenScopes(model.ScopeImagesList), ih.List)
 		api.GET("/tags", middleware.RequireTokenType(model.TokenTypeFull), ih.ListTags)
 		api.GET("/images/:hash/info", middleware.RequireTokenType(model.TokenTypeFull), ih.GetInfo)
@@ -176,6 +178,8 @@ func registerAPIRoutes(r *gin.Engine, cfg *config.Config, hh *handler.HealthHand
 
 		api.OPTIONS("/ping", func(c *gin.Context) { c.Status(204) })
 		api.OPTIONS("/images", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/images/tasks", func(c *gin.Context) { c.Status(204) })
+		api.OPTIONS("/images/tasks/:id", func(c *gin.Context) { c.Status(204) })
 		api.OPTIONS("/tags", func(c *gin.Context) { c.Status(204) })
 		api.OPTIONS("/images/:hash/info", func(c *gin.Context) { c.Status(204) })
 		api.OPTIONS("/images/:hash", func(c *gin.Context) { c.Status(204) })

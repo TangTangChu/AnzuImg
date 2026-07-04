@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
@@ -25,7 +26,35 @@ type ImageService struct {
 	db  *gorm.DB
 	log *logger.Logger
 
-	storage Storage
+	storage     Storage
+	uploadQueue chan uploadTaskJob
+}
+
+type uploadTaskJob struct {
+	TaskID string
+	Input  UploadTaskInput
+}
+
+type UploadTaskInput struct {
+	Buf                 []byte
+	FileName            string
+	Routes              []string
+	Description         string
+	Tags                []string
+	MimeType            string
+	Width               int
+	Height              int
+	Convert             bool
+	TargetFormat        string
+	Quality             int
+	Effort              int
+	UploadedByTokenID   *uint
+	UploadedByTokenName string
+	UploadedByTokenType string
+	RequestMethod       string
+	RequestPath         string
+	IPAddress           string
+	UserAgent           string
 }
 
 type TagCount struct {
@@ -37,22 +66,26 @@ func NewImageService(cfg *config.Config, db *gorm.DB) *ImageService {
 	factory := NewStorageFactory(cfg, logger.Register("storage-factory"))
 	storage := factory.CreateDefaultStorage()
 
-	return &ImageService{
+	svc := &ImageService{
 		cfg:     cfg,
 		db:      db,
 		log:     logger.Register("image"),
 		storage: storage,
 	}
+	svc.startUploadWorkers(2, 32)
+	return svc
 }
 
 // NewImageServiceWithStorage 使用指定的存储创建服务
 func NewImageServiceWithStorage(cfg *config.Config, db *gorm.DB, storage Storage) *ImageService {
-	return &ImageService{
+	svc := &ImageService{
 		cfg:     cfg,
 		db:      db,
 		log:     logger.Register("image"),
 		storage: storage,
 	}
+	svc.startUploadWorkers(2, 32)
+	return svc
 }
 
 type UploadResult struct {
@@ -163,27 +196,6 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		return nil, err
 	}
 
-	if IsImageFile(mimeType) {
-		if thumbData, err := GenerateThumbnail(bytes.NewReader(buf), 800, 800); err == nil {
-			// LocalStorage: hash[:2]/hash_thumb.webp
-			_, _, err := s.storage.Save(ctx, hashStr+"_thumb.webp", thumbData, "image/webp")
-			if err != nil {
-				s.log.Ctx(ctx).Warnf("Failed to save thumbnail: %v", err)
-			}
-		} else {
-			s.log.Ctx(ctx).Warnf("Failed to generate thumbnail: %v", err)
-		}
-	} else if IsVideoFile(mimeType) {
-		if thumbData, err := GenerateVideoThumbnail(ctx, buf, 800, 800); err == nil {
-			_, _, err := s.storage.Save(ctx, hashStr+"_thumb.jpg", thumbData, "image/jpeg")
-			if err != nil {
-				s.log.Ctx(ctx).Warnf("Failed to save video thumbnail: %v", err)
-			}
-		} else {
-			s.log.Ctx(ctx).Warnf("Failed to generate video thumbnail: %v", err)
-		}
-	}
-
 	img := model.Image{
 		Hash:                hashStr,
 		FileName:            fileName,
@@ -231,6 +243,8 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		return nil, err
 	}
 
+	s.generateThumbnailAsync(hashStr, buf, mimeType)
+
 	firstRoute := ""
 	if len(routes) > 0 {
 		firstRoute = routes[0]
@@ -243,6 +257,196 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		HashURL:  "/i/" + img.Hash,
 		RouteURL: routeURL(firstRoute),
 	}, nil
+}
+
+func (s *ImageService) generateThumbnailAsync(hashStr string, buf []byte, mimeType string) {
+	if !IsImageFile(mimeType) && !IsVideoFile(mimeType) {
+		return
+	}
+
+	data := append([]byte(nil), buf...)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		if IsImageFile(mimeType) {
+			if thumbData, err := GenerateThumbnail(bytes.NewReader(data), 800, 800); err == nil {
+				if _, _, err := s.storage.Save(ctx, hashStr+"_thumb.webp", thumbData, "image/webp"); err != nil {
+					s.log.Ctx(ctx).Warnf("Failed to save thumbnail: %v", err)
+				}
+			} else {
+				s.log.Ctx(ctx).Warnf("Failed to generate thumbnail: %v", err)
+			}
+			return
+		}
+
+		if thumbData, err := GenerateVideoThumbnail(ctx, data, 800, 800); err == nil {
+			if _, _, err := s.storage.Save(ctx, hashStr+"_thumb.jpg", thumbData, "image/jpeg"); err != nil {
+				s.log.Ctx(ctx).Warnf("Failed to save video thumbnail: %v", err)
+			}
+		} else {
+			s.log.Ctx(ctx).Warnf("Failed to generate video thumbnail: %v", err)
+		}
+	}()
+}
+
+func (s *ImageService) startUploadWorkers(workerCount int, queueSize int) {
+	if workerCount <= 0 {
+		workerCount = 1
+	}
+	if queueSize <= 0 {
+		queueSize = 16
+	}
+
+	s.uploadQueue = make(chan uploadTaskJob, queueSize)
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for job := range s.uploadQueue {
+				s.runUploadTask(job)
+			}
+		}()
+	}
+}
+
+func (s *ImageService) EnqueueUploadTask(input UploadTaskInput) (*model.UploadTask, error) {
+	if s.uploadQueue == nil {
+		s.startUploadWorkers(2, 32)
+	}
+
+	task := model.UploadTask{
+		ID:       uuid.NewString(),
+		Status:   model.UploadTaskStatusPending,
+		FileName: input.FileName,
+	}
+	if err := s.db.Create(&task).Error; err != nil {
+		return nil, fmt.Errorf("create upload task failed: %w", err)
+	}
+
+	select {
+	case s.uploadQueue <- uploadTaskJob{TaskID: task.ID, Input: input}:
+		return &task, nil
+	default:
+		now := time.Now()
+		updates := map[string]interface{}{
+			"status":        model.UploadTaskStatusFailed,
+			"error_code":    "queue_full",
+			"error_message": "upload queue is full",
+			"completed_at":  &now,
+		}
+		_ = s.db.Model(&model.UploadTask{}).Where("id = ?", task.ID).Updates(updates).Error
+		task.Status = model.UploadTaskStatusFailed
+		task.ErrorCode = "queue_full"
+		task.ErrorMessage = "upload queue is full"
+		task.CompletedAt = &now
+		return &task, nil
+	}
+}
+
+func (s *ImageService) GetUploadTask(id string) (*model.UploadTask, error) {
+	var task model.UploadTask
+	if err := s.db.Where("id = ?", id).First(&task).Error; err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+func (s *ImageService) runUploadTask(job uploadTaskJob) {
+	ctx := context.Background()
+	_ = s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
+		"status": model.UploadTaskStatusRunning,
+	}).Error
+
+	input := job.Input
+	res, err := s.Upload(
+		ctx,
+		input.Buf,
+		input.FileName,
+		input.Routes,
+		input.Description,
+		input.Tags,
+		input.MimeType,
+		input.Width,
+		input.Height,
+		input.Convert,
+		input.TargetFormat,
+		input.Quality,
+		input.Effort,
+		input.UploadedByTokenID,
+		input.UploadedByTokenName,
+		input.UploadedByTokenType,
+	)
+
+	now := time.Now()
+	if err != nil {
+		if updateErr := s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
+			"status":        model.UploadTaskStatusFailed,
+			"error_code":    "upload_failed",
+			"error_message": err.Error(),
+			"completed_at":  &now,
+		}).Error; updateErr != nil {
+			s.log.Ctx(ctx).Warnf("Failed to update failed upload task %s: %v", job.TaskID, updateErr)
+		}
+		return
+	}
+
+	if input.UploadedByTokenID != nil {
+		tokenSvc := NewAPITokenService(s.db)
+		_ = tokenSvc.RecordLog(&model.APITokenLog{
+			TokenID:   *input.UploadedByTokenID,
+			TokenName: input.UploadedByTokenName,
+			TokenType: input.UploadedByTokenType,
+			Action:    "image_upload",
+			Method:    input.RequestMethod,
+			Path:      input.RequestPath,
+			IPAddress: input.IPAddress,
+			UserAgent: input.UserAgent,
+			ImageHash: res.Image.Hash,
+		})
+	}
+
+	result := map[string]interface{}{
+		"success":          true,
+		"hash":             res.Image.Hash,
+		"file_name":        res.Image.FileName,
+		"size":             res.Image.Size,
+		"mime":             res.Image.MimeType,
+		"path":             res.Image.Path,
+		"width":            res.Image.Width,
+		"height":           res.Image.Height,
+		"duration_seconds": res.Image.DurationSeconds,
+		"video_codec":      res.Image.VideoCodec,
+		"video_bitrate":    res.Image.VideoBitrate,
+		"audio_codec":      res.Image.AudioCodec,
+		"audio_bitrate":    res.Image.AudioBitrate,
+		"description":      res.Image.Description,
+		"tags":             res.Image.Tags,
+		"created_at":       res.Image.CreatedAt,
+		"updated_at":       res.Image.UpdatedAt,
+		"reused":           res.Reused,
+		"url":              res.HashURL,
+		"route":            res.Route,
+		"route_url":        res.RouteURL,
+	}
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		if updateErr := s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
+			"status":        model.UploadTaskStatusFailed,
+			"error_code":    "result_encode_failed",
+			"error_message": err.Error(),
+			"completed_at":  &now,
+		}).Error; updateErr != nil {
+			s.log.Ctx(ctx).Warnf("Failed to update result encode error for upload task %s: %v", job.TaskID, updateErr)
+		}
+		return
+	}
+
+	if updateErr := s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
+		"status":       model.UploadTaskStatusSucceeded,
+		"result":       datatypes.JSON(resultBytes),
+		"completed_at": &now,
+	}).Error; updateErr != nil {
+		s.log.Ctx(ctx).Warnf("Failed to update succeeded upload task %s: %v", job.TaskID, updateErr)
+	}
 }
 
 func routeURL(route string) string {
