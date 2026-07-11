@@ -48,7 +48,7 @@ type FetchResult struct {
 	Filename string
 }
 
-func (f *URLFetcher) Fetch(ctx context.Context, rawURL string) (*FetchResult, error) {
+func (f *URLFetcher) Fetch(ctx context.Context, rawURL string, requestMaxBytes int64) (*FetchResult, error) {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrURLInvalid, err)
@@ -68,6 +68,9 @@ func (f *URLFetcher) Fetch(ctx context.Context, rawURL string) (*FetchResult, er
 	maxBytes := eff.URLFetchMaxBytes
 	if maxBytes <= 0 {
 		maxBytes = 60 * 1024 * 1024
+	}
+	if requestMaxBytes > 0 && requestMaxBytes < maxBytes {
+		maxBytes = requestMaxBytes
 	}
 	allowPrivate := eff.URLFetchAllowPrivate
 

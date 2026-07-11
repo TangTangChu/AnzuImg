@@ -47,6 +47,36 @@ var allowedUploadMIMETypes = map[string]struct{}{
 	"video/x-matroska":         {},
 }
 
+const multipartMemoryThreshold int64 = 8 << 20
+
+const (
+	maxMediaDimension = 32768
+	maxMediaPixels    = int64(100_000_000)
+)
+
+func minPositive(values ...int64) int64 {
+	var result int64
+	for _, value := range values {
+		if value <= 0 {
+			continue
+		}
+		if result == 0 || value < result {
+			result = value
+		}
+	}
+	return result
+}
+
+func mediaDimensionsAllowed(width, height int) bool {
+	if width <= 0 || height <= 0 {
+		return true
+	}
+	if width > maxMediaDimension || height > maxMediaDimension {
+		return false
+	}
+	return int64(width)*int64(height) <= maxMediaPixels
+}
+
 func detectUploadMIMEAndDimensions(buf []byte) (mimeType string, width, height int) {
 	mimeType, width, height, err := service.InspectImage(bytes.NewReader(buf))
 	if err == nil {
@@ -91,7 +121,8 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxTotal)
 
-	if err := c.Request.ParseMultipartForm(maxTotal); err != nil {
+	memoryThreshold := minPositive(maxTotal, multipartMemoryThreshold)
+	if err := c.Request.ParseMultipartForm(memoryThreshold); err != nil {
 		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_multipart_form", "file size exceeds limit or invalid form")
 		return
 	}
@@ -190,6 +221,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 
 	var results []gin.H
+	remainingTotal := maxTotal
 	appendUploadError := func(clientIndex int, fileName, code, message string) {
 		results = append(results, gin.H{
 			"client_index": clientIndex,
@@ -239,11 +271,20 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			appendUploadError(clientIndex, fileHeader.Filename, "file_too_large", "file too large")
 			continue
 		}
+		if remainingTotal > 0 && int64(len(buf)) > remainingTotal {
+			appendUploadError(clientIndex, fileHeader.Filename, "upload_total_too_large", "total upload size exceeds limit")
+			continue
+		}
+		remainingTotal -= int64(len(buf))
 
 		mimeType, width, height := detectUploadMIMEAndDimensions(buf)
 
 		if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
 			appendUploadError(clientIndex, fileHeader.Filename, "unsupported_file_type", "unsupported file type: "+mimeType)
+			continue
+		}
+		if !mediaDimensionsAllowed(width, height) {
+			appendUploadError(clientIndex, fileHeader.Filename, "media_dimensions_too_large", "media dimensions exceed limit")
 			continue
 		}
 
@@ -302,7 +343,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		if uploaderToken != nil {
-			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			tokenSvc := service.NewAPITokenService(h.svc.Config(), h.svc.DB())
 			_ = tokenSvc.RecordLog(&model.APITokenLog{
 				TokenID:   uploaderToken.ID,
 				TokenName: uploaderToken.Name,
@@ -354,29 +395,45 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 			continue
 		}
 
-		fetchRes, err := h.urlFetcher.Fetch(c.Request.Context(), rawURL)
+		maxPerFile := int64(60 * 1024 * 1024)
+		urlFetchMax := int64(60 * 1024 * 1024)
+		if h.svc != nil {
+			if cfg := h.svc.Config(); cfg != nil {
+				eff := cfg.Effective()
+				if eff.MaxUploadFileBytes > 0 {
+					maxPerFile = eff.MaxUploadFileBytes
+				}
+				if eff.URLFetchMaxBytes > 0 {
+					urlFetchMax = eff.URLFetchMaxBytes
+				}
+			}
+		}
+		fetchLimit := minPositive(maxPerFile, urlFetchMax, remainingTotal)
+		if fetchLimit <= 0 {
+			appendUploadError(clientIndex, rawURL, "upload_total_too_large", "total upload size exceeds limit")
+			continue
+		}
+
+		fetchRes, err := h.urlFetcher.Fetch(c.Request.Context(), rawURL, fetchLimit)
 		if err != nil {
 			code, msg := classifyURLFetchError(err)
 			appendUploadError(clientIndex, rawURL, code, msg)
 			continue
 		}
 
-		maxPerFile := int64(60 * 1024 * 1024)
-		if h.svc != nil {
-			if cfg := h.svc.Config(); cfg != nil {
-				if v := cfg.Effective().MaxUploadFileBytes; v > 0 {
-					maxPerFile = v
-				}
-			}
-		}
 		if maxPerFile > 0 && int64(len(fetchRes.Body)) > maxPerFile {
 			appendUploadError(clientIndex, rawURL, "file_too_large", "file too large")
 			continue
 		}
+		remainingTotal -= int64(len(fetchRes.Body))
 
 		mimeType, width, height := detectUploadMIMEAndDimensions(fetchRes.Body)
 		if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
 			appendUploadError(clientIndex, rawURL, "unsupported_file_type", "unsupported file type: "+mimeType)
+			continue
+		}
+		if !mediaDimensionsAllowed(width, height) {
+			appendUploadError(clientIndex, rawURL, "media_dimensions_too_large", "media dimensions exceed limit")
 			continue
 		}
 
@@ -414,7 +471,7 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		}
 
 		if uploaderToken != nil {
-			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			tokenSvc := service.NewAPITokenService(h.svc.Config(), h.svc.DB())
 			_ = tokenSvc.RecordLog(&model.APITokenLog{
 				TokenID:   uploaderToken.ID,
 				TokenName: uploaderToken.Name,
@@ -519,6 +576,10 @@ func (h *ImageHandler) UploadTask(c *gin.Context) {
 	mimeType, width, height := detectUploadMIMEAndDimensions(buf)
 	if _, allowed := allowedUploadMIMETypes[mimeType]; !allowed {
 		response.WriteErrorCode(c, http.StatusBadRequest, "unsupported_file_type", "unsupported file type: "+mimeType)
+		return
+	}
+	if !mediaDimensionsAllowed(width, height) {
+		response.WriteErrorCode(c, http.StatusBadRequest, "media_dimensions_too_large", "media dimensions exceed limit")
 		return
 	}
 
@@ -647,7 +708,7 @@ func classifyURLFetchError(err error) (string, string) {
 func (h *ImageHandler) GetByHash(c *gin.Context) {
 	hashStr := c.Param("hash")
 
-	_, absPath, err := h.svc.ResolveByHash(c.Request.Context(), hashStr)
+	img, absPath, err := h.svc.ResolveByHash(c.Request.Context(), hashStr)
 	if err != nil {
 		response.WriteErrorCode(c, http.StatusNotFound, "image_not_found", "image not found")
 		return
@@ -656,6 +717,9 @@ func (h *ImageHandler) GetByHash(c *gin.Context) {
 	if strings.HasPrefix(absPath, "http://") || strings.HasPrefix(absPath, "https://") {
 		c.Redirect(http.StatusFound, absPath)
 		return
+	}
+	if img.MimeType == "image/svg+xml" {
+		c.Header("Content-Disposition", "attachment")
 	}
 	c.File(absPath)
 }
@@ -681,7 +745,7 @@ func (h *ImageHandler) GetThumbnailByHash(c *gin.Context) {
 func (h *ImageHandler) GetByRoute(c *gin.Context) {
 	routeStr := c.Param("route")
 
-	_, absPath, err := h.svc.ResolveByRoute(c.Request.Context(), routeStr)
+	img, absPath, err := h.svc.ResolveByRoute(c.Request.Context(), routeStr)
 	if err != nil {
 		response.WriteErrorCode(c, http.StatusNotFound, "route_not_found", "route not found")
 		return
@@ -690,6 +754,9 @@ func (h *ImageHandler) GetByRoute(c *gin.Context) {
 	if strings.HasPrefix(absPath, "http://") || strings.HasPrefix(absPath, "https://") {
 		c.Redirect(http.StatusFound, absPath)
 		return
+	}
+	if img.MimeType == "image/svg+xml" {
+		c.Header("Content-Disposition", "attachment")
 	}
 	c.File(absPath)
 }
@@ -716,7 +783,7 @@ func (h *ImageHandler) List(c *gin.Context) {
 
 	if v, ok := c.Get("api_token"); ok {
 		if token, ok2 := v.(*model.APIToken); ok2 && token != nil {
-			tokenSvc := service.NewAPITokenService(h.svc.DB())
+			tokenSvc := service.NewAPITokenService(h.svc.Config(), h.svc.DB())
 			_ = tokenSvc.RecordLog(&model.APITokenLog{
 				TokenID:   token.ID,
 				TokenName: token.Name,

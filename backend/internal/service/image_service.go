@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,8 +28,10 @@ type ImageService struct {
 	db  *gorm.DB
 	log *logger.Logger
 
-	storage     Storage
-	uploadQueue chan uploadTaskJob
+	storage        Storage
+	uploadQueue    chan uploadTaskJob
+	thumbnailQueue chan thumbnailJob
+	uploadLocks    [256]sync.Mutex
 }
 
 type uploadTaskJob struct {
@@ -37,6 +41,7 @@ type uploadTaskJob struct {
 
 type UploadTaskInput struct {
 	Buf                 []byte
+	TempPath            string
 	FileName            string
 	Routes              []string
 	Description         string
@@ -57,6 +62,27 @@ type UploadTaskInput struct {
 	UserAgent           string
 }
 
+type thumbnailJob struct {
+	Hash     string
+	TempPath string
+	MIMEType string
+}
+
+const (
+	maxProcessedMediaDimension = 32768
+	maxProcessedMediaPixels    = int64(100_000_000)
+)
+
+func processedMediaDimensionsAllowed(width, height int) bool {
+	if width <= 0 || height <= 0 {
+		return true
+	}
+	if width > maxProcessedMediaDimension || height > maxProcessedMediaDimension {
+		return false
+	}
+	return int64(width)*int64(height) <= maxProcessedMediaPixels
+}
+
 type TagCount struct {
 	Tag   string `json:"tag"`
 	Count int64  `json:"count"`
@@ -72,7 +98,8 @@ func NewImageService(cfg *config.Config, db *gorm.DB) *ImageService {
 		log:     logger.Register("image"),
 		storage: storage,
 	}
-	svc.startUploadWorkers(2, 32)
+	svc.startUploadWorkers(2, 8)
+	svc.startThumbnailWorkers(2, 4)
 	return svc
 }
 
@@ -84,7 +111,8 @@ func NewImageServiceWithStorage(cfg *config.Config, db *gorm.DB, storage Storage
 		log:     logger.Register("image"),
 		storage: storage,
 	}
-	svc.startUploadWorkers(2, 32)
+	svc.startUploadWorkers(2, 8)
+	svc.startThumbnailWorkers(2, 4)
 	return svc
 }
 
@@ -103,7 +131,7 @@ type UploadResult struct {
 func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, routes []string, description string, tags []string, mimeType string, width, height int, convert bool, targetFormat string, quality int, effort int, uploadedByTokenID *uint, uploadedByTokenName string, uploadedByTokenType string) (*UploadResult, error) {
 	// 如果需要转换
 	if convert && IsImageFile(mimeType) {
-		newBuf, newMime, err := ConvertImage(buf, mimeType, targetFormat, quality, effort)
+		newBuf, newMime, err := ConvertImage(ctx, buf, mimeType, targetFormat, quality, effort)
 		if err != nil {
 			return nil, fmt.Errorf("convert image failed: %w", err)
 		}
@@ -146,6 +174,9 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 			s.log.Ctx(ctx).Warnf("Failed to probe video metadata: %v", err)
 		}
 	}
+	if !processedMediaDimensionsAllowed(width, height) {
+		return nil, errors.New("media dimensions exceed limit")
+	}
 
 	tagsBytes, err := json.Marshal(tags)
 	if err != nil {
@@ -154,6 +185,9 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 	tagsJSON := datatypes.JSON(tagsBytes)
 	sum := sha256.Sum256(buf)
 	hashStr := hex.EncodeToString(sum[:])
+	contentLock := &s.uploadLocks[int(sum[0])]
+	contentLock.Lock()
+	defer contentLock.Unlock()
 
 	// 按 hash 去重
 	var existing model.Image
@@ -243,7 +277,7 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 		return nil, err
 	}
 
-	s.generateThumbnailAsync(hashStr, buf, mimeType)
+	s.enqueueThumbnail(hashStr, buf, mimeType)
 
 	firstRoute := ""
 	if len(routes) > 0 {
@@ -259,35 +293,85 @@ func (s *ImageService) Upload(ctx context.Context, buf []byte, fileName string, 
 	}, nil
 }
 
-func (s *ImageService) generateThumbnailAsync(hashStr string, buf []byte, mimeType string) {
+func writeTempData(pattern string, data []byte) (string, error) {
+	tmp, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", err
+	}
+	path := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(path)
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	return path, nil
+}
+
+func (s *ImageService) enqueueThumbnail(hashStr string, buf []byte, mimeType string) {
 	if !IsImageFile(mimeType) && !IsVideoFile(mimeType) {
 		return
 	}
+	tempPath, err := writeTempData("anzuimg-thumbnail-*", buf)
+	if err != nil {
+		s.log.Warnf("Failed to stage thumbnail input: %v", err)
+		return
+	}
+	job := thumbnailJob{Hash: hashStr, TempPath: tempPath, MIMEType: mimeType}
+	select {
+	case s.thumbnailQueue <- job:
+	default:
+		_ = os.Remove(tempPath)
+		s.log.Warnf("Thumbnail queue full; skipped thumbnail for %s", hashStr)
+	}
+}
 
-	data := append([]byte(nil), buf...)
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-
-		if IsImageFile(mimeType) {
-			if thumbData, err := GenerateThumbnail(bytes.NewReader(data), 800, 800); err == nil {
-				if _, _, err := s.storage.Save(ctx, hashStr+"_thumb.webp", thumbData, "image/webp"); err != nil {
-					s.log.Ctx(ctx).Warnf("Failed to save thumbnail: %v", err)
-				}
-			} else {
-				s.log.Ctx(ctx).Warnf("Failed to generate thumbnail: %v", err)
+func (s *ImageService) startThumbnailWorkers(workerCount, queueSize int) {
+	if workerCount <= 0 {
+		workerCount = 1
+	}
+	if queueSize <= 0 {
+		queueSize = 4
+	}
+	s.thumbnailQueue = make(chan thumbnailJob, queueSize)
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for job := range s.thumbnailQueue {
+				s.runThumbnailJob(job)
 			}
-			return
-		}
+		}()
+	}
+}
 
-		if thumbData, err := GenerateVideoThumbnail(ctx, data, 800, 800); err == nil {
-			if _, _, err := s.storage.Save(ctx, hashStr+"_thumb.jpg", thumbData, "image/jpeg"); err != nil {
-				s.log.Ctx(ctx).Warnf("Failed to save video thumbnail: %v", err)
+func (s *ImageService) runThumbnailJob(job thumbnailJob) {
+	defer func() { _ = os.Remove(job.TempPath) }()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	data, err := os.ReadFile(job.TempPath)
+	if err != nil {
+		s.log.Ctx(ctx).Warnf("Failed to read thumbnail input: %v", err)
+		return
+	}
+	if IsImageFile(job.MIMEType) {
+		if thumbData, err := GenerateThumbnail(bytes.NewReader(data), 800, 800); err == nil {
+			if _, _, err := s.storage.Save(ctx, job.Hash+"_thumb.webp", thumbData, "image/webp"); err != nil {
+				s.log.Ctx(ctx).Warnf("Failed to save thumbnail: %v", err)
 			}
 		} else {
-			s.log.Ctx(ctx).Warnf("Failed to generate video thumbnail: %v", err)
+			s.log.Ctx(ctx).Warnf("Failed to generate thumbnail: %v", err)
 		}
-	}()
+		return
+	}
+	if thumbData, err := GenerateVideoThumbnail(ctx, data, 800, 800); err == nil {
+		if _, _, err := s.storage.Save(ctx, job.Hash+"_thumb.jpg", thumbData, "image/jpeg"); err != nil {
+			s.log.Ctx(ctx).Warnf("Failed to save video thumbnail: %v", err)
+		}
+	} else {
+		s.log.Ctx(ctx).Warnf("Failed to generate video thumbnail: %v", err)
+	}
 }
 
 func (s *ImageService) startUploadWorkers(workerCount int, queueSize int) {
@@ -310,15 +394,22 @@ func (s *ImageService) startUploadWorkers(workerCount int, queueSize int) {
 
 func (s *ImageService) EnqueueUploadTask(input UploadTaskInput) (*model.UploadTask, error) {
 	if s.uploadQueue == nil {
-		s.startUploadWorkers(2, 32)
+		s.startUploadWorkers(2, 8)
 	}
 
+	tempPath, err := writeTempData("anzuimg-upload-task-*", input.Buf)
+	if err != nil {
+		return nil, fmt.Errorf("stage upload task failed: %w", err)
+	}
+	input.Buf = nil
+	input.TempPath = tempPath
 	task := model.UploadTask{
 		ID:       uuid.NewString(),
 		Status:   model.UploadTaskStatusPending,
 		FileName: input.FileName,
 	}
 	if err := s.db.Create(&task).Error; err != nil {
+		_ = os.Remove(tempPath)
 		return nil, fmt.Errorf("create upload task failed: %w", err)
 	}
 
@@ -326,6 +417,7 @@ func (s *ImageService) EnqueueUploadTask(input UploadTaskInput) (*model.UploadTa
 	case s.uploadQueue <- uploadTaskJob{TaskID: task.ID, Input: input}:
 		return &task, nil
 	default:
+		_ = os.Remove(tempPath)
 		now := time.Now()
 		updates := map[string]interface{}{
 			"status":        model.UploadTaskStatusFailed,
@@ -351,15 +443,29 @@ func (s *ImageService) GetUploadTask(id string) (*model.UploadTask, error) {
 }
 
 func (s *ImageService) runUploadTask(job uploadTaskJob) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	_ = s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
 		"status": model.UploadTaskStatusRunning,
 	}).Error
 
 	input := job.Input
+	defer func() { _ = os.Remove(input.TempPath) }()
+	buf, readErr := os.ReadFile(input.TempPath)
+	if readErr != nil {
+		now := time.Now()
+		_ = s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
+			"status":        model.UploadTaskStatusFailed,
+			"error_code":    "upload_input_unavailable",
+			"error_message": "upload input unavailable",
+			"completed_at":  &now,
+		}).Error
+		s.log.Ctx(ctx).Warnf("Failed to read upload task input %s: %v", job.TaskID, readErr)
+		return
+	}
 	res, err := s.Upload(
 		ctx,
-		input.Buf,
+		buf,
 		input.FileName,
 		input.Routes,
 		input.Description,
@@ -381,16 +487,17 @@ func (s *ImageService) runUploadTask(job uploadTaskJob) {
 		if updateErr := s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
 			"status":        model.UploadTaskStatusFailed,
 			"error_code":    "upload_failed",
-			"error_message": err.Error(),
+			"error_message": "upload processing failed",
 			"completed_at":  &now,
 		}).Error; updateErr != nil {
 			s.log.Ctx(ctx).Warnf("Failed to update failed upload task %s: %v", job.TaskID, updateErr)
 		}
+		s.log.Ctx(ctx).Warnf("Upload task %s failed: %v", job.TaskID, err)
 		return
 	}
 
 	if input.UploadedByTokenID != nil {
-		tokenSvc := NewAPITokenService(s.db)
+		tokenSvc := NewAPITokenService(s.cfg, s.db)
 		_ = tokenSvc.RecordLog(&model.APITokenLog{
 			TokenID:   *input.UploadedByTokenID,
 			TokenName: input.UploadedByTokenName,
@@ -432,7 +539,7 @@ func (s *ImageService) runUploadTask(job uploadTaskJob) {
 		if updateErr := s.db.Model(&model.UploadTask{}).Where("id = ?", job.TaskID).Updates(map[string]interface{}{
 			"status":        model.UploadTaskStatusFailed,
 			"error_code":    "result_encode_failed",
-			"error_message": err.Error(),
+			"error_message": "failed to encode upload result",
 			"completed_at":  &now,
 		}).Error; updateErr != nil {
 			s.log.Ctx(ctx).Warnf("Failed to update result encode error for upload task %s: %v", job.TaskID, updateErr)

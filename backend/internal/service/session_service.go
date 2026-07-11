@@ -221,7 +221,7 @@ func (s *SessionService) MarkStepUp(c *gin.Context) error {
 }
 
 func (s *SessionService) SessionMiddleware() gin.HandlerFunc {
-	apiTokenService := NewAPITokenService(s.db)
+	apiTokenService := NewAPITokenService(s.cfg, s.db)
 
 	return func(c *gin.Context) {
 		session, err := s.ValidateSession(c)

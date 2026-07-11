@@ -16,12 +16,11 @@ import (
 )
 
 func NewRouter(cfg *config.Config, db *gorm.DB, settings *service.SettingsService, hub *service.LogStreamHub) (*gin.Engine, error) {
-	r := gin.Default()
-
 	resolver, err := clientip.NewResolver(cfg.TrustedProxies, cfg.ClientIPHeaders, cfg.ClientIPXFFStrategy)
 	if err != nil {
 		return nil, fmt.Errorf("init client ip resolver failed: %w", err)
 	}
+	r := gin.New()
 
 	originsFn := func() []string { return cfg.Effective().AllowedOrigins }
 	cspExtraFn := func() string { return cfg.Effective().CSPExtra }
@@ -32,6 +31,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB, settings *service.SettingsServic
 	}
 
 	r.Use(middleware.ClientIPMiddleware(resolver))
+	r.Use(middleware.AccessLogger())
+	r.Use(gin.Recovery())
+	r.Use(middleware.JSONBodyLimit(middleware.DefaultJSONBodyLimit))
 	r.Use(middleware.IPBlacklist(blacklistFn))
 	r.Use(middleware.RequestID())
 	r.Use(middleware.SecurityHeaders(cspExtraFn))
@@ -39,9 +41,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB, settings *service.SettingsServic
 	healthH := handler.NewHealthHandler()
 	imageH := handler.NewImageHandler(cfg, db)
 	authH := handler.NewAuthHandler(cfg, db)
-	apiTokenH := handler.NewAPITokenHandler(db)
+	apiTokenH := handler.NewAPITokenHandler(cfg, db)
 	settingsH := handler.NewSettingsHandler(cfg, db, settings)
-	logH := handler.NewLogHandler(db, hub)
+	logH := handler.NewLogHandler(cfg, db, hub)
 
 	registerHealthRoutes(r, healthH)
 	registerPublicImageRoutes(r, imageH)

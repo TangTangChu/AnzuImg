@@ -50,8 +50,8 @@ ANZUIMG_CLOUD_USE_SSL=true
 # 网络与安全配置
 # 允许跨域访问的源，逗号分隔，填写前端访问地址
 ANZUIMG_ALLOWED_ORIGINS=http://localhost:9200
-# 信任代理网段，用于获取真实 IP，逗号分隔
-ANZUIMG_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+# 仅填写实际反向代理的精确 IP/CIDR；留空时忽略所有转发 IP 头
+ANZUIMG_TRUSTED_PROXIES=
 # 客户端 IP 读取头顺序，按顺序尝试，按顺序尝试，在 ANZUIMG_TRUSTED_PROXIES 配置有效值时生效
 ANZUIMG_CLIENT_IP_HEADERS=X-Forwarded-For,X-Real-IP
 # XFF 解析策略：trusted（按受信任代理链推导）/ rightmost（取最右有效 IP）

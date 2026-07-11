@@ -134,7 +134,7 @@ func (s *PasskeyService) BeginRegistration() (*protocol.CredentialCreation, stri
 		return nil, "", err
 	}
 	registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
-		credCreationOpts.AuthenticatorSelection.UserVerification = protocol.VerificationPreferred
+		credCreationOpts.AuthenticatorSelection.UserVerification = protocol.VerificationRequired
 	}
 
 	creation, sessionData, err := s.webAuthn.BeginRegistration(user, registerOptions)
@@ -201,7 +201,7 @@ func (s *PasskeyService) BeginLogin() (*protocol.CredentialAssertion, string, er
 	}
 
 	loginOptions := func(credAssertionOpts *protocol.PublicKeyCredentialRequestOptions) {
-		credAssertionOpts.UserVerification = protocol.VerificationPreferred
+		credAssertionOpts.UserVerification = protocol.VerificationRequired
 	}
 
 	assertion, sessionData, err := s.webAuthn.BeginLogin(user, loginOptions)

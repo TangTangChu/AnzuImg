@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -146,7 +147,7 @@ func GenerateThumbnail(reader io.Reader, width, height int) ([]byte, error) {
 }
 
 // ConvertImage 将图片转换为指定格式
-func ConvertImage(data []byte, sourceMimeType string, targetFormat string, quality int, effort int) ([]byte, string, error) {
+func ConvertImage(ctx context.Context, data []byte, sourceMimeType string, targetFormat string, quality int, effort int) ([]byte, string, error) {
 	// 验证目标格式
 	targetFormat = strings.ToLower(targetFormat)
 	if targetFormat != "webp" && targetFormat != "avif" {
@@ -194,7 +195,7 @@ func ConvertImage(data []byte, sourceMimeType string, targetFormat string, quali
 		mimeType = "image/webp"
 	case "avif":
 		if isAnimated {
-			if avifBuf, convErr := ConvertAnimatedToAvif(data, sourceMimeType, quality, effort); convErr == nil {
+			if avifBuf, convErr := ConvertAnimatedToAvif(ctx, data, sourceMimeType, quality, effort); convErr == nil {
 				return avifBuf, "image/avif", nil
 			}
 		}
@@ -244,7 +245,7 @@ func loadForConversion(data []byte, sourceMimeType string) (*vips.Image, error) 
 	}
 }
 
-func ConvertAnimatedToAvif(data []byte, sourceMimeType string, quality, effort int) ([]byte, error) {
+func ConvertAnimatedToAvif(ctx context.Context, data []byte, sourceMimeType string, quality, effort int) ([]byte, error) {
 	inputExt := mimeTypeToExt(sourceMimeType)
 	if inputExt == "" {
 		inputExt = ".img"
@@ -288,7 +289,7 @@ func ConvertAnimatedToAvif(data []byte, sourceMimeType string, quality, effort i
 		outPath,
 	}
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return nil, fmt.Errorf("ffmpeg not found")

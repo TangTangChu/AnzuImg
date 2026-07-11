@@ -20,6 +20,7 @@ type APIToken struct {
 	LastUsedIP  string         `json:"last_used_ip" gorm:"size:45"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+	ExpiresAt   *time.Time     `json:"expires_at,omitempty" gorm:"-"`
 }
 
 const (

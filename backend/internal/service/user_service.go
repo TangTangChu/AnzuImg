@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
@@ -18,7 +19,10 @@ type UserService struct {
 	db  *gorm.DB
 }
 
-var ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
+var (
+	ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
+	ErrAlreadyInitialized       = errors.New("system already initialized")
+)
 
 func NewUserService(cfg *config.Config, db *gorm.DB) *UserService {
 	return &UserService{cfg: cfg, db: db}
@@ -33,15 +37,8 @@ func (s *UserService) GetAdmin() (*model.User, error) {
 }
 
 func (s *UserService) EnsureAdminExists() error {
-	var count int64
-	s.db.Model(&model.User{}).Where("id = ?", model.DefaultUserID).Count(&count)
-	if count == 0 {
-		user := model.User{
-			ID: model.DefaultUserID,
-		}
-		return s.db.Create(&user).Error
-	}
-	return nil
+	user := model.User{ID: model.DefaultUserID}
+	return s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&user).Error
 }
 
 func (s *UserService) IsInitialized() bool {
@@ -101,10 +98,6 @@ func scanPasswordChars(password string) (hasUpper, hasLower, hasDigit, hasSymbol
 }
 
 func (s *UserService) SetupAdmin(password string) error {
-	if s.IsInitialized() {
-		return errors.New("system already initialized")
-	}
-
 	if err := s.ValidatePasswordComplexity(password); err != nil {
 		return err
 	}
@@ -114,7 +107,22 @@ func (s *UserService) SetupAdmin(password string) error {
 		return err
 	}
 
-	return s.db.Model(&model.User{}).Where("id = ?", model.DefaultUserID).Update("password_hash", string(hashedPassword)).Error
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		user := model.User{ID: model.DefaultUserID}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&user).Error; err != nil {
+			return err
+		}
+		result := tx.Model(&model.User{}).
+			Where("id = ? AND COALESCE(password_hash, '') = ''", model.DefaultUserID).
+			Update("password_hash", string(hashedPassword))
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrAlreadyInitialized
+		}
+		return nil
+	})
 }
 
 func (s *UserService) VerifyPassword(password string) bool {

@@ -5,6 +5,7 @@
 **/.git
 **/.idea
 **/.vscode
+.tmp
 backend/anzuimg.exe
 backend/server.exe
 backend/test_build.exe

@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
@@ -28,11 +29,11 @@ type LogHandler struct {
 	log    *logger.Logger
 }
 
-func NewLogHandler(db *gorm.DB, hub *service.LogStreamHub) *LogHandler {
+func NewLogHandler(cfg *config.Config, db *gorm.DB, hub *service.LogStreamHub) *LogHandler {
 	return &LogHandler{
 		db:     db,
 		q:      service.NewLogQueryService(db),
-		tokens: service.NewAPITokenService(db),
+		tokens: service.NewAPITokenService(cfg, db),
 		hub:    hub,
 		log:    logger.Register("log-handler"),
 	}

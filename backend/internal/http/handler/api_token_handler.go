@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/middleware"
 	"github.com/TangTangChu/AnzuImg/backend/internal/http/response"
 	"github.com/TangTangChu/AnzuImg/backend/internal/logger"
@@ -22,10 +23,10 @@ type APITokenHandler struct {
 	log *logger.Logger
 }
 
-func NewAPITokenHandler(db *gorm.DB) *APITokenHandler {
+func NewAPITokenHandler(cfg *config.Config, db *gorm.DB) *APITokenHandler {
 	return &APITokenHandler{
 		db:  db,
-		svc: service.NewAPITokenService(db),
+		svc: service.NewAPITokenService(cfg, db),
 		log: logger.Register("api-token-handler"),
 	}
 }

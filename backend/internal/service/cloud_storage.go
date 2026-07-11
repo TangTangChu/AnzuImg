@@ -120,7 +120,7 @@ func (s *CloudStorage) Save(ctx context.Context, hash string, data []byte, mimeT
 		s.bucket, key, len(data))
 
 	// 上传到S3
-	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+	input := &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(key),
 		Body:          bytes.NewReader(data),
@@ -128,7 +128,11 @@ func (s *CloudStorage) Save(ctx context.Context, hash string, data []byte, mimeT
 		ContentLength: aws.Int64(int64(len(data))),
 		// 设置缓存控制（1年）
 		CacheControl: aws.String("public, max-age=31536000"),
-	})
+	}
+	if mimeType == "image/svg+xml" {
+		input.ContentDisposition = aws.String("attachment")
+	}
+	_, err := s.client.PutObject(ctx, input)
 
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to upload to cloud storage: %w", err)

@@ -10,17 +10,43 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
+	"github.com/TangTangChu/AnzuImg/backend/internal/config"
 	"github.com/TangTangChu/AnzuImg/backend/internal/model"
 )
 
 type APITokenService struct {
-	db *gorm.DB
+	cfg *config.Config
+	db  *gorm.DB
 }
 
-var ErrInvalidTokenType = errors.New("invalid token type")
+var (
+	ErrInvalidTokenType = errors.New("invalid token type")
+	ErrAPITokenExpired  = errors.New("api token expired")
+)
 
-func NewAPITokenService(db *gorm.DB) *APITokenService {
-	return &APITokenService{db: db}
+func NewAPITokenService(cfg *config.Config, db *gorm.DB) *APITokenService {
+	return &APITokenService{cfg: cfg, db: db}
+}
+
+func (s *APITokenService) ttlHours() int {
+	if s == nil || s.cfg == nil {
+		return 0
+	}
+	return s.cfg.Effective().APITokenTTLHours
+}
+
+func tokenExpiresAt(createdAt time.Time, ttlHours int) *time.Time {
+	if ttlHours <= 0 || createdAt.IsZero() {
+		return nil
+	}
+	expiresAt := createdAt.Add(time.Duration(ttlHours) * time.Hour)
+	return &expiresAt
+}
+
+func (s *APITokenService) applyExpiry(token *model.APIToken) {
+	if token != nil {
+		token.ExpiresAt = tokenExpiresAt(token.CreatedAt, s.ttlHours())
+	}
 }
 
 func (s *APITokenService) CreateToken(name string, ipAllowlist []string, tokenType string) (string, *model.APIToken, error) {
@@ -54,6 +80,7 @@ func (s *APITokenService) CreateToken(name string, ipAllowlist []string, tokenTy
 	if err := s.db.Create(token).Error; err != nil {
 		return "", nil, err
 	}
+	s.applyExpiry(token)
 
 	return rawToken, token, nil
 }
@@ -62,6 +89,9 @@ func (s *APITokenService) ListTokens() ([]model.APIToken, error) {
 	var tokens []model.APIToken
 	if err := s.db.Where("user_id = ?", model.DefaultUserID).Order("created_at DESC").Find(&tokens).Error; err != nil {
 		return nil, err
+	}
+	for i := range tokens {
+		s.applyExpiry(&tokens[i])
 	}
 	return tokens, nil
 }
@@ -76,6 +106,10 @@ func (s *APITokenService) ValidateToken(rawToken, clientIP string) (*model.APITo
 	var token model.APIToken
 	if err := s.db.Where("token_hash = ?", tokenHash).First(&token).Error; err != nil {
 		return nil, err
+	}
+	s.applyExpiry(&token)
+	if token.ExpiresAt != nil && !time.Now().Before(*token.ExpiresAt) {
+		return nil, ErrAPITokenExpired
 	}
 
 	if err := validateIP(clientIP, token.IPAllowlist); err != nil {
@@ -99,6 +133,7 @@ func (s *APITokenService) GetTokenByID(id uint) (*model.APIToken, error) {
 	if token.TokenType == "" {
 		token.TokenType = model.TokenTypeFull
 	}
+	s.applyExpiry(&token)
 	return &token, nil
 }
 

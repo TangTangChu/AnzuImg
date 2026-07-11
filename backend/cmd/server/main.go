@@ -368,7 +368,7 @@ func main() {
 			}
 			if d := eff.TokenLogRetentionDays; d > 0 {
 				cutoff := time.Now().AddDate(0, 0, -d)
-				if _, err := service.NewAPITokenService(db).CleanupLogsBefore(cutoff); err != nil {
+				if _, err := service.NewAPITokenService(cfg, db).CleanupLogsBefore(cutoff); err != nil {
 					log.Errorf("clean token logs failed: %v", err)
 				}
 			}
@@ -391,13 +391,20 @@ func main() {
 		log.Fatalf("init router failed: %v", err)
 	}
 
-	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+	// Client IPs are resolved exclusively by internal/clientip. Keep Gin from
+	// independently trusting forwarding headers with different semantics.
+	if err := r.SetTrustedProxies(nil); err != nil {
 		log.Fatalf("set trusted proxies failed: %v", err)
 	}
 
 	httpServer := &http.Server{
-		Addr:    cfg.ServerAddr,
-		Handler: r,
+		Addr:              cfg.ServerAddr,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       5 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	serverErrCh := make(chan error, 1)

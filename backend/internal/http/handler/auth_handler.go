@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -117,12 +118,11 @@ func (h *AuthHandler) Setup(c *gin.Context) {
 		response.WriteErrorCode(c, http.StatusForbidden, "system_already_initialized", "system already initialized")
 		return
 	}
-	if err := h.userService.EnsureAdminExists(); err != nil {
-		response.WriteErrorCode(c, http.StatusInternalServerError, "ensure_admin_failed", "failed to ensure admin user exists")
-		return
-	}
-
 	if err := h.userService.SetupAdmin(req.Password); err != nil {
+		if errors.Is(err, service.ErrAlreadyInitialized) {
+			response.WriteErrorCode(c, http.StatusForbidden, "system_already_initialized", "system already initialized")
+			return
+		}
 		h.recordSecurityEvent(c, "error", "setup_failed", "failed to set initial password")
 		response.WriteErrorCode(c, http.StatusInternalServerError, "setup_password_failed", "failed to set password")
 		return
@@ -146,7 +146,12 @@ func (h *AuthHandler) AuthWithPassword(c *gin.Context) {
 
 	eff := h.cfg.Effective()
 
-	locked, unlockTime := model.IsIPLocked(h.db, clientIP, eff.LoginMaxAttempts, eff.LoginLockoutMinutes)
+	locked, unlockTime, err := model.IsIPLocked(h.db, clientIP, eff.LoginMaxAttempts, eff.LoginLockoutMinutes)
+	if err != nil {
+		h.log.Ctx(c.Request.Context()).Errorf("check login throttle failed: %v", err)
+		response.WriteErrorCode(c, http.StatusServiceUnavailable, "login_security_unavailable", "login temporarily unavailable")
+		return
+	}
 	if locked {
 		h.recordSecurityEventWithDedup(c, "warning", "login_rate_limited", "too many login attempts", time.Duration(eff.LoginLockoutMinutes)*time.Minute)
 		requestID, _ := c.Get(response.CtxRequestIDKey)
@@ -167,13 +172,19 @@ func (h *AuthHandler) AuthWithPassword(c *gin.Context) {
 	}
 
 	if !h.userService.VerifyPassword(req.Password) {
-		model.RecordLoginAttempt(h.db, clientIP, "admin", false)
+		if err := model.RecordLoginAttempt(h.db, clientIP, "admin", false); err != nil {
+			h.log.Ctx(c.Request.Context()).Errorf("record login attempt failed: %v", err)
+			response.WriteErrorCode(c, http.StatusServiceUnavailable, "login_security_unavailable", "login temporarily unavailable")
+			return
+		}
 		h.recordSecurityEvent(c, "warning", "login_failed", "failed login attempt (UA: "+userAgent+")")
 		h.recordBruteforceAlertIfNeeded(c, clientIP)
 		response.WriteErrorCode(c, http.StatusUnauthorized, "invalid_credentials", "invalid password or system not initialized")
 		return
 	}
-	model.RecordLoginAttempt(h.db, clientIP, "admin", true)
+	if err := model.ClearFailedLoginAttempts(h.db, clientIP, "admin"); err != nil {
+		h.log.Ctx(c.Request.Context()).Warnf("clear failed login attempts: %v", err)
+	}
 	h.recordSecurityEvent(c, "info", "login_success", "successful login (UA: "+userAgent+")")
 
 	token, session, err := h.sessionService.CreateSession(c)
@@ -340,10 +351,62 @@ func (h *AuthHandler) StepUpWithPassword(c *gin.Context) {
 		response.WriteErrorCode(c, http.StatusBadRequest, "invalid_request", "invalid request")
 		return
 	}
+	clientIP := middleware.ClientIP(c)
+	if clientIP == "" {
+		clientIP = "unknown"
+	}
+	sessionRaw, ok := c.Get("session")
+	session, ok := sessionRaw.(*model.Session)
+	if !ok || session == nil {
+		response.WriteErrorCode(c, http.StatusForbidden, "session_required", "session authentication required")
+		return
+	}
+	subject := fmt.Sprintf("step-up:%d", session.ID)
+	eff := h.cfg.Effective()
+	locked, unlockTime, err := model.IsLoginSubjectLocked(h.db, clientIP, subject, eff.LoginMaxAttempts, eff.LoginLockoutMinutes)
+	if err != nil {
+		h.log.Ctx(c.Request.Context()).Errorf("check step-up throttle failed: %v", err)
+		response.WriteErrorCode(c, http.StatusServiceUnavailable, "step_up_security_unavailable", "step-up temporarily unavailable")
+		return
+	}
+	if locked {
+		_ = h.sessionService.RevokeCurrentSession(c)
+		h.sessionService.ClearSessionCookie(c)
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"code":        "too_many_step_up_attempts",
+			"message":     "too many step-up attempts; session revoked",
+			"unlock_time": unlockTime.Format(time.RFC3339),
+		})
+		return
+	}
 	if !h.userService.VerifyPassword(req.Password) {
+		if err := model.RecordLoginAttempt(h.db, clientIP, subject, false); err != nil {
+			h.log.Ctx(c.Request.Context()).Errorf("record step-up attempt failed: %v", err)
+			response.WriteErrorCode(c, http.StatusServiceUnavailable, "step_up_security_unavailable", "step-up temporarily unavailable")
+			return
+		}
 		h.recordSecurityEvent(c, "warning", "step_up_failed", "step-up password incorrect")
+		locked, unlockTime, err = model.IsLoginSubjectLocked(h.db, clientIP, subject, eff.LoginMaxAttempts, eff.LoginLockoutMinutes)
+		if err != nil {
+			h.log.Ctx(c.Request.Context()).Errorf("recheck step-up throttle failed: %v", err)
+			response.WriteErrorCode(c, http.StatusServiceUnavailable, "step_up_security_unavailable", "step-up temporarily unavailable")
+			return
+		}
+		if locked {
+			_ = h.sessionService.RevokeCurrentSession(c)
+			h.sessionService.ClearSessionCookie(c)
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"code":        "too_many_step_up_attempts",
+				"message":     "too many step-up attempts; session revoked",
+				"unlock_time": unlockTime.Format(time.RFC3339),
+			})
+			return
+		}
 		response.WriteErrorCode(c, http.StatusUnauthorized, "invalid_credentials", "invalid password")
 		return
+	}
+	if err := model.ClearFailedLoginAttempts(h.db, clientIP, subject); err != nil {
+		h.log.Ctx(c.Request.Context()).Warnf("clear failed step-up attempts: %v", err)
 	}
 	if err := h.sessionService.MarkStepUp(c); err != nil {
 		response.WriteErrorCode(c, http.StatusInternalServerError, "step_up_persist_failed", "failed to record step-up")
@@ -595,7 +658,7 @@ func (h *AuthHandler) recordBruteforceAlertIfNeeded(c *gin.Context, clientIP str
 	if threshold <= 0 {
 		threshold = eff.LoginMaxAttempts
 	}
-	failedCount, err := model.CountRecentFailedAttempts(h.db, clientIP, eff.LoginLockoutMinutes)
+	failedCount, err := model.CountRecentFailedAttempts(h.db, clientIP, "admin", eff.LoginLockoutMinutes)
 	if err != nil {
 		h.log.Ctx(c.Request.Context()).Warnf("failed to count login attempts for alert: %v", err)
 		return
