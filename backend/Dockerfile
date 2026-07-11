@@ -38,14 +38,9 @@ RUN apk update && apk add --no-cache \
     ca-certificates \
     tzdata \
     libjxl \
-    && addgroup -S -g 10001 anzuimg \
-    && adduser -S -D -H -u 10001 -G anzuimg anzuimg \
-    && mkdir -p /data/images /data/logs /data/tmp \
-    && chown -R anzuimg:anzuimg /app /data
+    && mkdir -p /data/images
 
-COPY --from=builder --chown=anzuimg:anzuimg /app/anzuimg /app/anzuimg
-
-USER anzuimg
+COPY --from=builder /app/anzuimg /app/anzuimg
 
 EXPOSE 8080
 

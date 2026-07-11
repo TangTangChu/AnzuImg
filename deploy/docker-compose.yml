@@ -18,27 +18,6 @@ services:
       POSTGRES_DB: ${ANZUIMG_DB_NAME:-anzuimg}
     volumes:
       - anzuimg-db-data:/var/lib/postgresql/data
-    networks:
-      anzuimg-internal:
-        ipv4_address: 172.30.250.2
-
-  backend-permissions:
-    image: alpine:edge
-    user: "0:0"
-    restart: "no"
-    network_mode: none
-    command: ["sh", "-c", "chown -R 10001:10001 /data/images /data/logs /data/tmp"]
-    volumes:
-      - anzuimg-images:/data/images
-      - anzuimg-logs:/data/logs
-      - anzuimg-tmp:/data/tmp
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-    security_opt:
-      - no-new-privileges:true
 
   backend:
     build:
@@ -49,8 +28,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      backend-permissions:
-        condition: service_completed_successfully
     environment:
       ANZUIMG_SERVER_ADDR: ":8080"
       ANZUIMG_SHUTDOWN_TIMEOUT_SEC: ${ANZUIMG_SHUTDOWN_TIMEOUT_SEC:-10}
@@ -85,8 +62,8 @@ services:
       # 生产环境建议设置：初始化保护 token（完成初始化后可移除）
       ANZUIMG_SETUP_TOKEN: ${ANZUIMG_SETUP_TOKEN:-}
 
-      # 默认仅信任 Compose 内固定的 frontend 代理；其他代理必须显式配置精确 IP/CIDR。
-      ANZUIMG_TRUSTED_PROXIES: ${ANZUIMG_TRUSTED_PROXIES:-172.30.250.4/32}
+      # 可信代理（宿主机 Nginx / 本机 / 常见内网网段）
+      ANZUIMG_TRUSTED_PROXIES: ${ANZUIMG_TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       # 客户端 IP 读取头顺序，按顺序尝试
       ANZUIMG_CLIENT_IP_HEADERS: ${ANZUIMG_CLIENT_IP_HEADERS:-X-Forwarded-For,X-Real-IP}
       # XFF 解析策略：trusted / rightmost
@@ -106,24 +83,11 @@ services:
       ANZUIMG_ALLOW_WEB_CONFIG: ${ANZUIMG_ALLOW_WEB_CONFIG:-true}
       # 应用日志文件输出目录
       ANZUIMG_LOG_FILE_DIR: ${ANZUIMG_LOG_FILE_DIR:-/data/logs}
-      TMPDIR: /data/tmp
     volumes:
       - anzuimg-images:/data/images
       - anzuimg-logs:/data/logs
-      - anzuimg-tmp:/data/tmp
-    read_only: true
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 256
-    mem_limit: ${ANZUIMG_BACKEND_MEMORY_LIMIT:-2g}
-    cpus: ${ANZUIMG_BACKEND_CPU_LIMIT:-2.0}
     ports:
       - "127.0.0.1:9211:8080"
-    networks:
-      anzuimg-internal:
-        ipv4_address: 172.30.250.3
 
   frontend:
     build:
@@ -143,18 +107,8 @@ services:
       ANZUIMG_FRONTEND_API_PREFIX: ${ANZUIMG_FRONTEND_API_PREFIX:-/kotori}
     ports:
       - "127.0.0.1:9200:3000"
-    networks:
-      anzuimg-internal:
-        ipv4_address: 172.30.250.4
 
 volumes:
   anzuimg-db-data:
   anzuimg-images:
   anzuimg-logs:
-  anzuimg-tmp:
-
-networks:
-  anzuimg-internal:
-    ipam:
-      config:
-        - subnet: 172.30.250.0/24
