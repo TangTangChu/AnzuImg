@@ -576,24 +576,32 @@ func (s *ImageService) ResolveByHash(ctx context.Context, hash string) (*model.I
 	return &img, absPath, nil
 }
 
-// ResolveThumbnailByHash：返回图片缩略图的绝对路径或访问URL。
-func (s *ImageService) ResolveThumbnailByHash(ctx context.Context, hash string) (string, error) {
+// ResolveThumbnailByHash：返回图片缩略图的绝对路径或访问URL，以及对应的 MIME 类型。
+func (s *ImageService) ResolveThumbnailByHash(ctx context.Context, hash string) (string, string, error) {
 	var img model.Image
 	if err := s.db.Where("hash = ?", hash).First(&img).Error; err != nil {
-		return "", err
+		return "", "", err
 	}
-	suffixes := []string{"_thumb.webp", "_thumb.jpg", "_thumb"}
+	candidates := []struct {
+		suffix   string
+		mimeType string
+	}{
+		{suffix: "_thumb.webp", mimeType: "image/webp"},
+		{suffix: "_thumb.jpg", mimeType: "image/jpeg"},
+	}
 
-	for _, suffix := range suffixes {
-		thumbPath := img.Path + suffix
+	for _, candidate := range candidates {
+		thumbPath := img.Path + candidate.suffix
 		exists, err := s.storage.Exists(ctx, thumbPath)
 		if err == nil && exists {
-			return s.storage.GetAbsPath(ctx, thumbPath)
+			absPath, err := s.storage.GetAbsPath(ctx, thumbPath)
+			return absPath, candidate.mimeType, err
 		}
 	}
 
 	// 如果缩略图都不存在，返回原图
-	return s.storage.GetAbsPath(ctx, img.Path)
+	absPath, err := s.storage.GetAbsPath(ctx, img.Path)
+	return absPath, img.MimeType, err
 }
 
 func (s *ImageService) ResolveByRoute(ctx context.Context, route string) (*model.Image, string, error) {

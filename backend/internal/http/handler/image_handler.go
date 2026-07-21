@@ -721,14 +721,14 @@ func (h *ImageHandler) GetByHash(c *gin.Context) {
 	if img.MimeType == "image/svg+xml" {
 		c.Header("Content-Disposition", "attachment")
 	}
-	c.File(absPath)
+	serveLocalMedia(c, absPath, img.MimeType)
 }
 
 // GET /i/:hash/thumbnail
 func (h *ImageHandler) GetThumbnailByHash(c *gin.Context) {
 	hashStr := c.Param("hash")
 
-	absPath, err := h.svc.ResolveThumbnailByHash(c.Request.Context(), hashStr)
+	absPath, mimeType, err := h.svc.ResolveThumbnailByHash(c.Request.Context(), hashStr)
 	if err != nil {
 		response.WriteErrorCode(c, http.StatusNotFound, "thumbnail_not_found", "thumbnail not found")
 		return
@@ -738,7 +738,7 @@ func (h *ImageHandler) GetThumbnailByHash(c *gin.Context) {
 		c.Redirect(http.StatusFound, absPath)
 		return
 	}
-	c.File(absPath)
+	serveLocalMedia(c, absPath, mimeType)
 }
 
 // GET /i/r/:route
@@ -757,6 +757,13 @@ func (h *ImageHandler) GetByRoute(c *gin.Context) {
 	}
 	if img.MimeType == "image/svg+xml" {
 		c.Header("Content-Disposition", "attachment")
+	}
+	serveLocalMedia(c, absPath, img.MimeType)
+}
+
+func serveLocalMedia(c *gin.Context, absPath, mimeType string) {
+	if mimeType != "" {
+		c.Header("Content-Type", mimeType)
 	}
 	c.File(absPath)
 }
